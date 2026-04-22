@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ArrowLeft, Building2, Zap, Users, Shield } from "lucide-react";
+import { ArrowLeft, Building2, UserCheck, ShieldCheck, Briefcase, CheckCircle, Users } from "lucide-react";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
 import EmailSignup from "../components/Auth/EmailSignup";
 import SignupVerifyOtp from "../components/Auth/SignupVerifyOtp";
@@ -20,28 +20,40 @@ const BusinessSignup = () => {
   const handleOTPSent = (userEmail, userRole) => { setEmail(userEmail); setRole(userRole); setStep("verify"); };
   const handleBack = () => { setStep("signup"); setEmail(""); };
 
+  const steps = [
+    {
+      num: "01",
+      title: "Create & complete your business profile",
+      desc: "Add your business name, category, address, description, contact details, and upload at least one photo.",
+    },
+    {
+      num: "02",
+      title: "Wait for admin approval",
+      desc: "Our team reviews your submission to ensure quality. Approvals are typically done within 24 hours.",
+    },
+    {
+      num: "03",
+      title: "Go live — promote your business & post jobs",
+      desc: "Once approved, promote your business on our platform and post jobs directly, and manage all applications from your dashboard.",
+    },
+  ];
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        html, body, #root {
-          height: 100%; min-height: 100%; margin: 0; background: #f0fdf4;
-        }
+        html, body, #root { height: 100%; min-height: 100%; margin: 0; background: #f0fdf4; }
         body { overflow: hidden; }
         #root, .App { height: 100%; min-height: 100%; background: #f0fdf4; }
         *, *::before, *::after { box-sizing: border-box; }
 
         .bizs-page {
-          height: calc(100dvh - 82px);
-          min-height: calc(100dvh - 82px);
-          display: flex;
-          align-items: stretch;
-          background: #f0fdf4;
-          overflow: hidden;
+          height: calc(100dvh - 82px); min-height: calc(100dvh - 82px);
+          display: flex; align-items: stretch;
+          background: #f0fdf4; overflow: hidden;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-
         .bizs-left, .bizs-right { height: 100%; min-height: 100%; }
 
         .bizs-left { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto; background: #f0fdf4; }
@@ -75,27 +87,81 @@ const BusinessSignup = () => {
         .bizs-form-box input[maxLength="1"], .bizs-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; }
         .bizs-form-box input[maxLength="1"]:focus, .bizs-form-box input[maxlength="1"]:focus { background: #f0fdf4 !important; border-color: #10b981 !important; }
 
-        .bizs-right { width: 42%; flex-shrink: 0; background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%); display: flex; flex-direction: column; justify-content: center; padding: 64px 56px; position: relative; overflow: hidden; }
+        /* ── Right panel ── */
+        .bizs-right {
+          width: 42%; flex-shrink: 0;
+          background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
+          display: flex; flex-direction: column; justify-content: center;
+          padding: 64px 56px; position: relative; overflow: hidden;
+        }
         .bizs-right-circles { position: absolute; inset: 0; pointer-events: none; }
         .bizs-right-circle { position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); }
         .bizs-right-c1 { width: 500px; height: 500px; top: -180px; left: -180px; }
         .bizs-right-c2 { width: 340px; height: 340px; top: 60px; right: -120px; }
         .bizs-right-c3 { width: 200px; height: 200px; bottom: 120px; left: 40px; border-color: rgba(16,185,129,0.2); }
-        .bizs-right-glow { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.15) 0%, transparent 60%); pointer-events: none; }
+        .bizs-right-glow { position: absolute; inset: 0; background-image: radial-gradient(circle at 70% 20%, rgba(16,185,129,0.14) 0%, transparent 60%); pointer-events: none; }
         .bizs-right-content { position: relative; z-index: 2; }
-        .bizs-right-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6ee7b7; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+        .bizs-right-eyebrow {
+          font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+          text-transform: uppercase; color: #6ee7b7; margin-bottom: 18px;
+          display: flex; align-items: center; gap: 10px;
+        }
         .bizs-right-eyebrow::before { content: ''; width: 24px; height: 1px; background: #6ee7b7; }
-        .bizs-right-title { font-size: 38px; font-weight: 800; line-height: 1.15; color: white; margin-bottom: 20px; letter-spacing: -1px; }
+
+        .bizs-right-title {
+          font-size: 34px; font-weight: 800; line-height: 1.15;
+          color: white; margin-bottom: 10px; letter-spacing: -0.8px;
+        }
         .bizs-right-title span { color: #6ee7b7; }
-        .bizs-right-desc { font-size: 14px; color: rgba(255,255,255,0.55); line-height: 1.8; margin-bottom: 40px; max-width: 300px; }
-        .bizs-perks { display: flex; flex-direction: column; gap: 18px; }
-        .bizs-perk { display: flex; align-items: flex-start; gap: 14px; }
-        .bizs-perk-icon { width: 38px; height: 38px; border-radius: 8px; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .bizs-perk-title { font-size: 13px; font-weight: 700; color: white; margin-bottom: 3px; }
-        .bizs-perk-desc { font-size: 12px; color: rgba(255,255,255,0.45); }
-        .bizs-free-badge { margin-top: 36px; padding: 14px 20px; background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.25); border-radius: 10px; }
-        .bizs-free-badge-title { font-size: 13px; font-weight: 700; color: #6ee7b7; margin-bottom: 4px; }
-        .bizs-free-badge-desc { font-size: 12px; color: rgba(255,255,255,0.45); }
+
+        .bizs-right-desc {
+          font-size: 13.5px; color: rgba(255,255,255,0.45);
+          line-height: 1.7; margin-bottom: 36px; max-width: 310px;
+        }
+
+        /* ── Vertical step list ── */
+        .bizs-steps { display: flex; flex-direction: column; gap: 0; position: relative; }
+
+        .bizs-steps::before {
+          content: '';
+          position: absolute;
+          left: 18px;
+          top: 38px;
+          bottom: 38px;
+          width: 1px;
+          background: linear-gradient(to bottom, rgba(110,231,183,0.4), rgba(110,231,183,0.1));
+        }
+
+        .bizs-step { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; }
+
+        .bizs-step-num-wrap {
+          position: relative; flex-shrink: 0;
+          width: 36px; height: 36px;
+          border-radius: 50%;
+          background: rgba(16,185,129,0.15);
+          border: 1.5px solid rgba(110,231,183,0.35);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 1;
+        }
+        .bizs-step-num { font-size: 11px; font-weight: 800; color: #6ee7b7; letter-spacing: 0.05em; line-height: 1; }
+
+        .bizs-step-body { padding-top: 4px; }
+        .bizs-step-title { font-size: 13.5px; font-weight: 700; color: white; margin-bottom: 4px; line-height: 1.3; }
+        .bizs-step-desc { font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.65; max-width: 260px; }
+
+        /* ── Recruiter note ── */
+        .bizs-recruiter-note {
+          margin-top: 32px;
+          padding: 14px 18px;
+          background: rgba(16,185,129,0.08);
+          border: 1px solid rgba(110,231,183,0.2);
+          border-radius: 10px;
+          display: flex; align-items: flex-start; gap: 10px;
+        }
+        .bizs-recruiter-note-icon { flex-shrink: 0; margin-top: 1px; }
+        .bizs-recruiter-note-text { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+        .bizs-recruiter-note-text strong { color: #6ee7b7; font-weight: 700; }
 
         @media (max-width: 900px) { .bizs-right { display: none; } }
         @media (max-width: 768px) {
@@ -122,7 +188,7 @@ const BusinessSignup = () => {
                 <p className="bizs-sub">List your company and attract green energy professionals.</p>
                 <EmailSignup onOTPSent={handleOTPSent} role="business" />
                 <div className="bizs-divider"><span>or</span></div>
-                <GoogleSignIn role="business"/>
+                <GoogleSignIn role="business" />
               </>
             ) : (
               <>
@@ -140,6 +206,7 @@ const BusinessSignup = () => {
           </div>
         </div>
 
+        {/* ── Right: How it actually works ── */}
         <div className="bizs-right">
           <div className="bizs-right-circles">
             <div className="bizs-right-circle bizs-right-c1" />
@@ -148,17 +215,24 @@ const BusinessSignup = () => {
           </div>
           <div className="bizs-right-glow" />
           <div className="bizs-right-content">
-            <div className="bizs-right-eyebrow">For Business Owners</div>
-            <h2 className="bizs-right-title">Build your <span>green</span> brand</h2>
-            <p className="bizs-right-desc">Join India's fastest growing platform for renewable energy businesses and talent.</p>
-            <div className="bizs-perks">
-              <div className="bizs-perk"><div className="bizs-perk-icon"><Zap size={16} color="#6ee7b7" /></div><div><div className="bizs-perk-title">Go live in minutes</div><div className="bizs-perk-desc">Set up your company profile quickly with our guided flow</div></div></div>
-              <div className="bizs-perk"><div className="bizs-perk-icon"><Users size={16} color="#6ee7b7" /></div><div><div className="bizs-perk-title">Access 18,000+ professionals</div><div className="bizs-perk-desc">Tap into a pre-vetted pool of green energy talent</div></div></div>
-              <div className="bizs-perk"><div className="bizs-perk-icon"><Shield size={16} color="#6ee7b7" /></div><div><div className="bizs-perk-title">Verified business badge</div><div className="bizs-perk-desc">Build credibility with our platform verification</div></div></div>
-            </div>
-            <div className="bizs-free-badge">
-              <div className="bizs-free-badge-title">✦ Free to get started</div>
-              <div className="bizs-free-badge-desc">No credit card required. List your business at no cost.</div>
+
+            <div className="bizs-right-eyebrow">How it works</div>
+            <h2 className="bizs-right-title">
+              From sign-up to<br /><span>live listings</span> in 3 steps
+            </h2>
+
+            <div className="bizs-steps">
+              {steps.map((s, i) => (
+                <div className="bizs-step" key={i}>
+                  <div className="bizs-step-num-wrap">
+                    <span className="bizs-step-num">{s.num}</span>
+                  </div>
+                  <div className="bizs-step-body">
+                    <div className="bizs-step-title">{s.title}</div>
+                    <div className="bizs-step-desc">{s.desc}</div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

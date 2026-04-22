@@ -1,16 +1,12 @@
 const express = require("express");
-const router = express.Router();
+const router  = express.Router();
 
 const protect        = require("../middleware/auth");
 const authorizeRoles = require("../middleware/role");
+const uploadBanner   = require("../middleware/uploadBanner"); // ← must exist at this path
+
 const { sendProfileReminders } = require("../controllers/reminderController");
 
-router.post(
-  "/send-profile-reminders",
-  protect,
-  authorizeRoles("admin"),
-  sendProfileReminders
-);
 const {
   getStats,
   getUsers,
@@ -23,44 +19,68 @@ const {
   getBusinesses,
   rejectBusiness,
   revokeBusiness,
-  getPendingVerificationRecruiters, 
+  getPendingVerificationRecruiters,
   verifyRecruiter,
-  createAdmin            
+  createAdmin,
+  revokeJob,
+  restoreJob,
+  getNavbarBanner,
+  updateNavbarBanner,
+  uploadNavbarBannerImage,
+  toggleBannerStatus,
 } = require("../controllers/admin.controller");
 
-// ── Stats ──────────────────────────────────────────────────
+// ── Profile reminders ──────────────────────────────────────────────────────
+router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendProfileReminders);
+
+// ── Stats ──────────────────────────────────────────────────────────────────
 router.get("/stats", protect, authorizeRoles("admin"), getStats);
 
-// ── Users ──────────────────────────────────────────────────
+// ── Users ──────────────────────────────────────────────────────────────────
 router.get("/users",        protect, authorizeRoles("admin"), getUsers);
 router.get("/users/:id",    protect, authorizeRoles("admin"), getUserById);
 router.delete("/users/:id", protect, authorizeRoles("admin"), deleteUser);
 
-// ── Jobs ───────────────────────────────────────────────────
-router.get("/jobs",              protect, authorizeRoles("admin"), getJobs);
-router.patch("/jobs/:id/status", protect, authorizeRoles("admin"), updateJobStatus);
-router.delete("/jobs/:id",       protect, authorizeRoles("admin"), deleteJob);
+// ── Jobs ───────────────────────────────────────────────────────────────────
+router.get("/jobs",               protect, authorizeRoles("admin"), getJobs);
+router.patch("/jobs/:id/status",  protect, authorizeRoles("admin"), updateJobStatus);
+router.delete("/jobs/:id",        protect, authorizeRoles("admin"), deleteJob);
+router.patch("/jobs/:id/revoke",  protect, authorizeRoles("admin"), revokeJob);
+router.patch("/jobs/:id/restore", protect, authorizeRoles("admin"), restoreJob);
 
-// ── Businesses ─────────────────────────────────────────────
+// ── Businesses ─────────────────────────────────────────────────────────────
 router.get("/businesses",               protect, authorizeRoles("admin"), getBusinesses);
 router.patch("/businesses/:id/approve", protect, authorizeRoles("admin"), approveBusiness);
 router.patch("/businesses/:id/reject",  protect, authorizeRoles("admin"), rejectBusiness);
 router.patch("/businesses/:id/revoke",  protect, authorizeRoles("admin"), revokeBusiness);
 
-// ── Recruiter Verifications ← NEW ──────────────────────────
-// GET  /api/admin/recruiters/pending-verification  → list all pending
-// PATCH /api/admin/recruiters/:id/verify           → approve or reject
-router.get(
-  "/recruiters/pending-verification",
-  protect,
-  authorizeRoles("admin"),
-  getPendingVerificationRecruiters
-);
-router.patch(
-  "/recruiters/:id/verify",
-  protect,
-  authorizeRoles("admin"),
-  verifyRecruiter
-);
+// ── Recruiter Verifications ────────────────────────────────────────────────
+router.get("/recruiters/pending-verification", protect, authorizeRoles("admin"), getPendingVerificationRecruiters);
+router.patch("/recruiters/:id/verify",         protect, authorizeRoles("admin"), verifyRecruiter);
+
+// ── Admin Management ───────────────────────────────────────────────────────
 router.post("/create-admin", protect, authorizeRoles("admin"), createAdmin);
+
+// ── Navbar Banner ──────────────────────────────────────────────────────────
+// NOTE: specific sub-paths (/upload, /toggle) MUST be defined before any
+// parameterised routes to avoid shadowing.
+
+// Public — navbar reads this on every page load, no token required
+router.get("/navbar-banner", getNavbarBanner);
+
+// Upload image to S3, returns { imageUrl } — does NOT save to DB yet
+router.post(
+  "/navbar-banner/upload",
+  protect,
+  authorizeRoles("admin"),
+  uploadBanner.single("bannerImage"),
+  uploadNavbarBannerImage
+);
+
+// Save banner settings (imageUrl, altText, height, borderRadius) to DB
+router.put("/navbar-banner", protect, authorizeRoles("admin"), updateNavbarBanner);
+
+// Toggle isActive on/off
+router.patch("/navbar-banner/toggle", protect, authorizeRoles("admin"), toggleBannerStatus);
+
 module.exports = router;

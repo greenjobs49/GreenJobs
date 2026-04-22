@@ -1,6 +1,8 @@
 const multer = require("multer");
 const multerS3 = require("multer-s3");
 const s3 = require("../config/s3");
+const path = require("path");
+const { v4: uuidv4 } = require("uuid");
 
 const allowedTypes = [
   "application/pdf",
@@ -14,11 +16,12 @@ const upload = multer({
     bucket: process.env.AWS_S3_BUCKET_NAME,
     contentType: multerS3.AUTO_CONTENT_TYPE,
     key: (req, file, cb) => {
-      const fileName = `resumes/${Date.now()}-${file.originalname}`;
-      cb(null, fileName);
+      //Sanitize filename with UUID to prevent traversal/character bugs
+      const ext = path.extname(file.originalname).toLowerCase();
+      const safeName = `resumes/${Date.now()}-${uuidv4()}${ext}`;
+      cb(null, safeName);
     }
   }),
-
   fileFilter: (req, file, cb) => {
     if (allowedTypes.includes(file.mimetype)) {
       cb(null, true);
@@ -26,7 +29,6 @@ const upload = multer({
       cb(new Error("Only PDF/DOC/DOCX allowed"));
     }
   },
-
   limits: { fileSize: 5 * 1024 * 1024 } // 5MB
 });
 

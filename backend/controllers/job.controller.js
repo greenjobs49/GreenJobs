@@ -4,6 +4,23 @@ const email = require("../services/emailService");
 const { notifyMatchingJobseekers } = require("../services/emailService");
 
 /* ===============================
+   HELPER — normalise the `type` field
+   Always stores as a non-empty array of valid values.
+=============================== */
+const VALID_JOB_TYPES = ['Full Time', 'Part Time', 'Contract', 'Internship', 'Remote', 'Freelance'];
+
+const normalizeType = (raw, fallback = ['Full Time']) => {
+  // Accept array or comma-separated string (legacy)
+  const arr = Array.isArray(raw)
+    ? raw
+    : typeof raw === 'string'
+    ? raw.split(',').map(s => s.trim())
+    : [];
+  const filtered = arr.filter(t => VALID_JOB_TYPES.includes(t));
+  return filtered.length > 0 ? filtered : (Array.isArray(fallback) ? fallback : [fallback]);
+};
+
+/* ===============================
    RECRUITER POSTS JOB
    Verified recruiter → job goes live immediately
    Non-verified recruiter with linkedBusiness → pending_business (legacy)
@@ -54,7 +71,7 @@ const createJob = async (req, res) => {
       title:         title.trim(),
       company:       companyName,
       location:      location.trim(),
-      type:          type || "Full Time",
+      type:          normalizeType(type),
       description:   description.trim(),
       skills:        skillsArray,
       isPaid:        isPaid !== false,
@@ -72,7 +89,7 @@ const createJob = async (req, res) => {
     const adminUsers = await User.find({ role: "admin" }).select("email");
     adminUsers.forEach((admin) => {
       email.sendJobPostedDirectlyEmail(
-        admin.email, job.title, recruiter.name, recruiter.email, companyName, job.location, job.type
+        admin.email, job.title, recruiter.name, recruiter.email, companyName, job.location, job.type.join(", ")
       ).catch(console.error);
     });
 
@@ -151,7 +168,7 @@ const createBusinessJob = async (req, res) => {
       title:            title.trim(),
       company:          companyName,
       location:         location.trim(),
-      type:             type || "Full Time",
+      type:             normalizeType(type),
       description:      description.trim(),
       skills:           skillsArray,
       isPaid:           isPaid !== false,
@@ -171,7 +188,7 @@ const createBusinessJob = async (req, res) => {
     const adminUsers = await User.find({ role: "admin" }).select("email");
     adminUsers.forEach((admin) => {
       email.sendJobPostedDirectlyEmail(
-        admin.email, job.title, owner.name, owner.email, companyName, job.location, job.type
+        admin.email, job.title, owner.name, owner.email, companyName, job.location, job.type.join(", ")
       ).catch(console.error);
     });
 
@@ -244,7 +261,7 @@ const updateBusinessJob = async (req, res) => {
       {
         title:         (title       || job.title).trim(),
         location:      (location    || job.location).trim(),
-        type:          type         || job.type,
+        type:          normalizeType(type, job.type),
         description:   (description || job.description).trim(),
         skills:        skillsArray,
         isPaid:        isPaid !== undefined ? isPaid : job.isPaid,
@@ -366,7 +383,7 @@ const updateJob = async (req, res) => {
       {
         title:         (title       || job.title).trim(),
         location:      (location    || job.location).trim(),
-        type:          type         || job.type,
+        type:          normalizeType(type, job.type),
         description:   (description || job.description).trim(),
         skills:        skillsArray,
         isPaid:        isPaid !== undefined ? isPaid : job.isPaid,
@@ -497,8 +514,14 @@ const businessApproveJob = async (req, res) => {
 
     const adminUsers = await User.find({ role: "admin" }).select("email");
     adminUsers.forEach((admin) => {
-      email.sendAdminJobLiveAlert(admin.email, job.title, bizName, job.recruiter.name, job.location, job.type).catch(console.error);
+      email.sendAdminJobLiveAlert(
+        admin.email, job.title, bizName, job.recruiter.name, job.location,
+        Array.isArray(job.type) ? job.type.join(", ") : job.type
+      ).catch(console.error);
     });
+
+    // Automatically trigger skill-matching notifications since the job is now LIVE
+    notifyMatchingJobseekers(job).catch(console.error);
 
     res.json({ success: true, message: "Job approved and LIVE!", job });
   } catch (err) {
@@ -575,7 +598,8 @@ const getPublicJobs = async (req, res) => {
     const skip  = (page - 1) * limit;
 
     const filter = { status: "approved", isOpen: true };
-    if (req.query.type)     filter.type     = req.query.type;
+    // type filter: match if the array contains the requested type
+    if (req.query.type)     filter.type     = { $in: [req.query.type] };
     if (req.query.location) filter.location = new RegExp(req.query.location, "i");
     if (req.query.isPaid !== undefined) filter.isPaid = req.query.isPaid === "true";
     if (req.query.skill)    filter.skills   = { $in: [new RegExp(req.query.skill, "i")] };

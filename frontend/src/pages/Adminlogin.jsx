@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Mail, Loader, ArrowLeft, ShieldCheck, Lock, Terminal } from "lucide-react";
+import { Mail, Loader, ArrowLeft, ShieldCheck, Lock, Terminal,RefreshCw } from "lucide-react";
+import { useOtpCooldown } from "../hooks/useOtpCooldown";
 import toast from "react-hot-toast";
 import { sendOTP, verifyOTP } from "../api/authApi";
 import ReCAPTCHA from "react-google-recaptcha";
@@ -13,9 +14,11 @@ const AdminLogin = () => {
   const [captchaToken, setCaptchaToken] = useState(null);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
+  const { secondsLeft, isCoolingDown, canRequest, recordRequest, startCooldown } = useOtpCooldown(email);
 
   if (isAuthenticated) return <Navigate to="/admin/dashboard" replace />;
 
@@ -39,23 +42,34 @@ const AdminLogin = () => {
   const otpString = otp.join("");
 
 const handleSendOtp = async (e) => {
-  e?.preventDefault();
-  if (!email) { toast.error("Enter admin email"); return; }
-  if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
-  setLoading(true);
-  try {
-    const res = await sendOTP(email, "login", captchaToken || "dev", "admin");
-    if (res.success) { toast.success("OTP dispatched"); setStep("verify"); }
-    else toast.error(res.message || "Failed");
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Failed to send OTP");
-    if (err.response?.data?.correctPortal) {
-      setTimeout(() => navigate(err.response.data.correctPortal), 1500);
-    }
-  } finally {
-    setLoading(false);
-  }
-};
+    e?.preventDefault();
+    if (!email) { toast.error("Enter admin email"); return; }
+    if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Complete the captcha"); return; }
+    if (isCoolingDown) { toast.error(`Please wait ${secondsLeft}s`); return; }
+    if (!canRequest()) { toast.error("Too many requests. Wait 10 minutes."); return; }
+    setLoading(true);
+    try {
+      const res = await sendOTP(email, "login", captchaToken || "dev", "admin");
+      if (res.success) {
+        toast.success("OTP dispatched");
+        recordRequest();
+        startCooldown();
+        setStep("verify");
+      } else {
+        toast.error(res.message || "Failed");
+      }
+    } catch (err) {
+      const status  = err.response?.status;
+      const message = err.response?.data?.message;
+      if (status === 429) {
+        toast.error(message || "Too many requests. Please wait before trying again.");
+        startCooldown();
+      } else {
+        toast.error(message || "Failed to send OTP");
+      }
+      if (err.response?.data?.correctPortal) setTimeout(() => navigate(err.response.data.correctPortal), 1500);
+    } finally { setLoading(false); }
+  };
 
 const handleVerifyOtp = async (e) => {
   e.preventDefault();
@@ -239,9 +253,13 @@ const handleVerifyOtp = async (e) => {
                   {import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
                     <div className="adm-captcha"><ReCAPTCHA sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setCaptchaToken} theme="dark" /></div>
                   )}
-                  <button className="adm-btn" disabled={loading}>
-                    {loading ? <><Loader size={14} className="spinner" /> Sending OTP...</> : <><Lock size={14} /> Send OTP →</>}
-                  </button>
+                  <button className="adm-btn" disabled={loading || isCoolingDown}>
+  {loading
+    ? <><Loader size={14} className="spinner" /> Sending OTP...</>
+    : isCoolingDown
+    ? `Resend available in ${secondsLeft}s`
+    : <><Lock size={14} /> Send OTP →</>}
+</button>
                 </form>
                 <div className="adm-warning">
                   <ShieldCheck size={14} color="#6ee7b7" style={{ marginTop: 1, flexShrink: 0 }} />
@@ -266,7 +284,17 @@ const handleVerifyOtp = async (e) => {
                         disabled={loading} autoFocus={i === 0} />
                     ))}
                   </div>
-                  <p className="adm-otp-hint">Didn't receive it? <button type="button" onClick={handleSendOtp}>Resend OTP</button></p>
+                  <p className="adm-otp-hint">
+  Didn't receive it?{" "}
+  <button type="button" onClick={handleSendOtp}
+    disabled={isCoolingDown || resending}
+    style={{ color: isCoolingDown ? "rgba(255,255,255,0.3)" : "#6ee7b7", cursor: isCoolingDown ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
+    {resending
+      ? <Loader size={11} style={{ animation: "spin 1s linear infinite" }} />
+      : <RefreshCw size={11} />}
+    {isCoolingDown ? `Resend in ${secondsLeft}s` : "Resend OTP"}
+  </button>
+</p>
                   <button className="adm-btn" disabled={loading || otpString.length !== 6}>
                     {loading ? <><Loader size={14} className="spinner" /> Verifying...</> : <><ShieldCheck size={14} /> Grant Access →</>}
                   </button>

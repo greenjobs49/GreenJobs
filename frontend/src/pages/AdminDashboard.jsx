@@ -33,6 +33,7 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
+  const [jobStatusFilter, setJobStatusFilter] = useState("all");
   const [revokingId, setRevokingId] = useState(null);
   const [verifyingId, setVerifyingId] = useState(null);
   const [revokingJobId, setRevokingJobId] = useState(null);
@@ -104,24 +105,29 @@ const AdminDashboard = () => {
   };
 
   // ── Fetch all data ──────────────────────────────────────────────────────────
+// ── Fetch all data ──────────────────────────────────────────────────────────
   const fetchAllData = useCallback(async () => {
     if (!token) return;
     try {
       setLoading(true);
       const headers = { Authorization: `Bearer ${token}` };
 
+      // ✅ FIX 1: Appended ?limit=1000 to users and jobs endpoints to support client-side filtering
+      // ✅ FIX 2: Changed jobs endpoint from /api/jobs/public to /api/admin/jobs
       const [statsRes, usersRes, liveJobsRes, approvedBizRes, pendingBizRes, pendingRecRes] =
         await Promise.all([
           axios.get(`${API_BASE_URL}/api/admin/stats`, { headers }).catch(() => ({ data: {} })),
-          axios.get(`${API_BASE_URL}/api/admin/users`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_BASE_URL}/api/jobs/public`).catch(() => ({ data: { jobs: [] } })),
+          axios.get(`${API_BASE_URL}/api/admin/users?limit=1000`, { headers }).catch(() => ({ data: { users: [] } })),
+          axios.get(`${API_BASE_URL}/api/admin/jobs?limit=1000`, { headers }).catch(() => ({ data: { jobs: [] } })),
           axios.get(`${API_BASE_URL}/api/profile/business/approved`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/api/profile/business/pending`, { headers }).catch(() => ({ data: [] })),
           axios.get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`, { headers }).catch(() => ({ data: [] })),
         ]);
 
-      const usersData       = Array.isArray(usersRes.data)        ? usersRes.data        : [];
-      const jobsData        = liveJobsRes.data?.jobs              || [];
+      // ✅ FIX 3: Safely extract 'users' and 'jobs' arrays from the new paginated backend response objects
+      const usersData       = usersRes.data?.users || (Array.isArray(usersRes.data) ? usersRes.data : []);
+      const jobsData        = liveJobsRes.data?.jobs || (Array.isArray(liveJobsRes.data) ? liveJobsRes.data : []);
+      
       const approvedBizData = Array.isArray(approvedBizRes.data)  ? approvedBizRes.data  : [];
       const pendingBizData  = Array.isArray(pendingBizRes.data)   ? pendingBizRes.data   : [];
       const pendingRecData  = Array.isArray(pendingRecRes.data)   ? pendingRecRes.data   : [];
@@ -275,12 +281,14 @@ const AdminDashboard = () => {
     return matchesRole && matchesSearch;
   });
 
-  const filteredJobs = liveJobs.filter(
-    (j) =>
-      j.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      j.location?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredJobs = liveJobs.filter((j) => {
+  const matchesSearch =
+    j.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    j.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    j.location?.toLowerCase().includes(searchTerm.toLowerCase());
+  const matchesStatus = jobStatusFilter === "all" || j.status === jobStatusFilter;
+  return matchesSearch && matchesStatus;
+});
 
   const filteredBusinesses = [...businesses, ...pendingBusinesses].filter(
     (b) =>
@@ -603,7 +611,7 @@ const AdminDashboard = () => {
               <button
                 key={tab.key}
                 className={`tab-button ${activeTab === tab.key ? "active" : ""}`}
-                onClick={() => { setActiveTab(tab.key); setSearchTerm(""); }}
+                onClick={() => { setActiveTab(tab.key); setSearchTerm(""); setJobStatusFilter("all"); }}
               >
                 {tab.label}
                 {tab.badge && (
@@ -824,76 +832,108 @@ const AdminDashboard = () => {
               ── Users Tab ──
           ══════════════════════════════════════════ */}
           {activeTab === "users" && (
-            <div className="section-card">
-              <div className="section-header">
-                <h2 className="section-title"><Users size={20} /> All Users ({filteredUsers.length})</h2>
-                <div className="search-box">
-                  <Search size={16} className="search-icon" />
-                  <input type="text" placeholder="Search users..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
-                {[
-                  { key: "all",       label: `All (${stats.totalUsers})`,         bg: "#f1f5f9", active: "#0f172a" },
-                  { key: "jobseeker", label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
-                  { key: "recruiter", label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
-                  { key: "business",  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
-                ].map((f) => (
-                  <button key={f.key} onClick={() => setRoleFilter(f.key)} style={{ padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: roleFilter === f.key ? f.bg : "#f8fafc", color: roleFilter === f.key ? f.active : "#64748b", outline: roleFilter === f.key ? `2px solid ${f.active}` : "none", transition: "all 0.15s" }}>
-                    {f.label}
+  <div className="section-card">
+    <div className="section-header">
+      <h2 className="section-title"><Users size={20} /> All Users ({filteredUsers.length})</h2>
+      <div className="search-box">
+        <Search size={16} className="search-icon" />
+        <input type="text" placeholder="Search users..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+      </div>
+    </div>
+
+    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+      {[
+        { key: "all",       label: `All (${stats.totalUsers})`,         bg: "#f1f5f9", active: "#0f172a" },
+        { key: "jobseeker", label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
+        { key: "recruiter", label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
+        { key: "business",  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
+      ].map((f) => (
+        <button key={f.key} onClick={() => setRoleFilter(f.key)} style={{ padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: roleFilter === f.key ? f.bg : "#f8fafc", color: roleFilter === f.key ? f.active : "#64748b", outline: roleFilter === f.key ? `2px solid ${f.active}` : "none", transition: "all 0.15s" }}>
+          {f.label}
+        </button>
+      ))}
+    </div>
+
+    {filteredUsers.length === 0 ? (
+      <div className="empty-state">
+        <div className="empty-icon"><Users size={28} color="#cbd5e1" /></div>
+        <div className="empty-title">No users found</div>
+      </div>
+    ) : (
+      <div style={{ overflowX: "auto" }}>
+        <table className="data-table">
+          <thead>
+            <tr>
+              <th>User</th><th>Role</th><th>Profile</th><th>Verification</th><th>Joined</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredUsers.slice(0, 50).map((u) => (
+              <tr key={u._id}>
+                <td>
+                  <div className="user-info">
+                    <div className="user-avatar">{u.name?.charAt(0).toUpperCase()}</div>
+                    <div>
+                      <div className="user-name">{u.name}</div>
+                      <div className="user-email">{u.email}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>{getRoleBadge(u.role)}</td>
+                <td>
+                  {u.profileCompleted
+                    ? <span style={{ color: "#10b981", display: "flex", alignItems: "center", gap: "4px" }}><CheckCircle size={14} /> Complete</span>
+                    : <span style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px" }}><Clock size={14} /> Incomplete</span>}
+                </td>
+                <td>
+                  {u.role === "recruiter" && (() => {
+                    const vs = u.recruiterProfile?.verificationStatus || "pending";
+                    const map = {
+                      approved: { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7", icon: <ShieldCheck size={13} />, label: "Verified" },
+                      pending:  { bg: "#fef3c7", color: "#92400e", border: "#fde047", icon: <Clock size={13} />,       label: "Pending" },
+                      rejected: { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5", icon: <XCircle size={13} />,     label: "Rejected" },
+                    };
+                    const s = map[vs] || map.pending;
+                    return (
+                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        {s.icon} {s.label}
+                      </span>
+                    );
+                  })()}
+
+                  {u.role === "business" && (() => {
+                    const bs = u.businessProfile?.status || "pending";
+                    const map = {
+                      approved: { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd", icon: <CheckCircle size={13} />, label: "Approved" },
+                      pending:  { bg: "#fef3c7", color: "#92400e", border: "#fde047", icon: <Clock size={13} />,       label: "Pending" },
+                      rejected: { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5", icon: <XCircle size={13} />,     label: "Rejected" },
+                    };
+                    const s = map[bs] || map.pending;
+                    return (
+                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                        {s.icon} {s.label}
+                      </span>
+                    );
+                  })()}
+
+                  {u.role !== "recruiter" && u.role !== "business" && (
+                    <span style={{ color: "#94a3b8", fontSize: "13px" }}>N/A</span>
+                  )}
+                </td>
+                <td style={{ color: "#64748b", fontSize: "13px" }}>{new Date(u.createdAt).toLocaleDateString()}</td>
+                <td>
+                  <button className="btn btn-secondary btn-sm" onClick={() => toast("User details coming soon")}>
+                    <Eye size={14} /> View
                   </button>
-                ))}
-              </div>
-              {filteredUsers.length === 0 ? (
-                <div className="empty-state">
-                  <div className="empty-icon"><Users size={28} color="#cbd5e1" /></div>
-                  <div className="empty-title">No users found</div>
-                </div>
-              ) : (
-                <div style={{ overflowX: "auto" }}>
-                  <table className="data-table">
-                    <thead>
-                      <tr>
-                        <th>User</th><th>Role</th><th>Profile</th><th>Verification</th><th>Joined</th><th>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredUsers.slice(0, 50).map((u) => (
-                        <tr key={u._id}>
-                          <td>
-                            <div className="user-info">
-                              <div className="user-avatar">{u.name?.charAt(0).toUpperCase()}</div>
-                              <div>
-                                <div className="user-name">{u.name}</div>
-                                <div className="user-email">{u.email}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td>{getRoleBadge(u.role)}</td>
-                          <td>
-                            {u.profileCompleted
-                              ? <span style={{ color: "#10b981", display: "flex", alignItems: "center", gap: "4px" }}><CheckCircle size={14} /> Complete</span>
-                              : <span style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px" }}><Clock size={14} /> Incomplete</span>}
-                          </td>
-                          <td>
-                            {u.role === "recruiter"
-                              ? getStatusBadge(u.recruiterProfile?.verificationStatus || "pending")
-                              : <span style={{ color: "#94a3b8", fontSize: "13px" }}>N/A</span>}
-                          </td>
-                          <td style={{ color: "#64748b", fontSize: "13px" }}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                          <td>
-                            <button className="btn btn-secondary btn-sm" onClick={() => toast("User details coming soon")}>
-                              <Eye size={14} /> View
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-          )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )}
+  </div>
+)}
 
           {/* ══════════════════════════════════════════
               ── Jobs Tab ──
@@ -925,10 +965,13 @@ const AdminDashboard = () => {
                 ].map(f => (
                   <button
                     key={f.key}
+                    onClick={() => setJobStatusFilter(f.key)}
                     style={{
                       padding: "5px 14px", borderRadius: 100, border: "none",
                       fontSize: 12, fontWeight: 600, cursor: "pointer",
-                      background: "#f1f5f9", color: "#64748b",
+                      background: jobStatusFilter === f.key ? "#0f172a" : "#f1f5f9",
+                      color: jobStatusFilter === f.key ? "#ffffff" : "#64748b",
+                      transition: "all 0.15s",
                     }}
                   >
                     {f.label}
@@ -1094,9 +1137,7 @@ const AdminDashboard = () => {
               ── Ad Manager Tab ──
           ══════════════════════════════════════════ */}
           {activeTab === "ads" && (
-            <div className="section-card">
               <AdminAdsManager token={token} />
-            </div>
           )}
 
         </div>

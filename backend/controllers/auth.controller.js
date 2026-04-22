@@ -17,7 +17,7 @@ const createToken = (user) => {
 
 exports.sendSignupOtp = async (req, res) => {
   try {
-    const { email } = req.body;
+    const { email, role, firstName, lastName } = req.body;
 
     if (!email)
       return res.status(400).json({ success: false, message: "Email required" });
@@ -39,7 +39,10 @@ exports.sendSignupOtp = async (req, res) => {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
-    await sendOtpEmail(email, otp);
+    const fullName =
+      `${firstName || ""} ${lastName || ""}`.trim() || "User";
+
+    await sendOtpEmail(email, otp, role || "user", fullName);
 
     res.json({ success: true, message: "OTP sent" });
   } catch (err) {
@@ -76,18 +79,18 @@ exports.verifySignupOtp = async (req, res) => {
 
     const userData = {
       email,
-      name:       fullName,
+      name: fullName,
       role,
-      mobile:     mobile || "",
-      password:   "OTP_AUTH",
+      mobile: mobile || "",
+      password: "OTP_AUTH",
       isVerified: true,
-      status:     "active",
+      status: "active",
     };
 
     if (role === "jobseeker") {
       userData.jobSeekerProfile = {
         firstName: firstName.trim(),
-        lastName:  lastName.trim(),
+        lastName: lastName.trim(),
         fullName,
       };
     }
@@ -96,13 +99,13 @@ exports.verifySignupOtp = async (req, res) => {
 
     await otpDoc.deleteOne();
 
-    const token    = createToken(user);
+    const token = createToken(user);
     const fullUser = await User.findById(user._id).select("-password");
 
     return res.json({
       success: true,
       message: "Signup successful",
-      user:    fullUser,
+      user: fullUser,
       token,
     });
 
@@ -129,19 +132,18 @@ exports.sendLoginOtp = async (req, res) => {
     if (!user)
       return res.status(400).json({ success: false, message: "No account found with this email." });
 
-    // ── Role guard at OTP send stage ────────────────────────────────────────
     if (expectedRole && user.role !== expectedRole) {
       const portalMap = {
         jobseeker: "/login",
         recruiter: "/recruiter/login",
-        business:  "/business/login",
-        admin:     "/admin/login",
+        business: "/business/login",
+        admin: "/admin/login",
       };
       const roleLabel = {
         jobseeker: "Job Seeker",
         recruiter: "Recruiter",
-        business:  "Business Owner",
-        admin:     "Administrator",
+        business: "Business Owner",
+        admin: "Administrator",
       };
       return res.status(403).json({
         success: false,
@@ -149,7 +151,6 @@ exports.sendLoginOtp = async (req, res) => {
         correctPortal: portalMap[user.role] || "/login",
       });
     }
-    // ────────────────────────────────────────────────────────────────────────
 
     const otp = generateOtp();
 
@@ -157,11 +158,11 @@ exports.sendLoginOtp = async (req, res) => {
     await Otp.create({
       email,
       otp,
-      purpose:   "login",
+      purpose: "login",
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
-    await sendOtpEmail(email, otp);
+    await sendOtpEmail(user.email, otp, user.role, user.name);
 
     res.json({ success: true, message: "OTP sent" });
   } catch (err) {
@@ -190,14 +191,12 @@ exports.verifyLoginOtp = async (req, res) => {
     if (!user)
       return res.status(400).json({ success: false, message: "User not found" });
 
-    // ── Role guard ──────────────────────────────────────────────────────────
     if (expectedRole && user.role !== expectedRole) {
-      // Do NOT delete the OTP — user may retry on the correct portal
       const portalMap = {
         jobseeker: "/login",
         recruiter: "/recruiter/login",
-        business:  "/business/login",
-        admin:     "/admin/login",
+        business: "/business/login",
+        admin: "/admin/login",
       };
       return res.status(403).json({
         success: false,
@@ -205,7 +204,6 @@ exports.verifyLoginOtp = async (req, res) => {
         correctPortal: portalMap[user.role] || "/login",
       });
     }
-    // ───────────────────────────────────────────────────────────────────────
 
     await otpDoc.deleteOne();
 
@@ -227,11 +225,11 @@ exports.googleAuth = async (req, res) => {
       return res.status(400).json({ success: false, message: "Google token required" });
 
     const ticket = await googleClient.verifyIdToken({
-      idToken:  token,
+      idToken: token,
       audience: process.env.GOOGLE_CLIENT_ID,
     });
 
-    const payload         = ticket.getPayload();
+    const payload = ticket.getPayload();
     const { email, name } = payload;
 
     let user = await User.findOne({ email });
@@ -239,18 +237,18 @@ exports.googleAuth = async (req, res) => {
     if (!user) {
       if (!role)
         return res.json({
-          success:     false,
+          success: false,
           requireRole: true,
-          message:     "Role required for first-time signup",
+          message: "Role required for first-time signup",
         });
 
       user = await User.create({
         email,
         name,
         role,
-        password:   "GOOGLE_AUTH",
+        password: "GOOGLE_AUTH",
         isVerified: true,
-        status:     "active",
+        status: "active",
       });
     }
 
@@ -260,8 +258,8 @@ exports.googleAuth = async (req, res) => {
     res.json({
       success: true,
       message: "Google authentication successful",
-      user:    fullUser,
-      token:   jwtToken,
+      user: fullUser,
+      token: jwtToken,
     });
 
   } catch (err) {

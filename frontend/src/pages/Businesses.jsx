@@ -90,7 +90,7 @@ export default function Businesses() {
           background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
           padding: 64px 24px 88px;
           position: relative;
-          overflow: hidden;
+          overflow: visible;
           width: 100%;
         }
         .biz-hero::before {
@@ -152,7 +152,7 @@ export default function Businesses() {
           max-width: 900px;
           margin: 0 auto;
           position: relative;
-          z-index: 10;
+          z-index: 999;
           width: 100%;
         }
         .biz-search-box {
@@ -196,6 +196,7 @@ export default function Businesses() {
         .biz-dropdown-wrap {
           position: relative;
           flex: 0 0 auto;
+          z-index: 9999;
         }
         .biz-dropdown-btn {
           display: flex; align-items: center; justify-content: space-between; gap: 8px;
@@ -211,7 +212,7 @@ export default function Businesses() {
         .biz-dropdown-btn.open .biz-dd-chevron { transform: rotate(180deg); color: #10b981; }
 
         .biz-dropdown-panel {
-          position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 999;
+          position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 9999;
           background: white; border: 1px solid #e2e8f0; border-radius: 12px;
           box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05);
           overflow: hidden; max-height: 260px; overflow-y: auto;
@@ -601,7 +602,16 @@ export default function Businesses() {
                   >
                     {/* Image */}
                     <div className="biz-card-img-wrap">
-                      {b.businessProfile?.images?.[0] ? (
+                      {b.profilePicture ? (
+                        <>
+                          <img
+                            src={b.profilePicture}
+                            alt={b.businessProfile?.businessName}
+                            className="biz-card-img"
+                          />
+                          <div className="biz-card-img-overlay" />
+                        </>
+                      ) : b.businessProfile?.images?.[0] ? (
                         <>
                           <img
                             src={b.businessProfile.images[0]}

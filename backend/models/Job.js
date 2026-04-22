@@ -34,14 +34,23 @@ const jobSchema = new mongoose.Schema({
     required: [true, "Location is required"]
   },
   salary: String,
+
+  // ── Employment Type (multi-select array) ──────────────────────────────────
   type: {
-    type: String,
+    type: [String],
     enum: ['Full Time', 'Part Time', 'Contract', 'Internship', 'Remote', 'Freelance'],
-    default: 'Full Time'
+    default: ['Full Time'],
+    validate: {
+      validator: function (arr) {
+        return Array.isArray(arr) && arr.length > 0;
+      },
+      message: 'At least one employment type is required',
+    },
   },
+
   skills: [{ type: String, trim: true }],
 
-  // ── Compensation ─────────────────────────────────────────────────────────
+  // ── Compensation ──────────────────────────────────────────────────────────
   isPaid:        { type: Boolean, default: true },
   stipend:       { type: String, trim: true, default: '' },
   stipendPeriod: {
@@ -58,13 +67,11 @@ const jobSchema = new mongoose.Schema({
   rounds: [roundSchema],
 
   // ── Relations ─────────────────────────────────────────────────────────────
-  // For recruiter-posted jobs
   recruiter: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     default: null,
   },
-  // Legacy: recruiter linked to a business
   business: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -73,9 +80,6 @@ const jobSchema = new mongoose.Schema({
   },
 
   // ── Business-owner-posted jobs ────────────────────────────────────────────
-  // When a business owner posts directly, this flag is true and
-  // businessOwner holds their User _id (same as `business` conceptually,
-  // but kept separate so existing recruiter queries are unaffected).
   postedByBusiness: { type: Boolean, default: false },
   businessOwner: {
     type: mongoose.Schema.Types.ObjectId,
@@ -93,6 +97,18 @@ const jobSchema = new mongoose.Schema({
   rejectedAt:     Date,
   rejectedReason: String,
   takenDownAt:    Date,
+
+  // ── Admin Revoke ──────────────────────────────────────────────────────────
+  revokedByAdmin: { type: Boolean, default: false },
+  revokeReason:   { type: String, trim: true, default: '' },
+  revokeType: {
+    type: String,
+    enum: ['fraud', 'non_applicable', 'policy_violation', 'other', ''],
+    default: '',
+  },
+  revokedAt:      { type: Date, default: null },
+  previousStatus: { type: String, default: '' },
+
 }, {
   timestamps: true
 });
@@ -101,7 +117,9 @@ const jobSchema = new mongoose.Schema({
 jobSchema.index({ status: 1, createdAt: -1 });
 jobSchema.index({ status: 1, isOpen: 1, createdAt: -1 });
 jobSchema.index({ skills: 1 });
+jobSchema.index({ type: 1 });
 jobSchema.index({ businessOwner: 1, postedByBusiness: 1 });
 jobSchema.index({ recruiter: 1 });
+jobSchema.index({ revokedByAdmin: 1 });
 
 module.exports = mongoose.model('Job', jobSchema);

@@ -13,7 +13,6 @@ import {
   Trash2,
   ChevronDown,
   ChevronUp,
-  DollarSign,
   Gift,
   Layers,
   Eye,
@@ -29,20 +28,22 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import API_BASE_URL from "../config/api";
+
 const RupeeIcon = ({ size = 16, color = "currentColor" }) => (
   <span style={{ fontSize: size, fontWeight: 700, color, fontFamily: "'Inter', sans-serif", lineHeight: 1 }}>₹</span>
 );
+
 const ROUND_TYPES = [
-  { value: "resume_screening",   label: "Resume Screening",       icon: "📄" },
-  { value: "online_test",        label: "Online Test / Assessment",icon: "💻" },
-  { value: "aptitude_test",      label: "Aptitude Test",           icon: "🧠" },
-  { value: "technical_interview",label: "Technical Interview",     icon: "⚙️" },
-  { value: "hr_interview",       label: "HR Interview",            icon: "🤝" },
-  { value: "group_discussion",   label: "Group Discussion",        icon: "💬" },
-  { value: "assignment",         label: "Assignment / Task",       icon: "📝" },
-  { value: "final_interview",    label: "Final Interview",         icon: "🎯" },
-  { value: "offer",              label: "Offer / Selection",       icon: "🏆" },
-  { value: "other",              label: "Other",                   icon: "➕" },
+  { value: "resume_screening",    label: "Resume Screening" },
+  { value: "online_test",         label: "Online Test / Assessment" },
+  { value: "aptitude_test",       label: "Aptitude Test" },
+  { value: "technical_interview", label: "Technical Interview" },
+  { value: "hr_interview",        label: "HR Interview" },
+  { value: "group_discussion",    label: "Group Discussion" },
+  { value: "assignment",          label: "Assignment / Task" },
+  { value: "final_interview",     label: "Final Interview" },
+  { value: "offer",               label: "Offer / Selection" },
+  { value: "other",               label: "Other" },
 ];
 
 const JOB_CATEGORIES = [
@@ -77,7 +78,6 @@ const PostJob = () => {
   const isBusinessApproved = user?.businessProfile?.status === "approved";
   const businessStatus     = user?.businessProfile?.status;
   const verificationStatus = user?.recruiterProfile?.verificationStatus;
-  // Business owners are "verified" as long as their business is approved
   const isVerified = isBusinessOwner ? isBusinessApproved : verificationStatus === "approved";
 
   /* ── Form state ─────────────────────────────────────────── */
@@ -85,22 +85,21 @@ const PostJob = () => {
     title:         "",
     company:       "",
     location:      "",
-    type:          "Full Time",
+    type:          [],   // ← always an array (multi-select)
     description:   "",
-    skills:        [], // Updated to array
+    skills:        [],
     isPaid:        true,
     stipend:       "",
     stipendPeriod: "monthly",
     rounds:        [defaultRound()],
   });
 
-  const [formErrors,   setFormErrors]   = useState({});
-  const [loading,      setLoading]      = useState(false);
-  const [activeSection,setActiveSection]= useState("basics");
-  const [existingJob,  setExistingJob]  = useState(null);
-  const [takingDown,   setTakingDown]   = useState(false);
-  
-  const [skillInput,   setSkillInput]   = useState(""); // For custom skill input
+  const [formErrors,    setFormErrors]    = useState({});
+  const [loading,       setLoading]       = useState(false);
+  const [activeSection, setActiveSection] = useState("basics");
+  const [existingJob,   setExistingJob]   = useState(null);
+  const [takingDown,    setTakingDown]    = useState(false);
+  const [skillInput,    setSkillInput]    = useState("");
 
   /* ── Pre-fill company name ──────────────────────────────── */
   useEffect(() => {
@@ -117,7 +116,6 @@ const PostJob = () => {
     if (!jobId || !token) return;
 
     if (isBusinessOwner) {
-      // Business owner: fetch own jobs list and pick the matching one
       axios
         .get(`${API_BASE_URL}/api/jobs/business/own`, {
           headers: { Authorization: `Bearer ${token}` },
@@ -143,13 +141,20 @@ const PostJob = () => {
 
   const populateForm = (job) => {
     setExistingJob(job);
+    // Normalise type: always store as array regardless of what the API returns
+    const typeArr = Array.isArray(job.type)
+      ? job.type
+      : job.type
+      ? [job.type]
+      : ["Full Time"];
+
     setForm({
       title:         job.title         || "",
       company:       job.company        || "",
       location:      job.location       || "",
-      type:          job.type           || "Full Time",
+      type:          typeArr,
       description:   job.description    || "",
-      skills:        job.skills         || [], // Array of skills
+      skills:        job.skills         || [],
       isPaid:        job.isPaid !== false,
       stipend:       job.stipend        || "",
       stipendPeriod: job.stipendPeriod  || "monthly",
@@ -159,24 +164,32 @@ const PostJob = () => {
     });
   };
 
+  /* ── Employment type toggle ─────────────────────────────── */
+  const toggleType = (cat) => {
+    setForm(prev => ({
+      ...prev,
+      type: prev.type.includes(cat)
+        ? prev.type.filter(t => t !== cat)
+        : [...prev.type, cat],
+    }));
+  };
+
   /* ── Skill Handlers ─────────────────────────────────────── */
   const handleAddSkill = (skill) => {
     if (skill && !form.skills.includes(skill)) {
-      setForm((p) => ({ ...p, skills: [...p.skills, skill] }));
+      setForm(p => ({ ...p, skills: [...p.skills, skill] }));
       setSkillInput("");
     }
   };
 
   const handleRemoveSkill = (skill) => {
-    setForm((p) => ({ ...p, skills: p.skills.filter((s) => s !== skill) }));
+    setForm(p => ({ ...p, skills: p.skills.filter(s => s !== skill) }));
   };
 
   const handleSkillKeyPress = (e) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (skillInput.trim()) {
-        handleAddSkill(skillInput.trim());
-      }
+      if (skillInput.trim()) handleAddSkill(skillInput.trim());
     }
   };
 
@@ -202,6 +215,8 @@ const PostJob = () => {
     const errors = {};
     if (!form.title.trim() || form.title.trim().length < 3)
       errors.title = "Job title must be at least 3 characters";
+    if (!form.type || form.type.length === 0)
+      errors.type = "Select at least one employment type";
     if (!form.location.trim())
       errors.location = "Location is required";
     if (!form.description.trim() || form.description.trim().length < 50)
@@ -218,7 +233,7 @@ const PostJob = () => {
   const handleSubmit = async () => {
     if (!validate()) {
       toast.error("Please fix the errors before submitting");
-      if (formErrors.title || formErrors.location || formErrors.description)
+      if (formErrors.title || formErrors.location || formErrors.description || formErrors.type)
         setActiveSection("basics");
       else if (formErrors.stipend)
         setActiveSection("compensation");
@@ -245,9 +260,9 @@ const PostJob = () => {
         title:         form.title.trim(),
         company:       form.company.trim(),
         location:      form.location.trim(),
-        type:          form.type,
+        type:          form.type,           // send as array
         description:   form.description.trim(),
-        skills:        form.skills, // Now an array natively
+        skills:        form.skills,
         isPaid:        form.isPaid,
         stipend:       form.isPaid ? form.stipend.trim() : "",
         stipendPeriod: form.isPaid ? form.stipendPeriod  : "",
@@ -260,7 +275,6 @@ const PostJob = () => {
         })),
       };
 
-      // Pick the right endpoint based on role
       const url = jobId
         ? isBusinessOwner
           ? `${API_BASE_URL}/api/jobs/business/${jobId}`
@@ -319,14 +333,15 @@ const PostJob = () => {
   const isFormValid = () =>
     form.title.trim().length >= 3 &&
     form.location.trim().length >= 2 &&
+    form.type.length > 0 &&
     form.description.trim().length >= 50 &&
     (!form.isPaid || form.stipend.trim()) &&
     form.rounds.length > 0;
 
   const sections = [
-    { id: "basics",       label: "Job Details",    icon: Briefcase  },
+    { id: "basics",       label: "Job Details",    icon: Briefcase },
     { id: "compensation", label: "Compensation",   icon: () => <RupeeIcon size={15} /> },
-    { id: "rounds",       label: "Hiring Process", icon: Layers     },
+    { id: "rounds",       label: "Hiring Process", icon: Layers    },
   ];
 
   const sectionOrder = ["basics", "compensation", "rounds"];
@@ -340,11 +355,11 @@ const PostJob = () => {
   };
 
   const progressPct = (
-    (form.title.trim().length >= 3          ? 1 : 0) +
-    (form.location.trim()                   ? 1 : 0) +
-    (form.description.trim().length >= 50   ? 1 : 0) +
-    (!form.isPaid || form.stipend.trim()    ? 1 : 0) +
-    (form.rounds.length > 0                 ? 1 : 0)
+    (form.title.trim().length >= 3         ? 1 : 0) +
+    (form.location.trim()                  ? 1 : 0) +
+    (form.description.trim().length >= 50  ? 1 : 0) +
+    (!form.isPaid || form.stipend.trim()   ? 1 : 0) +
+    (form.rounds.length > 0                ? 1 : 0)
   ) * 20;
 
   const dashboardPath = isBusinessOwner ? "/business-dashboard" : "/dashboard";
@@ -477,8 +492,35 @@ const PostJob = () => {
           box-shadow: 0 0 0 3px rgba(16,185,129,0.10);
         }
         .pj-input.error, .pj-textarea.error { border-color: #fca5a5; background: #fff5f5; }
-        
-        /* Skills Specific Styles */
+
+        /* ── Employment Type multi-select ── */
+        .pj-type-pills-wrap {
+          display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;
+        }
+        .pj-type-pill {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 8px 16px; border-radius: 50px;
+          font-size: 13px; font-weight: 600; cursor: pointer;
+          font-family: 'Inter', sans-serif; transition: all 0.2s;
+          border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b;
+          user-select: none;
+        }
+        .pj-type-pill.active {
+          background: #d1fae5; border-color: #6ee7b7; color: #065f46;
+          box-shadow: 0 2px 8px rgba(16,185,129,0.15);
+        }
+        .pj-type-pill:hover:not(.active) { border-color: #10b981; color: #0f172a; background: #f0fdf4; }
+        .pj-type-pill .pill-check {
+          width: 14px; height: 14px; background: #10b981; border-radius: 50%;
+          display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+        }
+        .pj-type-count {
+          font-size: 12px; color: #64748b; margin-top: 6px; display: flex; align-items: center; gap: 6px;
+        }
+        .pj-type-count strong { color: #059669; }
+        .pj-type-error { font-size: 12px; color: #f59e0b; margin-top: 4px; display: flex; align-items: center; gap: 4px; }
+
+        /* Skills */
         .pj-suggestion-tag {
           padding: 5px 13px; border-radius: 100px; font-size: 12.5px; font-weight: 600;
           cursor: pointer; border: 1.5px dashed #e2e8f0; background: white; color: #64748b;
@@ -508,24 +550,12 @@ const PostJob = () => {
         .pj-error-msg { font-size: 12px; color: #ef4444; display: flex; align-items: center; gap: 4px; margin-top: 2px; }
         .pj-hint      { font-size: 12px; color: #94a3b8; }
 
-        .pj-type-pill {
-          padding: 7px 16px; border-radius: 50px;
-          font-size: 13px; font-weight: 600; cursor: pointer;
-          font-family: 'Inter', sans-serif; transition: all 0.2s;
-          border: 1.5px solid #e2e8f0; background: #f8fafc; color: #64748b;
-        }
-        .pj-type-pill.active {
-          background: #d1fae5; border-color: #6ee7b7; color: #065f46;
-          box-shadow: 0 2px 8px rgba(16,185,129,0.15);
-        }
-        .pj-type-pill:hover:not(.active) { border-color: #10b981; color: #0f172a; }
-
         .pj-comp-chip {
           padding: 9px 18px; border-radius: 50px; font-size: 13px; font-weight: 600;
           cursor: pointer; border: 1.5px solid transparent; transition: all 0.2s;
           font-family: 'Inter', sans-serif; display: inline-flex; align-items: center; gap: 7px;
         }
-        .pj-comp-chip.paid   { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
+        .pj-comp-chip.paid          { background: #f0fdf4; border-color: #bbf7d0; color: #15803d; }
         .pj-comp-chip.paid.active   { background: #d1fae5; border-color: #4ade80; box-shadow: 0 0 0 3px rgba(74,222,128,0.15); }
         .pj-comp-chip.unpaid        { background: #f8fafc; border-color: #e2e8f0; color: #64748b; }
         .pj-comp-chip.unpaid.active { background: #f1f5f9; border-color: #94a3b8; box-shadow: 0 0 0 3px rgba(148,163,184,0.15); }
@@ -616,6 +646,14 @@ const PostJob = () => {
         .pj-summary-label { font-size: 10.5px; color: #94a3b8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
         .pj-summary-value { font-size: 13px; color: #1e293b; font-weight: 500; margin-top: 2px; }
 
+        /* Type tags in sidebar */
+        .pj-type-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .pj-type-tag  {
+          font-size: 11px; font-weight: 600; color: #065f46;
+          background: #d1fae5; border: 1px solid #a7f3d0;
+          padding: 2px 8px; border-radius: 100px;
+        }
+
         .pj-submit-btn {
           width: 100%; padding: 14px 24px;
           background: linear-gradient(135deg, #10b981 0%, #059669 100%);
@@ -691,6 +729,8 @@ const PostJob = () => {
           .pj-layout { padding: 24px 16px 60px; }
           .pj-header-left h1 { font-size: 22px; }
           .pj-card { padding: 20px; }
+          .pj-type-pills-wrap { gap: 6px; }
+          .pj-type-pill { font-size: 12px; padding: 7px 12px; }
         }
       `}</style>
 
@@ -716,7 +756,6 @@ const PostJob = () => {
               </p>
             </div>
 
-            {/* Verification pill */}
             <div className={`pj-verify-pill ${isVerified ? "verified" : "unverified"}`}>
               {isVerified ? (
                 <>
@@ -763,7 +802,7 @@ const PostJob = () => {
             </div>
           )}
 
-          {/* Progress bar (create mode only) */}
+          {/* Progress bar */}
           {!existingJob && (
             <div className="pj-progress-wrap">
               <div className="pj-progress-label">
@@ -803,6 +842,7 @@ const PostJob = () => {
                   <div className="pj-card-title">Core Details</div>
                   <div className="pj-card-subtitle">What's the role and where is it based?</div>
 
+                  {/* Title */}
                   <div className="pj-field">
                     <label className="pj-label">Job Title <span>*</span></label>
                     <input
@@ -817,6 +857,7 @@ const PostJob = () => {
                     )}
                   </div>
 
+                  {/* Company + Location */}
                   <div className="pj-grid-2">
                     <div className="pj-field">
                       <label className="pj-label">Company Name</label>
@@ -848,27 +889,58 @@ const PostJob = () => {
                     </div>
                   </div>
 
+                  {/* ── Employment Type (multi-select pills) ── */}
                   <div className="pj-field">
-                    <label className="pj-label">Employment Type <span>*</span></label>
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                      {JOB_CATEGORIES.map(cat => (
-                        <button
-                          key={cat}
-                          type="button"
-                          className={`pj-type-pill ${form.type === cat ? "active" : ""}`}
-                          onClick={() => setForm(p => ({ ...p, type: cat }))}
-                        >
-                          {cat}
-                        </button>
-                      ))}
+                    <label className="pj-label">
+                      Employment Type <span>*</span>
+                      <span style={{ textTransform: "none", fontWeight: 400, color: "#94a3b8", marginLeft: 6, fontSize: 11 }}>
+                        (select all that apply)
+                      </span>
+                    </label>
+
+                    <div className="pj-type-pills-wrap">
+                      {JOB_CATEGORIES.map(cat => {
+                        const isSelected = form.type.includes(cat);
+                        return (
+                          <button
+                            key={cat}
+                            type="button"
+                            className={`pj-type-pill ${isSelected ? "active" : ""}`}
+                            onClick={() => toggleType(cat)}
+                            disabled={loading || !isVerified}
+                          >
+                            {isSelected && (
+                              <span className="pill-check">
+                                <svg width="8" height="8" viewBox="0 0 8 8" fill="none">
+                                  <path d="M1.5 4L3.5 6L6.5 2" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                              </span>
+                            )}
+                            {cat}
+                          </button>
+                        );
+                      })}
                     </div>
+
+                    {form.type.length === 0 && (
+                      <span className="pj-type-error">
+                        <AlertCircle size={12} />Select at least one employment type
+                      </span>
+                    )}
+                    {form.type.length > 0 && (
+                      <span className="pj-type-count">
+                        <strong>{form.type.length}</strong> selected: {form.type.join(" · ")}
+                      </span>
+                    )}
+                    {formErrors.type && (
+                      <span className="pj-error-msg"><AlertCircle size={12} />{formErrors.type}</span>
+                    )}
                   </div>
 
-                  {/* Skills Section Updated */}
+                  {/* Skills */}
                   <div className="pj-field">
                     <label className="pj-label">Required Skills</label>
-                    
-                    {/* Selected Skills Chips */}
+
                     {form.skills.length > 0 && (
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 }}>
                         {form.skills.map((s, i) => (
@@ -882,11 +954,10 @@ const PostJob = () => {
                       </div>
                     )}
 
-                    {/* Skill Suggestions */}
                     <div style={{ marginBottom: 16 }}>
                       <div style={{ fontSize: 11.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 8 }}>Suggestions</div>
                       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                        {skillSuggestions.filter((s) => !form.skills.includes(s)).slice(0, 12).map((skill, i) => (
+                        {skillSuggestions.filter(s => !form.skills.includes(s)).slice(0, 12).map((skill, i) => (
                           <button key={i} type="button" onClick={() => handleAddSkill(skill)} className="pj-suggestion-tag">
                             {skill}
                           </button>
@@ -894,11 +965,10 @@ const PostJob = () => {
                       </div>
                     </div>
 
-                    {/* Custom Skill Input */}
                     <input
                       type="text"
                       value={skillInput}
-                      onChange={(e) => setSkillInput(e.target.value)}
+                      onChange={e => setSkillInput(e.target.value)}
                       onKeyPress={handleSkillKeyPress}
                       className="pj-input"
                       placeholder="Type a custom skill and press Enter"
@@ -907,6 +977,7 @@ const PostJob = () => {
                     <span className="pj-hint">Press Enter to add custom skills</span>
                   </div>
 
+                  {/* Description */}
                   <div className="pj-field">
                     <label className="pj-label">Job Description <span>*</span></label>
                     <textarea
@@ -1160,11 +1231,11 @@ const PostJob = () => {
                           ? "⏳ Verification Pending"
                           : "🔒 Verification Required"
                     ) : !isFormValid() ? (
-                      "⏳ Complete Required Fields"
+                      "Complete Required Fields"
                     ) : existingJob ? (
-                      "✅ Update Job Listing"
+                      "Update Job Listing"
                     ) : (
-                      "🚀 Post Job Live"
+                      "Post Job Live"
                     )}
                   </button>
                 )}
@@ -1176,35 +1247,71 @@ const PostJob = () => {
               {isVerified ? (
                 <div className="pj-summary-card">
                   <h3><Eye size={14} />Job Preview</h3>
-                  {[
-                    { icon: Briefcase,  label: "Role",     value: form.title    || "—" },
-                    { icon: Clock,      label: "Type",     value: form.type },
-                    { icon: MapPin,     label: "Location", value: form.location || "—" },
-                    {
-                      icon: RupeeIcon,
-                      label: "Pay",
-                      value: form.isPaid
-                        ? form.stipend
-                          ? `${form.stipend} / ${form.stipendPeriod}`
-                          : "Paid (TBD)"
-                        : "Unpaid / Volunteer",
-                    },
-                    {
-                      icon: Users,
-                      label: "Skills",
-                      value: form.skills.length > 0
-                        ? form.skills.length + " skills"
-                        : "None listed",
-                    },
-                  ].map(({ icon: Icon, label, value }) => (
-                    <div key={label} className="pj-summary-item">
-                      <div className="pj-summary-icon"><Icon size={14} color="#10b981" /></div>
-                      <div>
-                        <div className="pj-summary-label">{label}</div>
-                        <div className="pj-summary-value">{value}</div>
+
+                  {/* Role */}
+                  <div className="pj-summary-item">
+                    <div className="pj-summary-icon"><Briefcase size={14} color="#10b981" /></div>
+                    <div>
+                      <div className="pj-summary-label">Role</div>
+                      <div className="pj-summary-value">{form.title || "—"}</div>
+                    </div>
+                  </div>
+
+                  {/* Type — rendered as tags when multiple */}
+                  <div className="pj-summary-item">
+                    <div className="pj-summary-icon"><Clock size={14} color="#10b981" /></div>
+                    <div>
+                      <div className="pj-summary-label">Type</div>
+                      {form.type.length === 0 ? (
+                        <div className="pj-summary-value" style={{ color: "#cbd5e1" }}>—</div>
+                      ) : form.type.length === 1 ? (
+                        <div className="pj-summary-value">{form.type[0]}</div>
+                      ) : (
+                        <div className="pj-type-tags">
+                          {form.type.map(t => (
+                            <span key={t} className="pj-type-tag">{t}</span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Location */}
+                  <div className="pj-summary-item">
+                    <div className="pj-summary-icon"><MapPin size={14} color="#10b981" /></div>
+                    <div>
+                      <div className="pj-summary-label">Location</div>
+                      <div className="pj-summary-value">{form.location || "—"}</div>
+                    </div>
+                  </div>
+
+                  {/* Pay */}
+                  <div className="pj-summary-item">
+                    <div className="pj-summary-icon"><RupeeIcon size={14} color="#10b981" /></div>
+                    <div>
+                      <div className="pj-summary-label">Pay</div>
+                      <div className="pj-summary-value">
+                        {form.isPaid
+                          ? form.stipend
+                            ? `${form.stipend} / ${form.stipendPeriod}`
+                            : "Paid (TBD)"
+                          : "Unpaid / Volunteer"}
                       </div>
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Skills */}
+                  <div className="pj-summary-item">
+                    <div className="pj-summary-icon"><Users size={14} color="#10b981" /></div>
+                    <div>
+                      <div className="pj-summary-label">Skills</div>
+                      <div className="pj-summary-value">
+                        {form.skills.length > 0 ? `${form.skills.length} skills` : "None listed"}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Rounds */}
                   <div className="pj-summary-item">
                     <div className="pj-summary-icon"><Layers size={14} color="#10b981" /></div>
                     <div>

@@ -8,7 +8,7 @@ import Navbar from "../components/common/Navbar";
 import {
   User, FileText, Info, Zap, GraduationCap, Briefcase, Trophy,
   Building2, LayoutTemplate, Palette, Store, ClipboardList, Image,
-  LogOut, CheckCircle, Upload, X, ChevronRight, ArrowRight,
+  LogOut, CheckCircle, Upload, X, ChevronRight, ArrowRight, Camera
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
@@ -145,6 +145,7 @@ const CompleteProfile = () => {
       state:          seedProfile.state          || "",
       description:    seedProfile.description    || "",
       images:         seedProfile.images         || [],
+      profilePicture: user?.profilePicture       || "",
     };
     return base;
   });
@@ -263,6 +264,18 @@ const CompleteProfile = () => {
       setForm((p) => ({ ...p, images: [...(p.images || []), ...res.data.images] }));
       toast.success(`${res.data.images.length} image(s) uploaded!`);
     } catch { toast.error("Images upload failed."); }
+    finally { setUploading(false); }
+  };
+
+  const handleAvatarUpload = async (file) => {
+    if (!file) return;
+    setUploading(true);
+    const data = new FormData(); data.append("avatar", file);
+    try {
+      const res = await axios.post(`${API}/upload-avatar`, data, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } });
+      setForm((p) => ({ ...p, profilePicture: res.data.avatarUrl }));
+      toast.success("Profile picture uploaded!");
+    } catch { toast.error("Avatar upload failed."); }
     finally { setUploading(false); }
   };
 
@@ -507,6 +520,20 @@ const CompleteProfile = () => {
             {form.companyLogo && (
               <img src={form.companyLogo} alt="Logo" style={{ width: 120, height: 120, objectFit: "contain", marginTop: 16, borderRadius: 12, border: "1px solid #e2e8f0", padding: 8, background: "#f8fafc" }} />
             )}
+            
+            <div style={{ marginTop: 24 }}>
+              <Field label="Personal Profile Picture">
+                <input type="file" accept="image/*" onChange={(e) => handleAvatarUpload(e.target.files[0])} className="cp-file-input" id="avatar-upload" disabled={uploading} />
+                <label htmlFor="avatar-upload" className="cp-upload-label">
+                  <Camera size={16} style={{ marginRight: 8 }} />{uploading ? "Uploading…" : "Choose Profile Picture"}
+                </label>
+              </Field>
+              {form.profilePicture && (
+                <div style={{ marginTop: 12, position: 'relative', width: 80, height: 80 }}>
+                  <img src={form.profilePicture} alt="Avatar" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", border: "2px solid #10b981" }} />
+                </div>
+              )}
+            </div>
           </div>
         );
         default: return null;
@@ -580,6 +607,20 @@ const CompleteProfile = () => {
                 </div>
               </div>
             )}
+            
+            <div style={{ marginTop: 24 }}>
+              <Field label="Personal Profile Picture">
+                <input type="file" accept="image/*" onChange={(e) => handleAvatarUpload(e.target.files[0])} className="cp-file-input" id="avatar-upload-biz" disabled={uploading} />
+                <label htmlFor="avatar-upload-biz" className="cp-upload-label">
+                  <Camera size={16} style={{ marginRight: 8 }} />{uploading ? "Uploading…" : "Choose Profile Picture"}
+                </label>
+              </Field>
+              {form.profilePicture && (
+                <div style={{ marginTop: 12, position: 'relative', width: 80, height: 80 }}>
+                  <img src={form.profilePicture} alt="Avatar" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", border: "2px solid #10b981" }} />
+                </div>
+              )}
+            </div>
           </div>
         );
         default: return null;

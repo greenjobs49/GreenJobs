@@ -17,7 +17,7 @@ import API_BASE_URL from "../config/api";
    MAIN DASHBOARD
 ───────────────────────────────────────────────────────── */
 const BusinessOwnerDashboard = () => {
-  const { user, token } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   // ── Recruiter-related state ──────────────────────────────────────────────────
@@ -226,10 +226,12 @@ const BusinessOwnerDashboard = () => {
   // ── Effects ───────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (token && isApproved) {
+      refreshUser();
       fetchPendingJobs();
       fetchPendingRecruiters();
       fetchLinkedRecruiters();
       fetchOwnJobs();
+      
 
       const interval = setInterval(() => {
         fetchPendingJobs();

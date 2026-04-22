@@ -67,8 +67,8 @@ exports.createAd = async (req, res) => {
       bannerType:        bannerType          || "spotlight",
       bannerHeadline:    bannerHeadline?.trim(),
       bannerDescription: bannerDescription?.trim(),
-      order:             order ?? 0,
-      isActive:          isActive !== false,
+      order:    parseInt(order) || 0,
+isActive: isActive === true || isActive === "true" || isActive === "1",
       createdBy:         req.user.id,
     });
 
@@ -122,8 +122,15 @@ exports.updateAd = async (req, res) => {
     }
 
     fields.forEach(f => {
-      if (req.body[f] !== undefined) ad[f] = req.body[f];
-    });
+  if (req.body[f] === undefined) return;
+  if (f === "isActive") {
+    ad.isActive = req.body[f] === true || req.body[f] === "true" || req.body[f] === "1";
+  } else if (f === "order") {
+    ad.order = parseInt(req.body[f]) || 0;
+  } else {
+    ad[f] = req.body[f];
+  }
+});
 
     await ad.save();
     res.json({ success: true, message: "Ad updated", ad });
@@ -139,21 +146,27 @@ exports.updateAd = async (req, res) => {
 ========================================================= */
 exports.deleteAd = async (req, res) => {
   try {
-    const ad = await Ad.findByIdAndDelete(req.params.id);
+    const ad = await Ad.findById(req.params.id);
     if (!ad) return res.status(404).json({ success: false, message: "Ad not found" });
 
-    // Delete image from S3 if it was an uploaded file
-    if (ad.imageUrl?.includes(".amazonaws.com/")) {
-      const oldKey = ad.imageUrl.split(".amazonaws.com/")[1];
-      if (oldKey) {
+    // Only attempt S3 delete if it's actually an S3 URL
+    if (ad.imageUrl && ad.imageUrl.includes(".amazonaws.com/")) {
+      try {
+        const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
         const s3 = require("../config/s3");
-        s3.deleteObject(
-          { Bucket: process.env.AWS_S3_BUCKET_NAME, Key: oldKey },
-          (err) => { if (err) console.warn("S3 delete on ad delete failed:", err); }
-        );
+        const oldKey = ad.imageUrl.split(".amazonaws.com/")[1];
+        if (oldKey && process.env.AWS_S3_BUCKET_NAME) {
+          await s3.send(new DeleteObjectCommand({
+            Bucket: process.env.AWS_S3_BUCKET_NAME,
+            Key: oldKey,
+          }));
+        }
+      } catch (s3Err) {
+        console.warn("S3 delete failed (non-fatal):", s3Err.message);
       }
     }
 
+    await Ad.findByIdAndDelete(req.params.id);
     res.json({ success: true, message: `Ad "${ad.title}" deleted` });
   } catch (err) {
     console.error("DELETE AD ERROR:", err);

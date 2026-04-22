@@ -5,12 +5,14 @@ const role    = require("../middleware/role");
 const uploadResume = require("../middleware/uploadResume");
 const uploadImage  = require("../middleware/uploadImage");
 const uploadLogo   = require("../middleware/uploadLogo");
+const uploadAvatar = require("../middleware/uploadAvatar");
 
 const {
   completeProfile,
   getMyProfile,
   uploadResume: uploadResumeCtrl,
   uploadLogo: uploadLogoCtrl,
+  uploadProfilePicture,
   uploadBusinessImages,
   getPendingBusinesses,
   approveBusiness,
@@ -25,25 +27,26 @@ const {
   getLinkedRecruiters,
   removeRecruiterFromBusiness,
   getLinkedBusinessDetails,
-  requestVerification,          // ← NEW
+  requestVerification,         
 } = require("../controllers/profile.controller");
 
-// ── Core profile ────────────────────────────────────────────
+// Core profile
 router.post("/complete", auth, completeProfile);
 router.get("/me",        auth, getMyProfile);
 
-// ── File uploads ────────────────────────────────────────────
+// File uploads
 router.post("/upload-resume",          auth, role("jobseeker"), uploadResume.single("resume"), uploadResumeCtrl);
 router.post("/upload-logo",            auth, role("recruiter"), uploadLogo.single("logo"),     uploadLogoCtrl);
 router.post("/upload-business-images", auth, role("business"),  uploadImage.array("images", 5), uploadBusinessImages);
+router.post("/upload-avatar",          auth, uploadAvatar.single("avatar"), uploadProfilePicture);
 
-// ── Admin business approval ─────────────────────────────────
+// ── Admin business approval
 router.get("/business/pending",         auth, role("admin"), getPendingBusinesses);
 router.patch("/business/approve/:id",   auth, role("admin"), approveBusiness);
 router.patch("/business/reject/:id",    auth, role("admin"), rejectBusiness);
 router.get("/business/approved",        getApprovedBusinesses);           // public
 
-// ── Recruiter verification  ← NEW ──────────────────────────
+// ── Recruiter verification
 // POST /api/profile/recruiter/request-verification
 router.post(
   "/recruiter/request-verification",
@@ -52,14 +55,14 @@ router.post(
   requestVerification
 );
 
-// ── Recruiter ↔ Business linking (kept for backward compat) ─
+// Recruiter ↔ Business linking (kept for backward compat)
 router.post("/recruiter/request-business",         auth, role("recruiter"), requestBusinessLink);
 router.get("/recruiter/pending-requests",          auth, role("recruiter"), getPendingRecruiters);
 router.post("/recruiter/link-business",            auth, role("recruiter"), linkRecruiterToBusiness);
 router.post("/recruiter/unlink-business",          auth, role("recruiter"), unlinkRecruiterBusiness);
 router.get("/recruiter/linked-business-details",   auth, role("recruiter"), getLinkedBusinessDetails);
 
-// ── Business owner — recruiter management ───────────────────
+// Business owner — recruiter management
 router.get("/business/pending-recruiters",             auth, role("business"), getPendingRecruiters);
 router.get("/business/linked-recruiters",              auth, role("business"), getLinkedRecruiters);
 router.patch("/business/approve-recruiter/:requestId", auth, role("business"), approveRecruiterLink);

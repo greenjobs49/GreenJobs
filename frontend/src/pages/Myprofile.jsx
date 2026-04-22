@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useState } from "react";
 import Navbar from "../components/common/Navbar";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate } from "react-router-dom";
@@ -6,12 +6,18 @@ import {
   User, Mail, Phone, MapPin, Briefcase, GraduationCap,
   Globe, Linkedin, FileText, Building2, Clock, CheckCircle,
   Edit, ExternalLink, Shield, Tag, Image, DollarSign,
-  Award, Star, BarChart2
+   Award, Star, BarChart2, Camera
 } from "lucide-react";
+import apiClient from "../api/apiClient";
 
 export default function MyProfile() {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate = useNavigate();
+  const fileInputLogoRef = useRef(null);
+  const fileInputBizRef = useRef(null);
+  const fileInputAvatarRef = useRef(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBiz, setUploadingBiz] = useState(false);
 
   const role = user?.role;
   const profile =
@@ -133,6 +139,33 @@ export default function MyProfile() {
           letter-spacing: -1px;
           flex-shrink: 0;
           box-shadow: 0 4px 16px rgba(15,23,42,0.22);
+          overflow: hidden;
+          position: relative;
+        }
+
+        .mp-avatar img {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .mp-avatar-edit {
+          position: absolute;
+          bottom: 0;
+          right: 0;
+          left: 0;
+          background: rgba(0,0,0,0.6);
+          color: white;
+          font-size: 10px;
+          padding: 2px 0;
+          text-align: center;
+          opacity: 0;
+          transition: opacity 0.2s;
+          cursor: pointer;
+          font-weight: 700;
+        }
+        .mp-avatar:hover .mp-avatar-edit {
+          opacity: 1;
         }
 
         .mp-hero-info {
@@ -250,6 +283,13 @@ export default function MyProfile() {
           box-shadow: 0 4px 14px rgba(16,185,129,0.35);
           transform: translateY(-1px);
         }
+
+        .mp-upload-btn {
+          display: inline-flex; align-items: center; gap: 8px;
+          padding: 9px 14px; background: #111827; color: white; border: none; border-radius: 10px;
+          font-weight: 700; cursor: pointer; transition: all 0.18s; font-family: inherit;
+        }
+        .mp-upload-btn:hover { background: #10b981; box-shadow: 0 4px 14px rgba(16,185,129,0.28); transform: translateY(-1px); }
 
         /* ── Section cards — same as job cards ── */
         .mp-section {
@@ -494,8 +534,40 @@ export default function MyProfile() {
           {/* ── Hero ── */}
           <div className="mp-hero">
             <div className="mp-avatar">
-              {user?.name?.charAt(0)?.toUpperCase() || "U"}
+              {user?.profilePicture ? (
+                <img src={user.profilePicture} alt={user.name} />
+              ) : (
+                user?.name?.charAt(0)?.toUpperCase() || "U"
+              )}
+              {(role === "business" || role === "recruiter") && (
+                <div className="mp-avatar-edit" onClick={() => fileInputAvatarRef.current.click()}>
+                  EDIT
+                </div>
+              )}
             </div>
+            {(role === "business" || role === "recruiter") && (
+              <input
+                ref={fileInputAvatarRef}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const formData = new FormData();
+                  formData.append("avatar", file);
+                  try {
+                    await apiClient.post("/profile/upload-avatar", formData, {
+                      headers: { "Content-Type": "multipart/form-data" },
+                    });
+                    await refreshUser();
+                  } catch (err) {
+                    console.error("Avatar upload failed", err);
+                    alert(err.response?.data?.message || "Upload failed");
+                  }
+                }}
+              />
+            )}
 
             <div className="mp-hero-info">
               <div className="mp-name">{user?.name || "User"}</div>
@@ -664,13 +736,40 @@ export default function MyProfile() {
                 </div>
               </Section>
 
-              {profile.companyLogo && (
-                <Section title="Company Logo" icon={Image} accent="#10b981">
-                  <div style={{ padding: "18px 22px" }}>
+              <Section title="Company Logo" icon={Image} accent="#10b981">
+                <div style={{ padding: "18px 22px", display: 'flex', alignItems: 'center', gap: 12 }}>
+                  {profile.companyLogo ? (
                     <img src={profile.companyLogo} alt="Company logo" className="mp-company-logo" />
+                  ) : (
+                    <div style={{ width: 84, height: 84, borderRadius: 12, background: '#f3f4f6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>No logo</div>
+                  )}
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input ref={fileInputLogoRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={async (e) => {
+                      const f = e.target.files?.[0];
+                      if (!f) return;
+                      const form = new FormData();
+                      form.append('logo', f);
+                      try {
+                        setUploadingLogo(true);
+                        await apiClient.post('/profile/upload-logo', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+                        await refreshUser();
+                      } catch (err) {
+                        console.error('Logo upload failed', err);
+                        alert(err.response?.data?.message || 'Logo upload failed');
+                      } finally { setUploadingLogo(false); fileInputLogoRef.current.value = null; }
+                    }} />
+                    <button className="mp-upload-btn" onClick={() => fileInputLogoRef.current.click()} disabled={uploadingLogo}>
+                      {uploadingLogo ? 'Uploading…' : (profile.companyLogo ? 'Change Logo' : 'Upload Logo')}
+                    </button>
+                    {profile.companyLogo && (
+                      <button className="mp-upload-btn" onClick={async () => {
+                        // allow replacing by opening file dialog
+                        fileInputLogoRef.current.click();
+                      }}>Edit</button>
+                    )}
                   </div>
-                </Section>
-              )}
+                </div>
+              </Section>
             </>
           )}
 
@@ -709,16 +808,40 @@ export default function MyProfile() {
                 </div>
               </Section>
 
-              {profile.images?.length > 0 && (
-                <Section title="Business Images" icon={Image} accent="#10b981">
-                  <div className="mp-images-grid">
-                    {profile.images.map((img, i) => (
-                      <img key={i} src={img} alt={`Business ${i + 1}`} className="mp-biz-img"
-                        onClick={() => window.open(img, "_blank")} />
-                    ))}
+              <Section title="Business Images" icon={Image} accent="#10b981">
+                <div style={{ padding: '12px 18px' }}>
+                  <input ref={fileInputBizRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={async (e) => {
+                    const files = Array.from(e.target.files || []);
+                    if (files.length === 0) return;
+                    const form = new FormData();
+                    files.forEach((f) => form.append('images', f));
+                    try {
+                      setUploadingBiz(true);
+                      await apiClient.post('/profile/upload-business-images', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+                      await refreshUser();
+                    } catch (err) {
+                      console.error('Business images upload failed', err);
+                      alert(err.response?.data?.message || 'Upload failed');
+                    } finally { setUploadingBiz(false); fileInputBizRef.current.value = null; }
+                  }} />
+
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 12 }}>
+                    <button className="mp-upload-btn" onClick={() => fileInputBizRef.current.click()} disabled={uploadingBiz}>
+                      {uploadingBiz ? 'Uploading…' : 'Upload Images'}
+                    </button>
                   </div>
-                </Section>
-              )}
+
+                  {profile.images?.length > 0 ? (
+                    <div className="mp-images-grid">
+                      {profile.images.map((img, i) => (
+                        <img key={i} src={img} alt={`Business ${i + 1}`} className="mp-biz-img" onClick={() => window.open(img, "_blank")} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ color: '#64748b' }}>No images uploaded yet.</div>
+                  )}
+                </div>
+              </Section>
             </>
           )}
 

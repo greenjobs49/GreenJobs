@@ -37,32 +37,20 @@ const normalizeDbAd = (ad) => ({
 export default function GreenJobsHomepage() {
   const navigate = useNavigate();
 
-  // ── Search state ────────────────────────────────────────────────────────────
   const [searchKeyword, setSearchKeyword] = useState("");
   const [searchLocation, setSearchLocation] = useState("");
-
-  // ── Hero phrase animation ───────────────────────────────────────────────────
   const [phraseIndex, setPhraseIndex] = useState(0);
   const [phraseState, setPhraseState] = useState("visible");
-
-  // ── Jobs ────────────────────────────────────────────────────────────────────
   const [featuredJobs, setFeaturedJobs] = useState([]);
   const [jobsLoading, setJobsLoading]   = useState(true);
   const [jobsError, setJobsError]       = useState(null);
-
-  // ── Spotlight ads carousel ──────────────────────────────────────────────────
   const [activeAd, setActiveAd] = useState(0);
-
-  // ── Full banner ads ─────────────────────────────────────────────────────────
   const [activeFB, setActiveFB]           = useState(0);
   const [spotlightAds, setSpotlightAds]   = useState([]);
   const [fullBannerAds, setFullBannerAds] = useState([]);
   const [adsLoading, setAdsLoading]       = useState(true);
-
-  // ── Hero stats ──────────────────────────────────────────────────────────────
   const [heroStats, setHeroStats] = useState({ liveJobs: null, companies: null });
 
-  // ── Hero phrase cycling ─────────────────────────────────────────────────────
   useEffect(() => {
     const interval = setInterval(() => {
       setPhraseState("exit");
@@ -75,7 +63,6 @@ export default function GreenJobsHomepage() {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Hero stats fetch ────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -100,12 +87,11 @@ export default function GreenJobsHomepage() {
     fetchStats();
   }, []);
 
-  // ── Featured jobs fetch ─────────────────────────────────────────────────────
   useEffect(() => {
     const fetchJobs = async () => {
       try {
         setJobsLoading(true);
-        const response = await axios.get(`${API_BASE_URL}/api/jobs/public?page=1&limit=8`, { timeout: 10000 });
+        const response = await axios.get(`${API_BASE_URL}/api/jobs/public?page=1&limit=6`, { timeout: 10000 });
         let jobs = response.data.jobs && Array.isArray(response.data.jobs)
           ? response.data.jobs
           : Array.isArray(response.data) ? response.data : [];
@@ -113,14 +99,13 @@ export default function GreenJobsHomepage() {
       } catch {
         try {
           const fallback = await axios.get(`${API_BASE_URL}/api/jobs`, { timeout: 5000 });
-          setFeaturedJobs((fallback.data.jobs || fallback.data || []).filter(j => j.status === "approved").slice(0, 8));
+          setFeaturedJobs((fallback.data.jobs || fallback.data || []).filter(j => j.status === "approved").slice(0, 6));
         } catch { setJobsError("Could not load jobs."); }
       } finally { setJobsLoading(false); }
     };
     fetchJobs();
   }, []);
 
-  // ── Ads fetch ───────────────────────────────────────────────────────────────
   useEffect(() => {
     const fetchAds = async () => {
       try {
@@ -138,31 +123,24 @@ export default function GreenJobsHomepage() {
     fetchAds();
   }, []);
 
-  // ── Spotlight ads: normalize ────────────────────────────────────────────────
   const featuredAds = spotlightAds.map(normalizeDbAd);
 
-  // ── Reset activeAd if out of bounds after ads load ─────────────────────────
   useEffect(() => {
-    if (featuredAds.length > 0 && activeAd >= featuredAds.length) {
-      setActiveAd(0);
-    }
+    if (featuredAds.length > 0 && activeAd >= featuredAds.length) setActiveAd(0);
   }, [featuredAds.length]);
 
-  // ── Spotlight ads auto-cycle ────────────────────────────────────────────────
   useEffect(() => {
     if (featuredAds.length <= 1) return;
     const timer = setInterval(() => setActiveAd(p => (p + 1) % featuredAds.length), 4000);
     return () => clearInterval(timer);
   }, [featuredAds.length]);
 
-  // ── Full banner auto-cycle ──────────────────────────────────────────────────
   useEffect(() => {
     if (fullBannerAds.length <= 1) return;
     const t = setInterval(() => setActiveFB(p => (p + 1) % fullBannerAds.length), 6000);
     return () => clearInterval(t);
   }, [fullBannerAds.length]);
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
   const handleSearch = () => navigate(`/jobs?search=${searchKeyword}&location=${searchLocation}`);
 
   const handleAdNav = (url) => {
@@ -198,7 +176,6 @@ export default function GreenJobsHomepage() {
       ? (p - 1 + featuredAds.length) % featuredAds.length
       : (p + 1) % featuredAds.length);
 
-  // ── Static data ─────────────────────────────────────────────────────────────
   const jobCategories = [
     { name: "Freshers",        count: 1240, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
     { name: "IT",              count: 3890, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
@@ -218,30 +195,28 @@ export default function GreenJobsHomepage() {
     { name: "SuryaLogix", logo: "/companies/suryalogix.jpeg" },
     { name: "Nova SYS",   logo: "/companies/novasys.jpeg" },
   ];
-      const userReviews = [
+
+  const userReviews = [
     {
       name: "Aarav Mehta",
       role: "Solar Design Engineer",
       rating: 5,
-      comment:
-        "GreenJobs made my job search simple and fast. I found relevant renewable energy roles within days.",
+      comment: "GreenJobs made my job search simple and fast. I found relevant renewable energy roles within days.",
     },
     {
       name: "Priya Sharma",
       role: "Sustainability Analyst",
       rating: 4,
-      comment:
-        "The platform is clean and easy to use. I really liked the company listings and featured opportunities.",
+      comment: "The platform is clean and easy to use. I really liked the company listings and featured opportunities.",
     },
     {
       name: "Rohan Verma",
       role: "Operations Associate",
       rating: 5,
-      comment:
-        "A very useful portal for green energy careers. The jobs felt more targeted compared to other websites.",
+      comment: "A very useful portal for green energy careers. The jobs felt more targeted compared to other websites.",
     },
   ];
-  // ── Render ──────────────────────────────────────────────────────────────────
+
   return (
     <>
       <style>{`
@@ -329,7 +304,7 @@ export default function GreenJobsHomepage() {
         .company-card:hover { border-color: #10b981; box-shadow: 0 4px 12px rgba(16,185,129,0.1); transform: translateY(-2px); }
         .company-logo { max-width: 100%; max-height: 70px; width: auto; height: auto; object-fit: contain; }
 
-                        /* ══ REVIEWS ══ */
+        /* ══ REVIEWS ══ */
         .reviews-section { background: #ffffff; padding: 60px 40px; }
         .reviews-title { text-align: center; font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 10px; }
         .reviews-subtitle { text-align: center; font-size: 15px; color: #64748b; margin-bottom: 40px; }
@@ -343,11 +318,6 @@ export default function GreenJobsHomepage() {
         .review-rating { display: flex; gap: 3px; flex-shrink: 0; }
         .review-star { color: #f59e0b; font-size: 16px; line-height: 1; }
         .review-comment { font-size: 14px; color: #475569; line-height: 1.7; }
-
-        @media (max-width: 767px) {
-          .reviews-section { padding-left: 16px; padding-right: 16px; padding-top: 40px; padding-bottom: 40px; }
-          .reviews-title { font-size: 26px; }
-        }
 
         /* ══ FULL BANNER ADS ══ */
         .fb-section { position: relative; overflow: hidden; background: #0f172a; }
@@ -393,151 +363,25 @@ export default function GreenJobsHomepage() {
         .ads-arrow:hover { border-color: #10b981; background: #f0fdf4; color: #10b981; }
         .ads-spotlight { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
         .ads-spotlight-single { display: block; }
-
-        /* ── Main ad card (FIX: position relative, proper z-index, overflow hidden) ── */
-        .ad-main-card {
-          border-radius: 20px;
-          overflow: hidden;
-          position: relative;
-          min-height: 380px;
-          cursor: pointer;
-          transition: transform 0.3s, box-shadow 0.3s;
-          animation: slideIn 0.4s ease;
-          background: #0f172a;
-        }
+        .ad-main-card { border-radius: 20px; overflow: hidden; position: relative; min-height: 380px; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; animation: slideIn 0.4s ease; background: #0f172a; }
         .ad-main-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.14); }
-
-        /* ── Main card image: must fill entire card ── */
-        .ad-main-img {
-          position: absolute;
-          inset: 0;
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          object-position: center;
-          display: block;
-          z-index: 0;
-          transition: transform 0.5s ease;
-        }
+        .ad-main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; transition: transform 0.5s ease; }
         .ad-main-card:hover .ad-main-img { transform: scale(1.04); }
-
-        /* ── Overlay: strong gradient so text is always readable ── */
-        .ad-main-overlay {
-          position: absolute;
-          inset: 0;
-          z-index: 1;
-          background: linear-gradient(
-            to top,
-            rgba(0, 0, 0, 0.90) 0%,
-            rgba(0, 0, 0, 0.55) 45%,
-            rgba(0, 0, 0, 0.15) 100%
-          );
-        }
-
-        /* ── Content always on top ── */
-        .ad-main-content {
-          position: absolute;
-          bottom: 0;
-          left: 0;
-          right: 0;
-          padding: 28px 28px 32px;
-          z-index: 2;
-        }
-
-        /* ── Tag pill ── */
-        .ad-main-tag {
-          display: inline-flex;
-          align-items: center;
-          gap: 6px;
-          padding: 4px 12px;
-          border-radius: 50px;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          margin-bottom: 10px;
-          color: white;
-          backdrop-filter: blur(8px);
-          /* background & border set inline via accent color */
-        }
-
+        .ad-main-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.15) 100%); }
+        .ad-main-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 28px 32px; z-index: 2; }
+        .ad-main-tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; color: white; backdrop-filter: blur(8px); }
         .ad-main-title { font-size: 26px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.2; letter-spacing: -0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
         .ad-main-subtitle { font-size: 14px; color: rgba(255,255,255,0.82); margin-bottom: 20px; line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-
-        /* ── CTA button: FIXED — always has background from accent, never invisible ── */
-        .ad-main-cta {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          padding: 11px 22px;
-          border-radius: 10px;
-          font-size: 13px;
-          font-weight: 700;
-          border: none;
-          cursor: pointer;
-          transition: all 0.2s;
-          font-family: 'Inter', sans-serif;
-          color: white;
-          /* background is set inline */
-          box-shadow: 0 4px 14px rgba(0,0,0,0.3);
-          letter-spacing: 0.2px;
-        }
+        .ad-main-cta { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: 10px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; color: white; box-shadow: 0 4px 14px rgba(0,0,0,0.3); letter-spacing: 0.2px; }
         .ad-main-cta:hover { transform: translateX(3px); filter: brightness(1.12); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
-
-        /* ── Side cards ── */
         .ads-side-stack { display: flex; flex-direction: column; gap: 14px; }
-        .ad-side-card {
-          border-radius: 14px;
-          border: 1.5px solid #e2e8f0;
-          background: white;
-          display: flex;
-          align-items: stretch;
-          overflow: hidden;
-          cursor: pointer;
-          transition: all 0.22s;
-          flex: 1;
-          min-height: 110px;
-        }
-        .ad-side-card:hover {
-          border-color: transparent;
-          box-shadow: 0 8px 28px rgba(0,0,0,0.11);
-          transform: translateX(4px);
-        }
-        .ad-side-card.highlighted {
-          border-color: #10b981;
-          box-shadow: 0 0 0 3px rgba(16,185,129,0.12), 0 4px 16px rgba(16,185,129,0.12);
-        }
-
-        /* ── Side card image: fixed size square ── */
-        .ad-side-thumb {
-          width: 110px;
-          min-width: 110px;
-          flex-shrink: 0;
-          object-fit: cover;
-          object-position: center;
-          display: block;
-          align-self: stretch;
-        }
-        .ad-side-thumb-placeholder {
-          width: 110px;
-          min-width: 110px;
-          flex-shrink: 0;
-          display: block;
-          align-self: stretch;
-        }
-
+        .ad-side-card { border-radius: 14px; border: 1.5px solid #e2e8f0; background: white; display: flex; align-items: stretch; overflow: hidden; cursor: pointer; transition: all 0.22s; flex: 1; min-height: 110px; }
+        .ad-side-card:hover { border-color: transparent; box-shadow: 0 8px 28px rgba(0,0,0,0.11); transform: translateX(4px); }
+        .ad-side-card.highlighted { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12), 0 4px 16px rgba(16,185,129,0.12); }
+        .ad-side-thumb { width: 110px; min-width: 110px; flex-shrink: 0; object-fit: cover; object-position: center; display: block; align-self: stretch; }
+        .ad-side-thumb-placeholder { width: 110px; min-width: 110px; flex-shrink: 0; display: block; align-self: stretch; }
         .ad-side-body { padding: 16px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px; flex: 1; min-width: 0; }
-
-        /* ── Side tag: FIXED — color always applied ── */
-        .ad-side-tag {
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.8px;
-          text-transform: uppercase;
-          line-height: 1;
-          /* color set inline via accent */
-        }
-
+        .ad-side-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1; }
         .ad-side-title { font-size: 15px; font-weight: 700; color: #0f172a; line-height: 1.35; }
         .ad-side-subtitle { font-size: 12px; color: #64748b; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
         .ad-side-arrow { display: flex; align-items: center; justify-content: center; padding: 0 14px; color: #cbd5e1; transition: color 0.2s; flex-shrink: 0; }
@@ -549,8 +393,28 @@ export default function GreenJobsHomepage() {
         .jobs-title { font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 8px; }
         .jobs-subtitle { font-size: 16px; color: #64748b; }
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
-        .job-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 24px; transition: all 0.2s; cursor: pointer; animation: fadeUp 0.3s ease; display: flex; flex-direction: column; }
-        .job-card:hover { border-color: #10b981; box-shadow: 0 4px 20px rgba(16,185,129,0.1); transform: translateY(-2px); }
+
+        /* ── Job card: flex column so button always sticks to bottom ── */
+        .job-card {
+          background: white;
+          border: 1px solid #e2e8f0;
+          border-radius: 16px;
+          padding: 24px;
+          transition: all 0.22s;
+          cursor: pointer;
+          animation: fadeUp 0.3s ease;
+          /* KEY: flex column + equal height via grid stretch */
+          display: flex;
+          flex-direction: column;
+          /* Minimum height so short cards don't look squished */
+          min-height: 340px;
+        }
+        .job-card:hover {
+          border-color: #10b981;
+          box-shadow: 0 8px 28px rgba(16,185,129,0.13);
+          transform: translateY(-3px);
+        }
+
         .job-tags { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
         .job-tag { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .tag-type { background: #dbeafe; color: #1e40af; }
@@ -558,20 +422,63 @@ export default function GreenJobsHomepage() {
         .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
         .tag-pay { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
         .tag-unpaid { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
-        .job-title-text { font-size: 18px; font-weight: 700; color: #0f172a; margin-bottom: 12px; line-height: 1.4; transition: color 0.2s; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        .job-title-text {
+          font-size: 17px;
+          font-weight: 700;
+          color: #0f172a;
+          margin-bottom: 12px;
+          line-height: 1.4;
+          transition: color 0.2s;
+          /* clamp to 2 lines for consistent height */
+          display: -webkit-box;
+          -webkit-line-clamp: 2;
+          -webkit-box-orient: vertical;
+          overflow: hidden;
+          min-height: 2.8em;
+        }
         .job-card:hover .job-title-text { color: #10b981; }
+
         .job-company-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
         .company-logo-box { width: 36px; height: 36px; background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .company-name { font-size: 14px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .job-meta { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; font-size: 14px; color: #64748b; }
+        .job-meta { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; font-size: 13.5px; color: #64748b; }
         .job-meta-item { display: flex; align-items: center; gap: 8px; }
-        .job-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+
+        /* Skills area: fixed min-height so absent skills don't cause jump */
+        .job-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; min-height: 28px; }
         .job-skill-pill { padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 500; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; }
-        .job-salary { font-size: 16px; font-weight: 700; color: #10b981; margin-top: 4px; }
-        .job-salary-unpaid { font-size: 16px; font-weight: 600; color: #64748b; margin-top: 4px; }
-        .job-posted { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top: 10px; }
-        .job-view-btn { margin-top: 16px; width: 100%; padding: 11px; background: #0f172a; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s; font-family: 'Inter', sans-serif; }
-        .job-view-btn:hover { background: #10b981; }
+
+        .job-salary { font-size: 17px; font-weight: 800; color: #10b981; margin-top: 4px; letter-spacing: -0.3px; }
+        .job-salary-unpaid { font-size: 15px; font-weight: 600; color: #94a3b8; margin-top: 4px; }
+        .job-posted { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top: 8px; }
+
+        /* ── Spacer pushes button to the very bottom of the card ── */
+        .job-card-spacer { flex: 1; }
+
+        /* ── View Details button: always at the bottom, full width, polished ── */
+        .job-view-btn {
+          margin-top: 18px;
+          width: 100%;
+          padding: 12px;
+          background: #0f172a;
+          color: white;
+          border: none;
+          border-radius: 10px;
+          font-size: 14px;
+          font-weight: 700;
+          cursor: pointer;
+          transition: background 0.2s, transform 0.15s;
+          font-family: 'Inter', sans-serif;
+          letter-spacing: 0.2px;
+          /* Never allow this to shrink */
+          flex-shrink: 0;
+        }
+        .job-view-btn:hover {
+          background: #10b981;
+          transform: translateY(-1px);
+        }
+
         .jobs-state { max-width: 1200px; margin: 0 auto; text-align: center; padding: 60px 24px; }
         .state-icon { width: 64px; height: 64px; margin: 0 auto 20px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .state-title { font-size: 18px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
@@ -655,6 +562,8 @@ export default function GreenJobsHomepage() {
           .fb-btns { flex-direction: column; width: 100%; }
           .fb-btn-main, .fb-btn-ghost { width: 100%; justify-content: center; }
           .ad-side-thumb, .ad-side-thumb-placeholder { width: 90px; min-width: 90px; }
+          .reviews-section { padding-left: 16px; padding-right: 16px; padding-top: 40px; padding-bottom: 40px; }
+          .reviews-title { font-size: 26px; }
         }
         @media (max-width: 480px) {
           .fb-right { display: none; }
@@ -778,6 +687,7 @@ export default function GreenJobsHomepage() {
             <h2 className="jobs-title">Jobs Listed Right Now</h2>
             <p className="jobs-subtitle">Explore the latest live opportunities in renewable energy</p>
           </div>
+
           {jobsLoading ? (
             <div className="jobs-state">
               <div className="state-icon"><Loader2 size={32} color="#10b981" className="spinner" /></div>
@@ -806,35 +716,59 @@ export default function GreenJobsHomepage() {
                     || job.business?.businessProfile?.companyName
                     || "Direct Hire";
                   const skills = (job.skills || []).slice(0, 4);
+
                   return (
                     <div key={job._id} className="job-card" onClick={() => navigate(`/jobs/${job._id}`)}>
+
+                      {/* Tags row */}
                       <div className="job-tags">
                         {job.type && <span className="job-tag tag-type">{job.type}</span>}
                         <span className="job-tag tag-live"><span className="live-dot" />Live</span>
                         <span className={`job-tag ${job.isPaid ? "tag-pay" : "tag-unpaid"}`}>{job.isPaid ? "Paid" : "Unpaid"}</span>
                       </div>
+
+                      {/* Title — always 2 lines tall */}
                       <h3 className="job-title-text">{job.title}</h3>
+
+                      {/* Company */}
                       <div className="job-company-row">
                         <div className="company-logo-box"><Building2 size={18} color="white" /></div>
                         <span className="company-name">{companyName}</span>
                       </div>
+
+                      {/* Meta */}
                       <div className="job-meta">
-                        {job.location  && <div className="job-meta-item"><MapPinIcon size={14} />{job.location}</div>}
+                        {job.location   && <div className="job-meta-item"><MapPinIcon size={14} />{job.location}</div>}
                         {job.experience && <div className="job-meta-item"><Briefcase size={14} />{job.experience}</div>}
                       </div>
-                      {skills.length > 0 && (
-                        <div className="job-skills">
-                          {skills.map(s => <span key={s} className="job-skill-pill">{s}</span>)}
-                          {(job.skills || []).length > 4 && (
-                            <span className="job-skill-pill" style={{ color: "#94a3b8", background: "transparent", border: "none" }}>
-                              +{job.skills.length - 4} more
-                            </span>
-                          )}
-                        </div>
-                      )}
+
+                      {/* Skills */}
+                      <div className="job-skills">
+                        {skills.map(s => <span key={s} className="job-skill-pill">{s}</span>)}
+                        {(job.skills || []).length > 4 && (
+                          <span className="job-skill-pill" style={{ color: "#94a3b8", background: "transparent", border: "none" }}>
+                            +{job.skills.length - 4} more
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Salary */}
                       <div className={job.isPaid ? "job-salary" : "job-salary-unpaid"}>{salaryLabel}</div>
+
+                      {/* Posted date */}
                       {posted && <div className="job-posted"><Clock size={12} />{posted}</div>}
-                      <button className="job-view-btn" onClick={e => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}>View Details</button>
+
+                      {/* ── Spacer: pushes button to the bottom regardless of content height ── */}
+                      <div className="job-card-spacer" />
+
+                      {/* View Details — always pinned to bottom */}
+                      <button
+                        className="job-view-btn"
+                        onClick={e => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}
+                      >
+                        View Details →
+                      </button>
+
                     </div>
                   );
                 })}
@@ -850,18 +784,13 @@ export default function GreenJobsHomepage() {
             {(() => {
               const ad = fullBannerAds.map(normalizeDbAd)[activeFB];
               return (
-                <div
-                  key={activeFB}
-                  className="fb-banner fb-anim"
-                  onClick={() => handleAdNav(ad.ctaUrl)}
-                >
+                <div key={activeFB} className="fb-banner fb-anim" onClick={() => handleAdNav(ad.ctaUrl)}>
                   {ad.image && (
                     <img src={ad.image} alt={ad.title} className="fb-bg-img"
                       onError={e => { e.target.style.background = "#1e293b"; }} />
                   )}
                   <div className="fb-gradient" />
                   <div className="fb-accent-layer" style={{ background: `linear-gradient(105deg, ${ad.accent}44 0%, transparent 55%)` }} />
-
                   <div className="fb-inner">
                     <div className="fb-copy">
                       {ad.tag && (
@@ -878,22 +807,16 @@ export default function GreenJobsHomepage() {
                           style={{ background: ad.accent, boxShadow: `0 4px 24px ${ad.accent}55` }}
                           onClick={e => { e.stopPropagation(); handleAdNav(ad.ctaUrl); }}
                         >
-                          {ad.cta}
-                          <ChevronRight size={17} />
+                          {ad.cta}<ChevronRight size={17} />
                         </button>
                       </div>
                     </div>
-
                   </div>
-
                   {fullBannerAds.length > 1 && (
                     <div className="fb-nav-row">
                       {fullBannerAds.map((_, i) => (
-                        <div
-                          key={i}
-                          className={`fb-dot${i === activeFB ? " active" : ""}`}
-                          onClick={e => { e.stopPropagation(); setActiveFB(i); }}
-                        />
+                        <div key={i} className={`fb-dot${i === activeFB ? " active" : ""}`}
+                          onClick={e => { e.stopPropagation(); setActiveFB(i); }} />
                       ))}
                     </div>
                   )}
@@ -916,11 +839,7 @@ export default function GreenJobsHomepage() {
                   <div className="ads-nav">
                     <div className="ads-dots">
                       {featuredAds.map((_, i) => (
-                        <div
-                          key={i}
-                          className={`ads-dot${i === activeAd ? " active" : ""}`}
-                          onClick={() => setActiveAd(i)}
-                        />
+                        <div key={i} className={`ads-dot${i === activeAd ? " active" : ""}`} onClick={() => setActiveAd(i)} />
                       ))}
                     </div>
                     <button className="ads-arrow" onClick={() => scrollAds("left")}><ChevronLeft size={18} /></button>
@@ -930,139 +849,65 @@ export default function GreenJobsHomepage() {
               </div>
 
               {featuredAds.length === 1 ? (
-                <div
-                  className="ad-main-card ads-spotlight-single"
-                  onClick={() => handleAdNav(featuredAds[0]?.ctaUrl)}
-                >
+                <div className="ad-main-card ads-spotlight-single" onClick={() => handleAdNav(featuredAds[0]?.ctaUrl)}>
                   {featuredAds[0].image ? (
-                    <img
-                      src={featuredAds[0].image}
-                      alt={featuredAds[0].title}
-                      className="ad-main-img"
-                      onError={e => { e.target.style.display = "none"; }}
-                    />
+                    <img src={featuredAds[0].image} alt={featuredAds[0].title} className="ad-main-img" onError={e => { e.target.style.display = "none"; }} />
                   ) : (
                     <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[0].accent}99, #0f172a)`, zIndex: 0 }} />
                   )}
                   <div className="ad-main-overlay" />
                   <div className="ad-main-content">
                     {featuredAds[0].tag && (
-                      <div
-                        className="ad-main-tag"
-                        style={{
-                          background: featuredAds[0].accent + "40",
-                          border: `1px solid ${featuredAds[0].accent}60`,
-                        }}
-                      >
-                        {featuredAds[0].tag}
-                      </div>
+                      <div className="ad-main-tag" style={{ background: featuredAds[0].accent + "40", border: `1px solid ${featuredAds[0].accent}60` }}>{featuredAds[0].tag}</div>
                     )}
                     <div className="ad-main-title">{featuredAds[0].title}</div>
-                    {featuredAds[0].subtitle && (
-                      <div className="ad-main-subtitle">{featuredAds[0].subtitle}</div>
-                    )}
-                    <button
-                      className="ad-main-cta"
-                      style={{ background: featuredAds[0].accent }}
-                      onClick={e => { e.stopPropagation(); handleAdNav(featuredAds[0]?.ctaUrl); }}
-                    >
+                    {featuredAds[0].subtitle && <div className="ad-main-subtitle">{featuredAds[0].subtitle}</div>}
+                    <button className="ad-main-cta" style={{ background: featuredAds[0].accent }}
+                      onClick={e => { e.stopPropagation(); handleAdNav(featuredAds[0]?.ctaUrl); }}>
                       {featuredAds[0].cta} <ChevronRight size={16} />
                     </button>
                   </div>
                 </div>
               ) : (
                 <div className="ads-spotlight">
-                  {/* Main featured card */}
-                  <div
-                    className="ad-main-card"
-                    onClick={() => handleAdNav(featuredAds[activeAd]?.ctaUrl)}
-                    key={activeAd}
-                  >
+                  <div className="ad-main-card" onClick={() => handleAdNav(featuredAds[activeAd]?.ctaUrl)} key={activeAd}>
                     {featuredAds[activeAd].image ? (
-                      <img
-                        src={featuredAds[activeAd].image}
-                        alt={featuredAds[activeAd].title}
-                        className="ad-main-img"
-                        onError={e => { e.target.style.display = "none"; }}
-                      />
+                      <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" onError={e => { e.target.style.display = "none"; }} />
                     ) : (
                       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[activeAd].accent}99, #0f172a)`, zIndex: 0 }} />
                     )}
                     <div className="ad-main-overlay" />
                     <div className="ad-main-content">
                       {featuredAds[activeAd].tag && (
-                        <div
-                          className="ad-main-tag"
-                          style={{
-                            background: featuredAds[activeAd].accent + "40",
-                            border: `1px solid ${featuredAds[activeAd].accent}60`,
-                          }}
-                        >
-                          {featuredAds[activeAd].tag}
-                        </div>
+                        <div className="ad-main-tag" style={{ background: featuredAds[activeAd].accent + "40", border: `1px solid ${featuredAds[activeAd].accent}60` }}>{featuredAds[activeAd].tag}</div>
                       )}
                       <div className="ad-main-title">{featuredAds[activeAd].title}</div>
-                      {featuredAds[activeAd].subtitle && (
-                        <div className="ad-main-subtitle">{featuredAds[activeAd].subtitle}</div>
-                      )}
-                      <button
-                        className="ad-main-cta"
-                        style={{ background: featuredAds[activeAd].accent }}
-                        onClick={e => { e.stopPropagation(); handleAdNav(featuredAds[activeAd]?.ctaUrl); }}
-                      >
+                      {featuredAds[activeAd].subtitle && <div className="ad-main-subtitle">{featuredAds[activeAd].subtitle}</div>}
+                      <button className="ad-main-cta" style={{ background: featuredAds[activeAd].accent }}
+                        onClick={e => { e.stopPropagation(); handleAdNav(featuredAds[activeAd]?.ctaUrl); }}>
                         {featuredAds[activeAd].cta} <ChevronRight size={16} />
                       </button>
                     </div>
                   </div>
 
-                  {/* Side stack */}
                   <div className="ads-side-stack">
-                    {featuredAds
-                      .map((ad, i) => ({ ad, i }))
-                      .filter(({ i }) => i !== activeAd)
-                      .map(({ ad, i }) => (
-                        <div
-                          key={i}
-                          className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
-                          onClick={() => { setActiveAd(i); handleAdNav(ad.ctaUrl); }}
-                        >
-                          {ad.image ? (
-                            <img
-                              src={ad.image}
-                              alt={ad.title}
-                              className="ad-side-thumb"
-                              onError={e => {
-                                e.target.style.display = "none";
-                                // show placeholder sibling
-                                const placeholder = e.target.nextElementSibling;
-                                if (placeholder) placeholder.style.display = "block";
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className="ad-side-thumb-placeholder"
-                            style={{
-                              display: ad.image ? "none" : "block",
-                              background: `linear-gradient(135deg, ${ad.accent}55, ${ad.accent}22)`,
-                            }}
-                          />
-                          <div className="ad-side-body">
-                            {ad.tag && (
-                              <div
-                                className="ad-side-tag"
-                                style={{ color: ad.accent }}
-                              >
-                                {ad.tag}
-                              </div>
-                            )}
-                            <div className="ad-side-title">{ad.title}</div>
-                            {ad.subtitle && (
-                              <div className="ad-side-subtitle">{ad.subtitle}</div>
-                            )}
-                          </div>
-                          <div className="ad-side-arrow"><ChevronRight size={18} /></div>
+                    {featuredAds.map((ad, i) => ({ ad, i })).filter(({ i }) => i !== activeAd).map(({ ad, i }) => (
+                      <div key={i} className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
+                        onClick={() => { setActiveAd(i); handleAdNav(ad.ctaUrl); }}>
+                        {ad.image ? (
+                          <img src={ad.image} alt={ad.title} className="ad-side-thumb"
+                            onError={e => { e.target.style.display = "none"; const p = e.target.nextElementSibling; if (p) p.style.display = "block"; }} />
+                        ) : null}
+                        <div className="ad-side-thumb-placeholder"
+                          style={{ display: ad.image ? "none" : "block", background: `linear-gradient(135deg, ${ad.accent}55, ${ad.accent}22)` }} />
+                        <div className="ad-side-body">
+                          {ad.tag && <div className="ad-side-tag" style={{ color: ad.accent }}>{ad.tag}</div>}
+                          <div className="ad-side-title">{ad.title}</div>
+                          {ad.subtitle && <div className="ad-side-subtitle">{ad.subtitle}</div>}
                         </div>
-                      ))}
+                        <div className="ad-side-arrow"><ChevronRight size={18} /></div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
@@ -1076,20 +921,14 @@ export default function GreenJobsHomepage() {
           <div className="companies-grid">
             {topCompanies.map((company, i) => (
               <div key={i} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
-                <img
-                  src={company.logo}
-                  alt={company.name}
-                  className="company-logo"
-                  onError={e => {
-                    e.target.style.display = "none";
-                    e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`;
-                  }}
-                />
+                <img src={company.logo} alt={company.name} className="company-logo"
+                  onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`; }} />
               </div>
             ))}
           </div>
         </section>
-                        {/* ══ REVIEWS ══ */}
+
+        {/* ══ REVIEWS ══ */}
         <section className="reviews-section">
           <h2 className="reviews-title">What Users Say</h2>
           <p className="reviews-subtitle">Reviews from job seekers using GreenJobs</p>
@@ -1103,9 +942,7 @@ export default function GreenJobsHomepage() {
                   </div>
                   <div className="review-rating">
                     {Array.from({ length: 5 }).map((_, index) => (
-                      <span key={index} className="review-star">
-                        {index < review.rating ? "★" : "☆"}
-                      </span>
+                      <span key={index} className="review-star">{index < review.rating ? "★" : "☆"}</span>
                     ))}
                   </div>
                 </div>

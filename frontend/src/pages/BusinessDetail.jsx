@@ -473,7 +473,9 @@ export default function BusinessDetail() {
               <div className="bd-hero-inner">
                 {/* Logo */}
                 <div className="bd-logo-wrap">
-                  {profile.images?.[0] ? (
+                  {business.profilePicture ? (
+                    <img src={business.profilePicture} alt={profile.businessName} />
+                  ) : profile.images?.[0] ? (
                     <img src={profile.images[0]} alt={profile.businessName} />
                   ) : (
                     <Building2 size={38} className="bd-logo-fallback" />

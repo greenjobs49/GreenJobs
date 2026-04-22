@@ -1,23 +1,24 @@
 import React, { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { Mail, Loader, ArrowLeft, BarChart2, Users, Zap, Target } from "lucide-react";
+import { Mail, Loader, ArrowLeft, BarChart2, Users, Zap, Target,RefreshCw } from "lucide-react";
 import toast from "react-hot-toast";
 import { sendOTP, verifyOTP } from "../api/authApi";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
 import ReCAPTCHA from "react-google-recaptcha";
 import Navbar from "../components/common/Navbar";
-
+import { useOtpCooldown } from "../hooks/useOtpCooldown";
 const RecruiterLogin = () => {
   const [step, setStep] = useState("email");
   const [email, setEmail] = useState("");
   const [captchaToken, setCaptchaToken] = useState(null);
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
 
   const { isAuthenticated, login } = useAuth();
   const navigate = useNavigate();
-
+  const { secondsLeft, isCoolingDown, canRequest, recordRequest, startCooldown } = useOtpCooldown(email);
   if (isAuthenticated) return <Navigate to="/recruiter/dashboard" replace />;
 
   const handleOtpChange = (val, idx) => {
@@ -43,13 +44,28 @@ const RecruiterLogin = () => {
     e?.preventDefault();
     if (!email) { toast.error("Please enter your email"); return; }
     if (!captchaToken && import.meta.env.VITE_RECAPTCHA_SITE_KEY) { toast.error("Please complete the captcha"); return; }
+    if (isCoolingDown) { toast.error(`Please wait ${secondsLeft}s`); return; }
+    if (!canRequest()) { toast.error("Too many requests. Wait 10 minutes."); return; }
     setLoading(true);
     try {
       const res = await sendOTP(email, "login", captchaToken || "dev", "recruiter");
-      if (res.success) { toast.success("OTP sent!"); setStep("verify"); }
-      else toast.error(res.message || "Failed to send OTP");
+      if (res.success) {
+        toast.success("OTP sent!");
+        recordRequest();
+        startCooldown();
+        setStep("verify");
+      } else {
+        toast.error(res.message || "Failed to send OTP");
+      }
     } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to send OTP");
+      const status  = err.response?.status;
+      const message = err.response?.data?.message;
+      if (status === 429) {
+        toast.error(message || "Too many requests. Please wait before trying again.");
+        startCooldown();
+      } else {
+        toast.error(message || "Failed to send OTP");
+      }
       if (err.response?.data?.correctPortal) setTimeout(() => navigate(err.response.data.correctPortal), 1500);
     } finally { setLoading(false); }
   };
@@ -223,9 +239,13 @@ const RecruiterLogin = () => {
                   {import.meta.env.VITE_RECAPTCHA_SITE_KEY && (
                     <div className="rec-captcha"><ReCAPTCHA sitekey={import.meta.env.VITE_RECAPTCHA_SITE_KEY} onChange={setCaptchaToken} /></div>
                   )}
-                  <button className="rec-btn" disabled={loading}>
-                    {loading ? <><Loader size={15} className="spinner" /> Sending OTP...</> : "Send OTP →"}
-                  </button>
+                  <button className="rec-btn" disabled={loading || isCoolingDown}>
+  {loading
+    ? <><Loader size={15} className="spinner" /> Sending OTP...</>
+    : isCoolingDown
+    ? `Resend available in ${secondsLeft}s`
+    : "Send OTP →"}
+</button>
                   <div className="rec-divider"><span>or</span></div>
                   <GoogleSignIn />
                 </form>
@@ -248,7 +268,17 @@ const RecruiterLogin = () => {
                         disabled={loading} autoFocus={i === 0} />
                     ))}
                   </div>
-                  <p className="rec-otp-hint">Didn't receive it? <button type="button" onClick={handleSendOtp}>Resend OTP</button></p>
+                  <p className="rec-otp-hint">
+  Didn't receive it?{" "}
+  <button type="button" onClick={handleSendOtp}
+    disabled={isCoolingDown || resending}
+    style={{ color: isCoolingDown ? "#9ca3af" : "#16a34a", cursor: isCoolingDown ? "default" : "pointer", display: "inline-flex", alignItems: "center", gap: 3 }}>
+    {resending
+      ? <Loader size={11} style={{ animation: "spin 1s linear infinite" }} />
+      : <RefreshCw size={11} />}
+    {isCoolingDown ? `Resend in ${secondsLeft}s` : "Resend OTP"}
+  </button>
+</p>
                   <button className="rec-btn" disabled={loading || otpString.length !== 6}>
                     {loading ? <><Loader size={15} className="spinner" /> Verifying...</> : "Verify & Enter →"}
                   </button>

@@ -1,7 +1,38 @@
 const transporter = require("../config/email");
+const sanitizeHtml = require("sanitize-html"); // ✅ Added sanitization library
+const User = require("../models/User"); // ✅ Moved from inside function
+const Application = require("../models/Application"); // ✅ Moved from inside function
+const Job = require("../models/Job"); // ✅ Moved from inside function
+const JobNotificationLog = require("../models/JobNotificationLog");
 
 const APP_NAME = "Green Jobs";
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
+
+// ✅ Added XSS Sanitizer for email templates
+const safe = (str) => sanitizeHtml(str ?? "", { allowedTags: [], allowedAttributes: {} });
+
+// ✅ Added Retry Logic for robust email delivery
+async function sendWithRetry(mailOptions, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try { 
+      return await transporter.sendMail(mailOptions); 
+    } catch (e) { 
+      if (i === retries - 1) throw e; 
+      await new Promise(res => setTimeout(res, 1000 * (i + 1))); 
+    }
+  }
+}
+
+const verifySmtpConnection = async () => {
+  try {
+    await transporter.verify();
+    console.log("✅ SMTP Connection verified successfully. Ready to send emails.");
+  } catch (error) {
+    // ✅ Fix: Removed process.exit(1). Set warning instead.
+    console.error("⚠️ WARNING: SMTP Connection failed. Emails will not send until resolved.");
+    console.error(error.message);
+  }
+};
 
 // ─── Base Template ─────────────────────────────────────────────────────────
 const baseTemplate = (content) => `
@@ -18,7 +49,6 @@ const baseTemplate = (content) => `
       <td align="center">
         <table width="600" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.07);">
           
-          <!-- Header -->
           <tr>
             <td style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);padding:36px 40px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${APP_NAME}</h1>
@@ -26,14 +56,12 @@ const baseTemplate = (content) => `
             </td>
           </tr>
 
-          <!-- Body -->
           <tr>
             <td style="padding:40px;">
               ${content}
             </td>
           </tr>
 
-          <!-- Footer -->
           <tr>
             <td style="background:#f8fafc;padding:24px 40px;border-top:1px solid #e2e8f0;text-align:center;">
               <p style="margin:0;color:#94a3b8;font-size:12px;">© ${new Date().getFullYear()} ${APP_NAME}. All rights reserved.</p>
@@ -111,8 +139,8 @@ const signOff = () => `
 
 const sendBusinessPendingEmail = async (email, name, businessName) => {
   const html = baseTemplate(`
-    ${greeting(name)}
-    ${paragraph(`Thank you for registering <strong>${businessName}</strong> on ${APP_NAME}. Your application has been received and is now under review by our admin team.`)}
+    ${greeting(safe(name))}
+    ${paragraph(`Thank you for registering <strong>${safe(businessName)}</strong> on ${APP_NAME}. Your application has been received and is now under review by our admin team.`)}
     <div style="margin:20px 0;">${statusBadge("Application Under Review", "pending")}</div>
     ${infoBox([
       { label: "Business Name", value: businessName },
@@ -134,9 +162,9 @@ const sendBusinessPendingEmail = async (email, name, businessName) => {
 
 const sendBusinessApprovedEmail = async (email, name, businessName) => {
   const html = baseTemplate(`
-    ${greeting(name)}
+    ${greeting(safe(name))}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">🎉 Congratulations! Your business is now live.</p>
-    ${paragraph(`We're thrilled to inform you that <strong>${businessName}</strong> has been approved and is now publicly listed on ${APP_NAME}.`)}
+    ${paragraph(`We're thrilled to inform you that <strong>${safe(businessName)}</strong> has been approved and is now publicly listed on ${APP_NAME}.`)}
     <div style="margin:20px 0;">${statusBadge("Approved & Live", "success")}</div>
     ${infoBox([
       { label: "Business Name", value: businessName },
@@ -162,9 +190,9 @@ const sendBusinessApprovedEmail = async (email, name, businessName) => {
 
 const sendBusinessReApprovedEmail = async (email, name, businessName, jobsRestored = 0) => {
   const html = baseTemplate(`
-    ${greeting(name)}
+    ${greeting(safe(name))}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">🎉 Welcome back! Your business is live again.</p>
-    ${paragraph(`Great news — <strong>${businessName}</strong> has been reviewed by our admin team and is now re-approved.`)}
+    ${paragraph(`Great news — <strong>${safe(businessName)}</strong> has been reviewed by our admin team and is now re-approved.`)}
     <div style="margin:20px 0;">${statusBadge("Re-Approved & Live", "success")}</div>
     ${infoBox([
       { label: "Business Name", value: businessName },
@@ -188,10 +216,10 @@ const sendBusinessReApprovedEmail = async (email, name, businessName, jobsRestor
 
 const sendBusinessRejectedEmail = async (email, name, businessName, reason) => {
   const html = baseTemplate(`
-    ${greeting(name)}
-    ${paragraph(`We regret to inform you that your application for <strong>${businessName}</strong> has not been approved at this time.`)}
+    ${greeting(safe(name))}
+    ${paragraph(`We regret to inform you that your application for <strong>${safe(businessName)}</strong> has not been approved at this time.`)}
     <div style="margin:20px 0;">${statusBadge("Application Not Approved", "danger")}</div>
-    ${reason ? infoBox([{ label: "Reason", value: reason }]) : ""}
+    ${reason ? infoBox([{ label: "Reason", value: safe(reason) }]) : ""}
     ${paragraph("Don't be discouraged — you're welcome to review the requirements and re-apply with updated information.")}
     ${ctaButton("Update & Re-apply", `${FRONTEND_URL}/complete-profile`, "#dc2626")}
     ${signOff()}
@@ -260,8 +288,8 @@ const sendRecruiterVerificationRequestedEmail = async (email, name, companyName)
     ${paragraph(`Your verification request for <strong>${companyName || "your recruiter profile"}</strong> has been successfully submitted to our admin team.`)}
     <div style="margin:20px 0;">${statusBadge("Verification Pending", "pending")}</div>
     ${infoBox([
-      { label: "Company",            value: companyName || "—" },
-      { label: "Status",             value: "Under Admin Review" },
+      { label: "Company",             value: companyName || "—" },
+      { label: "Status",              value: "Under Admin Review" },
       { label: "Estimated Response", value: "Within 24 hours" },
     ])}
     ${paragraph("Once approved, you'll be able to post job listings immediately — no per-job approvals required.")}
@@ -1151,8 +1179,8 @@ const sendJobMatchNotificationEmail = async (
             .join("")}
           ${matchedSkills.length > 8
             ? `<span style="display:inline-block;padding:4px 12px;
-                            background:#f1f5f9;border:1px solid #e2e8f0;
-                            border-radius:20px;font-size:12px;color:#64748b;">
+                             background:#f1f5f9;border:1px solid #e2e8f0;
+                             border-radius:20px;font-size:12px;color:#64748b;">
                  +${matchedSkills.length - 8} more
                </span>`
             : ""}
@@ -1173,7 +1201,6 @@ const sendJobMatchNotificationEmail = async (
        Don't miss your chance — early applicants stand out!`
     )}
 
-    <!-- Job card -->
     <table width="100%" cellpadding="0" cellspacing="0"
       style="background:linear-gradient(135deg,#052e16,#14532d);
              border-radius:12px;overflow:hidden;margin:20px 0;">
@@ -1210,7 +1237,6 @@ const sendJobMatchNotificationEmail = async (
       </tr>
     </table>
 
-    <!-- matched skills / type-match message -->
     <table width="100%" cellpadding="0" cellspacing="0"
       style="background:#f0fdf4;border:1.5px solid #bbf7d0;
              border-radius:10px;margin:0 0 24px;">
@@ -1260,9 +1286,46 @@ const MIN_PROFILE_PROGRESS = 40;
 const BATCH_SIZE            = 20;
 const BATCH_DELAY_MS        = 300;
 
-const normalise = (arr = []) =>
-  arr.map((s) => (s || "").toLowerCase().trim()).filter(Boolean);
+const splitSkills = (value = "") =>
+  String(value)
+    .split(/[,\n/|]+/g)
+    .map((part) => part.trim())
+    .filter(Boolean);
 
+const canonicalSkill = (value = "") =>
+  String(value)
+    .toLowerCase()
+    .trim()
+    .replace(/\bc\+\+\b/g, "cpp")
+    .replace(/\bc#\b/g, "csharp")
+    .replace(/\.js\b/g, " js")
+    .replace(/[^a-z0-9+\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+const normalise = (arr = []) =>
+arr
+    .flatMap((item) => splitSkills(item))
+    .map((s) => canonicalSkill(s))
+    .filter(Boolean);
+
+const wordsOverlap = (a = "", b = "") => {
+  const aNorm = canonicalSkill(a);
+  const bNorm = canonicalSkill(b);
+  if (!aNorm || !bNorm) return false;
+  if (aNorm === bNorm) return true;
+
+  const aTokens = new Set(aNorm.split(" ").filter(Boolean));
+  const bTokens = new Set(bNorm.split(" ").filter(Boolean));
+
+  for (const token of aTokens) {
+    if (token.length >= 2 && bTokens.has(token)) return true;
+  }
+
+  // Fallback for multi-word vs short-form skills (e.g., "react js" vs "react")
+  if (aNorm.length >= 3 && bNorm.includes(aNorm)) return true;
+  if (bNorm.length >= 3 && aNorm.includes(bNorm)) return true;
+  return false;
+};
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function sendInBatches(tasks) {
@@ -1282,106 +1345,106 @@ async function sendInBatches(tasks) {
  */
 const notifyMatchingJobseekers = async (job) => {
   try {
-    // Lazy-require models here to avoid circular-dependency issues
-    // (emailService is required by controllers, which are required by routes,
-    //  so we must not require User/Application at module load time if those
-    //  models also pull in emailService.)
-    const User        = require("../models/User");
+    const User = require("../models/User");
     const Application = require("../models/Application");
-    const Job         = require("../models/Job");
+    const Job = require("../models/Job"); // Added Log Model
 
-    const jobSkills    = normalise(job.skills);
-    const jobType      = (job.type || "").toLowerCase().trim();
-    const jobId        = job._id.toString();
-    const jobTitle     = job.title;
-    const companyName  = job.company || "a company";
-    const location     = job.location || "";
-    const jobTypeLabel = job.type || "";
+    const jobSkillsRaw = (Array.isArray(job.skills) ? job.skills : [])
+      .flatMap((item) => splitSkills(item))
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const jobSkills = jobSkillsRaw.map((s) => canonicalSkill(s)).filter(Boolean);
+    const jobType = Array.isArray(job.type) ? job.type.map(t => t.toLowerCase()) : [];
+    const jobId = job._id.toString();
+    const jobTitle = job.title;
+    const companyName = job.company || "a company";
+    const location = job.location || "";
+    const jobTypeLabel = Array.isArray(job.type) ? job.type.join(", ") : job.type || "";
 
-    // 1. Jobseekers who already applied to this job
-    const existingApps   = await Application.find({ job: jobId }).select("jobseeker");
+    const existingApps = await Application.find({ job: jobId }).select("jobseeker");
     const alreadyApplied = new Set(existingApps.map((a) => a.jobseeker.toString()));
 
-    // 2. Active jobseekers with adequate profile progress
     const candidates = await User.find({
-      role:            "jobseeker",
-      status:          "active",
-      profileProgress: { $gte: MIN_PROFILE_PROGRESS },
+      role: "jobseeker",
+      status: "active",
+      email: { $exists: true, $ne: "" },
+      "jobSeekerProfile.skills.0": { $exists: true },
     }).select("name email jobSeekerProfile.skills jobSeekerProfile.firstName profileProgress");
 
-    // 3. Jobseeker IDs that have previously applied for the same job type
     let typeMatchIds = new Set();
     if (jobType) {
       const sameTypeJobs = await Job.find({
-  type:   job.type,
-  status: "approved",
-  _id:    { $ne: job._id }          // exclude the just-created job
-}).select("_id");
+        type: job.type,
+        status: "approved",
+        _id: { $ne: job._id }
+      }).select("_id");
+      
       const sameTypeJobIds = sameTypeJobs.map((j) => j._id);
-
       if (sameTypeJobIds.length) {
         const typeApps = await Application.find({ job: { $in: sameTypeJobIds } }).select("jobseeker");
         typeMatchIds = new Set(typeApps.map((a) => a.jobseeker.toString()));
       }
     }
 
-    // 4. Filter to candidates that match by skill or job type
     const toNotify = candidates.filter((u) => {
       const uid = u._id.toString();
       if (alreadyApplied.has(uid)) return false;
       if (!u.email) return false;
 
       const profileSkills = normalise(u.jobSeekerProfile?.skills);
-
-      const hasSkillMatch =
-  jobSkills.length > 0 &&
-  profileSkills.some((ps) =>
-    jobSkills.some((js) => js === ps)          // exact match first
-    || jobSkills.some((js) =>                  // then whole-word substring
-        new RegExp(`\\b${ps}\\b`).test(js) ||
-        new RegExp(`\\b${js}\\b`).test(ps))
-  );
-
+      const hasSkillMatch = jobSkills.length > 0 && profileSkills.some((ps) =>
+        jobSkills.some((js) => wordsOverlap(js, ps))
+      );
       const hasTypeMatch = typeMatchIds.has(uid);
 
       return hasSkillMatch || hasTypeMatch;
     });
 
-    if (!toNotify.length) return;
+    if (!toNotify.length) {
+      console.log(`[jobMatch] No eligible candidates found for "${jobTitle}"`);
+      return;
+    }
 
     console.log(`[jobMatch] Notifying ${toNotify.length} jobseekers about "${jobTitle}"`);
 
-    // 5. Build and dispatch email tasks
-    const tasks = toNotify.map((u) => () => {
+    // UPDATED: Async wrapper to handle DB logging
+    const tasks = toNotify.map((u) => async () => {
       const profileSkills = normalise(u.jobSeekerProfile?.skills);
       const matchedSkills = jobSkills.filter((js) =>
-  profileSkills.some((ps) =>
-    js === ps ||
-    new RegExp(`\\b${ps}\\b`).test(js) ||
-    new RegExp(`\\b${js}\\b`).test(ps)
-  )
-);
+        profileSkills.some((ps) => wordsOverlap(js, ps))
+      );
 
       const firstName =
         u.jobSeekerProfile?.firstName ||
         u.name?.split(" ")[0] ||
         "there";
 
-      return sendJobMatchNotificationEmail(
-        u.email,
-        firstName,
-        jobTitle,
-        companyName,
-        location,
-        jobTypeLabel,
-        matchedSkills,
-        jobId
-      ).catch((err) =>
-        console.error(`[jobMatch] Email failed for ${u.email}:`, err.message)
-      );
+      try {
+        await sendJobMatchNotificationEmail(
+          u.email, firstName, jobTitle, companyName, location, jobTypeLabel, matchedSkills, jobId
+        );
+        
+        // Log Success
+        await JobNotificationLog.create({
+          jobId: job._id,
+          userId: u._id,
+          email: u.email,
+          status: "sent"
+        });
+      } catch (err) {
+        console.error(`[jobMatch] Email failed for ${u.email}:`, err.message);
+        
+        // Log Failure
+        await JobNotificationLog.create({
+          jobId: job._id,
+          userId: u._id,
+          email: u.email,
+          status: "failed",
+          error: err.message
+        });
+      }
     });
 
-    // Fire-and-forget
     sendInBatches(tasks).catch((err) =>
       console.error("[jobMatch] Batch send error:", err.message)
     );
@@ -1389,7 +1452,6 @@ const notifyMatchingJobseekers = async (job) => {
     console.error("[jobMatch] Error:", err.message);
   }
 };
-
 
 // ════════════════════════════════════════════════════════════
 //   EXPORTS
@@ -1452,4 +1514,5 @@ module.exports = {
   // Job match
   sendJobMatchNotificationEmail,
   notifyMatchingJobseekers,
+  verifySmtpConnection,
 };

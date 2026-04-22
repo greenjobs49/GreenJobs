@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { ArrowLeft, BarChart2, Users, Zap, Target } from "lucide-react";
+import { ArrowLeft, BarChart2, UserCheck, ShieldCheck, Briefcase, CheckCircle } from "lucide-react";
 import GoogleSignIn from "../components/Auth/GoogleSignIn";
 import EmailSignup from "../components/Auth/EmailSignup";
 import SignupVerifyOtp from "../components/Auth/SignupVerifyOtp";
@@ -20,28 +20,43 @@ const RecruiterSignup = () => {
   const handleOTPSent = (userEmail, userRole) => { setEmail(userEmail); setRole(userRole); setStep("verify"); };
   const handleBack = () => { setStep("signup"); setEmail(""); };
 
+  const steps = [
+    {
+      icon: UserCheck,
+      num: "01",
+      title: "Create & complete your profile",
+      desc: "Fill in your company name, industry, location, contact details, and upload your logo.",
+    },
+    {
+      icon: ShieldCheck,
+      num: "02",
+      title: "Submit for admin verification",
+      desc: "Once your profile is complete, request verification. Our team reviews it — usually within 24 hours.",
+    },
+    {
+      icon: Briefcase,
+      num: "03",
+      title: "Post jobs & hire talent",
+      desc: "After approval, post jobs instantly. They go live immediately — no per-job sign-off needed.",
+    },
+  ];
+
   return (
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
-        html, body, #root {
-          height: 100%; min-height: 100%; margin: 0; background: #f0fdf4;
-        }
+        html, body, #root { height: 100%; min-height: 100%; margin: 0; background: #f0fdf4; }
         body { overflow: hidden; }
         #root, .App { height: 100%; min-height: 100%; background: #f0fdf4; }
         *, *::before, *::after { box-sizing: border-box; }
 
         .recs-page {
-          height: calc(100dvh - 82px);
-          min-height: calc(100dvh - 82px);
-          display: flex;
-          align-items: stretch;
-          background: #f0fdf4;
-          overflow: hidden;
+          height: calc(100dvh - 82px); min-height: calc(100dvh - 82px);
+          display: flex; align-items: stretch;
+          background: #f0fdf4; overflow: hidden;
           font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
         }
-
         .recs-left, .recs-right { height: 100%; min-height: 100%; }
 
         .recs-left { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: center; padding: 48px 40px; overflow-y: auto; background: #f0fdf4; }
@@ -75,28 +90,82 @@ const RecruiterSignup = () => {
         .recs-form-box input[maxLength="1"], .recs-form-box input[maxlength="1"] { font-size: 22px !important; font-weight: 800 !important; text-align: center !important; }
         .recs-form-box input[maxLength="1"]:focus, .recs-form-box input[maxlength="1"]:focus { background: #f0fdf4 !important; border-color: #10b981 !important; }
 
-        .recs-right { width: 42%; flex-shrink: 0; background: linear-gradient(160deg, #052e16 0%, #14532d 55%, #166534 100%); display: flex; flex-direction: column; justify-content: center; padding: 64px 56px; position: relative; overflow: hidden; }
-        .recs-right-pattern { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(110,231,183,0.12) 1px, transparent 1px); background-size: 32px 32px; }
-        .recs-right-glow { position: absolute; width: 480px; height: 480px; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,0.18) 0%, transparent 70%); top: -100px; right: -100px; pointer-events: none; }
-        .recs-right-glow2 { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,0.1) 0%, transparent 70%); bottom: -60px; left: -60px; pointer-events: none; }
-        .recs-right-circles { position: absolute; inset: 0; pointer-events: none; }
-        .recs-right-circle { position: absolute; border-radius: 50%; border: 1px solid rgba(255,255,255,0.06); }
-        .recs-rc1 { width: 480px; height: 480px; top: -160px; right: -160px; }
-        .recs-rc2 { width: 280px; height: 280px; bottom: 40px; left: -80px; border-color: rgba(16,185,129,0.15); }
+        /* ── Right panel ── */
+        .recs-right {
+          width: 42%; flex-shrink: 0;
+          background: linear-gradient(160deg, #052e16 0%, #14532d 55%, #166534 100%);
+          display: flex; flex-direction: column; justify-content: center;
+          padding: 64px 56px; position: relative; overflow: hidden;
+        }
+        .recs-right-pattern { position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(circle, rgba(110,231,183,0.10) 1px, transparent 1px); background-size: 32px 32px; }
+        .recs-right-glow { position: absolute; width: 480px; height: 480px; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,0.16) 0%, transparent 70%); top: -120px; right: -100px; pointer-events: none; }
+        .recs-right-glow2 { position: absolute; width: 300px; height: 300px; border-radius: 50%; background: radial-gradient(circle, rgba(16,185,129,0.09) 0%, transparent 70%); bottom: -60px; left: -60px; pointer-events: none; }
         .recs-right-content { position: relative; z-index: 2; }
-        .recs-right-eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #6ee7b7; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+
+        .recs-right-eyebrow {
+          font-size: 11px; font-weight: 700; letter-spacing: 0.14em;
+          text-transform: uppercase; color: #6ee7b7; margin-bottom: 18px;
+          display: flex; align-items: center; gap: 10px;
+        }
         .recs-right-eyebrow::after { content: ''; flex: 1; height: 1px; background: rgba(110,231,183,0.3); max-width: 60px; }
-        .recs-right-title { font-size: 38px; font-weight: 800; line-height: 1.15; color: white; margin-bottom: 24px; letter-spacing: -1px; }
+
+        .recs-right-title {
+          font-size: 34px; font-weight: 800; line-height: 1.15;
+          color: white; margin-bottom: 10px; letter-spacing: -0.8px;
+        }
         .recs-right-title span { color: #6ee7b7; }
-        .recs-right-desc { font-size: 14px; color: rgba(255,255,255,0.45); line-height: 1.8; margin-bottom: 40px; max-width: 320px; }
-        .recs-features { display: flex; flex-direction: column; gap: 18px; }
-        .recs-feature { display: flex; align-items: flex-start; gap: 14px; }
-        .recs-feature-icon { width: 36px; height: 36px; border-radius: 8px; background: rgba(16,185,129,0.15); border: 1px solid rgba(110,231,183,0.25); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .recs-feature-title { font-size: 13px; font-weight: 700; color: white; margin-bottom: 3px; }
-        .recs-feature-desc { font-size: 12px; color: rgba(255,255,255,0.4); }
-        .recs-free-badge { margin-top: 36px; padding: 14px 20px; background: rgba(16,185,129,0.08); border: 1px solid rgba(110,231,183,0.2); border-radius: 10px; }
-        .recs-free-badge-title { font-size: 13px; font-weight: 700; color: #6ee7b7; margin-bottom: 4px; }
-        .recs-free-badge-desc { font-size: 12px; color: rgba(255,255,255,0.35); }
+
+        .recs-right-desc {
+          font-size: 13.5px; color: rgba(255,255,255,0.45);
+          line-height: 1.7; margin-bottom: 36px; max-width: 310px;
+        }
+
+        /* ── Vertical step list ── */
+        .recs-steps { display: flex; flex-direction: column; gap: 0; position: relative; }
+
+        /* Connecting line between steps */
+        .recs-steps::before {
+          content: '';
+          position: absolute;
+          left: 18px;
+          top: 38px;
+          bottom: 38px;
+          width: 1px;
+          background: linear-gradient(to bottom, rgba(110,231,183,0.4), rgba(110,231,183,0.1));
+        }
+
+        .recs-step { display: flex; align-items: flex-start; gap: 16px; padding: 14px 0; }
+
+        .recs-step-num-wrap {
+          position: relative; flex-shrink: 0;
+          width: 36px; height: 36px;
+          border-radius: 50%;
+          background: rgba(16,185,129,0.15);
+          border: 1.5px solid rgba(110,231,183,0.35);
+          display: flex; align-items: center; justify-content: center;
+          z-index: 1;
+        }
+        .recs-step-num {
+          font-size: 11px; font-weight: 800; color: #6ee7b7;
+          letter-spacing: 0.05em; line-height: 1;
+        }
+
+        .recs-step-body { padding-top: 4px; }
+        .recs-step-title { font-size: 13.5px; font-weight: 700; color: white; margin-bottom: 4px; line-height: 1.3; }
+        .recs-step-desc { font-size: 12px; color: rgba(255,255,255,0.42); line-height: 1.65; max-width: 260px; }
+
+        /* ── Note at the bottom ── */
+        .recs-note {
+          margin-top: 32px;
+          padding: 14px 18px;
+          background: rgba(16,185,129,0.08);
+          border: 1px solid rgba(110,231,183,0.2);
+          border-radius: 10px;
+          display: flex; align-items: flex-start; gap: 10px;
+        }
+        .recs-note-icon { flex-shrink: 0; margin-top: 1px; }
+        .recs-note-text { font-size: 12px; color: rgba(255,255,255,0.5); line-height: 1.65; }
+        .recs-note-text strong { color: #6ee7b7; font-weight: 700; }
 
         @media (max-width: 900px) { .recs-right { display: none; } }
         @media (max-width: 768px) {
@@ -123,7 +192,7 @@ const RecruiterSignup = () => {
                 <p className="recs-sub">Start hiring green energy talent today</p>
                 <EmailSignup onOTPSent={handleOTPSent} role="recruiter" />
                 <div className="recs-divider"><span>or</span></div>
-                <GoogleSignIn role="recruiter"/>
+                <GoogleSignIn role="recruiter" />
               </>
             ) : (
               <>
@@ -141,27 +210,45 @@ const RecruiterSignup = () => {
           </div>
         </div>
 
+        {/* ── Right: How it actually works ── */}
         <div className="recs-right">
           <div className="recs-right-pattern" />
           <div className="recs-right-glow" />
           <div className="recs-right-glow2" />
-          <div className="recs-right-circles">
-            <div className="recs-right-circle recs-rc1" />
-            <div className="recs-right-circle recs-rc2" />
-          </div>
           <div className="recs-right-content">
-            <div className="recs-right-eyebrow">For Recruiters</div>
-            <h2 className="recs-right-title">Hire <span>smarter</span> in green energy</h2>
-            <p className="recs-right-desc">Post jobs, review applications, and build your renewable energy team with India's leading green hiring platform.</p>
-            <div className="recs-features">
-              <div className="recs-feature"><div className="recs-feature-icon"><Users size={16} color="#6ee7b7" /></div><div><div className="recs-feature-title">Verified Talent Pool</div><div className="recs-feature-desc">Access pre-screened green energy professionals</div></div></div>
-              <div className="recs-feature"><div className="recs-feature-icon"><Zap size={16} color="#6ee7b7" /></div><div><div className="recs-feature-title">Fast Hiring</div><div className="recs-feature-desc">Post a job and get applications within 24 hours</div></div></div>
-              <div className="recs-feature"><div className="recs-feature-icon"><Target size={16} color="#6ee7b7" /></div><div><div className="recs-feature-title">Targeted Reach</div><div className="recs-feature-desc">Connect with candidates matched to your roles</div></div></div>
+
+            <div className="recs-right-eyebrow">How it works</div>
+            <h2 className="recs-right-title">
+              From sign-up to<br /><span>posting jobs</span> in 3 steps
+            </h2>
+
+            <div className="recs-steps">
+              {steps.map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <div className="recs-step" key={i}>
+                    <div className="recs-step-num-wrap">
+                      <span className="recs-step-num">{s.num}</span>
+                    </div>
+                    <div className="recs-step-body">
+                      <div className="recs-step-title">{s.title}</div>
+                      <div className="recs-step-desc">{s.desc}</div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
-            <div className="recs-free-badge">
-              <div className="recs-free-badge-title">✦ Free to get started</div>
-              <div className="recs-free-badge-desc">No credit card required. Post your first job at no cost.</div>
+
+            <div className="recs-note">
+              <div className="recs-note-icon">
+                <CheckCircle size={14} color="#6ee7b7" />
+              </div>
+              <div className="recs-note-text">
+                Once verified, your jobs go <strong>live immediately</strong> — no
+                per-job approvals, no waiting. Admin verification is a one-time process.
+              </div>
             </div>
+
           </div>
         </div>
       </div>

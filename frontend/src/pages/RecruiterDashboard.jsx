@@ -18,6 +18,7 @@ import {
   ToggleLeft,
   ShieldCheck,
   ShieldAlert,
+  PenLine, Trash2,  
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
@@ -33,6 +34,7 @@ const RecruiterDashboard = () => {
   const [jobs, setJobs] = useState([]);
   const [loadingJobs, setLoadingJobs] = useState(true);
   const [togglingJob, setTogglingJob] = useState(null);
+  const [takingDownJob, setTakingDownJob] = useState(null);
 
   const profileProgress = user?.profileProgress || 0;
   const isProfileComplete = user?.profileCompleted;
@@ -124,6 +126,23 @@ const RecruiterDashboard = () => {
       toast.error(err.response?.data?.message || "Failed to toggle job status");
     } finally {
       setTogglingJob(null);
+    }
+  };
+  const takedownJob = async (jobId, jobTitle) => {
+    if (!window.confirm(`Take down "${jobTitle}"? It will go offline.`)) return;
+    try {
+      setTakingDownJob(jobId);
+      await axios.patch(
+        `${API_BASE_URL}/api/jobs/${jobId}/takedown`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      toast.success("Job taken offline.");
+      fetchMyJobs();
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Failed to take down job");
+    } finally {
+      setTakingDownJob(null);
     }
   };
 
@@ -541,17 +560,18 @@ const RecruiterDashboard = () => {
                       )}
                     </div>
                     <div className="job-footer">
-                      <div>
-                        {job.isOpen ? (
-                          <span className="status-badge status-open">
-                            <CheckCircle size={12} /> Open
-                          </span>
-                        ) : (
-                          <span className="status-badge status-closed">
-                            <XCircle size={12} /> Closed
-                          </span>
-                        )}
-                      </div>
+                    <div>
+                      {job.isOpen ? (
+                        <span className="status-badge status-open">
+                          <CheckCircle size={12} /> Open
+                        </span>
+                      ) : (
+                        <span className="status-badge status-closed">
+                          <XCircle size={12} /> Closed
+                        </span>
+                      )}
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                       <button
                         onClick={() => toggleJobStatus(job._id, job.isOpen)}
                         disabled={togglingJob === job._id}
@@ -566,7 +586,23 @@ const RecruiterDashboard = () => {
                           <><ToggleRight size={14} /> Open Job</>
                         )}
                       </button>
+                      <button
+                        className="btn btn-secondary btn-sm"
+                        onClick={() => navigate(`/post-job/${job._id}`)}
+                      >
+                        <PenLine size={14} /> Edit
+                      </button>
+                      {job.status !== "taken_down" && (
+                        <button
+                          className="btn btn-danger btn-sm"
+                          onClick={() => takedownJob(job._id, job.title)}
+                          disabled={takingDownJob === job._id}
+                        >
+                          <Trash2 size={14} /> Take Down
+                        </button>
+                      )}
                     </div>
+                  </div>
                   </div>
                 ))}
               </div>

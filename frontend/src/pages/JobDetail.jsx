@@ -46,6 +46,35 @@ const ROUND_TYPE_LABELS = {
   other: "Other",
 };
 
+/* ── Always return an array of types ── */
+const getTypeArr = (type) => {
+  if (Array.isArray(type)) return type.filter(Boolean);
+  if (typeof type === "string" && type.trim()) return [type.trim()];
+  return [];
+};
+
+/* ── Per-type colour map ── */
+const TYPE_COLORS = {
+  "Full Time":  { bg: "rgba(59,130,246,0.15)",  border: "rgba(59,130,246,0.3)",  color: "#93c5fd" },
+  "Part Time":  { bg: "rgba(139,92,246,0.15)",  border: "rgba(139,92,246,0.3)",  color: "#c4b5fd" },
+  "Internship": { bg: "rgba(245,158,11,0.15)",  border: "rgba(245,158,11,0.3)",  color: "#fcd34d" },
+  "Contract":   { bg: "rgba(239,68,68,0.15)",   border: "rgba(239,68,68,0.3)",   color: "#fca5a5" },
+  "Remote":     { bg: "rgba(16,185,129,0.15)",  border: "rgba(16,185,129,0.3)",  color: "#6ee7b7" },
+  "Freelance":  { bg: "rgba(236,72,153,0.15)",  border: "rgba(236,72,153,0.3)",  color: "#f9a8d4" },
+};
+const defaultTypeColor = { bg: "rgba(148,163,184,0.15)", border: "rgba(148,163,184,0.3)", color: "rgba(255,255,255,0.6)" };
+
+/* ── Light (card) colour map ── */
+const TYPE_COLORS_LIGHT = {
+  "Full Time":  { bg: "#dbeafe", color: "#1e40af" },
+  "Part Time":  { bg: "#ede9fe", color: "#6d28d9" },
+  "Internship": { bg: "#fef3c7", color: "#92400e" },
+  "Contract":   { bg: "#fee2e2", color: "#991b1b" },
+  "Remote":     { bg: "#d1fae5", color: "#065f46" },
+  "Freelance":  { bg: "#fce7f3", color: "#9d174d" },
+};
+const defaultTypeColorLight = { bg: "#f1f5f9", color: "#475569" };
+
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
@@ -58,7 +87,7 @@ const JobDetail = () => {
   const [showApplyModal, setShowApplyModal] = useState(false);
 
   const isJobSeeker = user?.role === "jobseeker";
-  const isLoggedIn = !!token;
+  const isLoggedIn  = !!token;
 
   useEffect(() => {
     const fetchJob = async () => {
@@ -77,7 +106,7 @@ const JobDetail = () => {
               headers: { Authorization: `Bearer ${token}` },
             });
             setApplied(checkRes.data.applied || false);
-          } catch (err) { /* silently ignore */ }
+          } catch { /* silently ignore */ }
         }
       } catch (err) {
         setError(err.response?.data?.message || "Job not found");
@@ -87,32 +116,6 @@ const JobDetail = () => {
     };
     fetchJob();
   }, [jobId, token, user]);
-
-  const handleApply = async () => {
-    if (!coverLetter.trim() || coverLetter.trim().length < 30) {
-      setCoverLetterError("Please write at least 30 characters explaining your interest");
-      return;
-    }
-    setCoverLetterError("");
-    try {
-      setApplying(true);
-      await axios.post(
-        `${API_BASE_URL}/api/applications`,
-        { jobId, coverLetter: coverLetter.trim() },
-        { headers: { Authorization: `Bearer ${token}` } }
-      );
-      setApplied(true);
-      setShowApplyModal(false);
-      toast.success("Application submitted successfully!", {
-        duration: 4000,
-        style: { background: "#D1FAE5", color: "#065F46", border: "1px solid #6EE7B7", borderRadius: "12px", fontWeight: "500" },
-      });
-    } catch (err) {
-      toast.error(err.response?.data?.message || "Failed to submit application");
-    } finally {
-      setApplying(false);
-    }
-  };
 
   const formatPay = (job) => {
     if (!job) return null;
@@ -157,10 +160,11 @@ const JobDetail = () => {
     );
   }
 
-  const pay = formatPay(job);
-  const PayIcon = pay?.icon || DollarSign;
-  const rounds = job.rounds || [];
-  const skills = job.skills || [];
+  const pay      = formatPay(job);
+  const PayIcon  = pay?.icon || DollarSign;
+  const rounds   = job.rounds  || [];
+  const skills   = job.skills  || [];
+  const typeArr  = getTypeArr(job.type);
 
   return (
     <>
@@ -169,9 +173,9 @@ const JobDetail = () => {
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        @keyframes spin    { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+        @keyframes fadeUp  { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse   { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes modalIn { from { opacity: 0; transform: scale(0.96) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
         @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
 
@@ -199,13 +203,20 @@ const JobDetail = () => {
           display: flex; align-items: flex-start; justify-content: space-between;
           gap: 32px; flex-wrap: wrap;
         }
-
         .jd-hero-left { flex: 1; min-width: 0; animation: fadeUp 0.5s ease; }
 
-        .jd-tags { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
-        .jd-tag { padding: 5px 12px; border-radius: 100px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .jd-tag-type { background: rgba(59,130,246,0.15); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
-        .jd-tag-live { background: rgba(16,185,129,0.15); border: 1px solid rgba(16,185,129,0.3); color: #6ee7b7; display: flex; align-items: center; gap: 5px; }
+        /* ── Hero type tags ── */
+        .jd-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 20px; align-items: center; }
+        .jd-tag {
+          padding: 5px 12px; border-radius: 100px;
+          font-size: 12px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.5px;
+          border: 1px solid transparent;
+        }
+        .jd-tag-live {
+          background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.3);
+          color: #6ee7b7; display: flex; align-items: center; gap: 5px;
+        }
         .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
 
         .jd-title {
@@ -223,12 +234,25 @@ const JobDetail = () => {
         .jd-company-name { font-size: 18px; font-weight: 600; color: white; }
         .jd-company-verified { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #10b981; margin-top: 3px; }
 
-        .jd-meta-chips { display: flex; gap: 12px; flex-wrap: wrap; }
+        /* ── Meta chips (location, type summary, rounds, skills) ── */
+        .jd-meta-chips { display: flex; gap: 10px; flex-wrap: wrap; }
         .jd-meta-chip {
           display: flex; align-items: center; gap: 8px; padding: 8px 14px;
           background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
           border-radius: 8px; font-size: 13px; color: rgba(255,255,255,0.7); font-weight: 500;
         }
+        /* Types chip is a pill-group inside the meta row */
+        .jd-meta-type-group {
+          display: flex; align-items: center; gap: 0;
+          background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+          border-radius: 8px; overflow: hidden;
+        }
+        .jd-meta-type-pill {
+          padding: 8px 12px; font-size: 12px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap;
+          border-right: 1px solid rgba(255,255,255,0.08);
+        }
+        .jd-meta-type-pill:last-child { border-right: none; }
 
         /* ── Apply CTA (hero right) ── */
         .jd-cta-card {
@@ -239,7 +263,7 @@ const JobDetail = () => {
         }
         .jd-pay-display { padding: 14px 16px; border-radius: 10px; display: flex; align-items: center; gap: 10px; }
         .jd-pay-amount { font-size: 18px; font-weight: 700; }
-        .jd-pay-label { font-size: 12px; opacity: 0.7; margin-top: 2px; }
+        .jd-pay-label  { font-size: 12px; opacity: 0.7; margin-top: 2px; }
 
         .jd-apply-btn {
           width: 100%; padding: 15px; background: #10b981; color: white;
@@ -329,6 +353,14 @@ const JobDetail = () => {
         .jd-info-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
         .jd-info-value { font-size: 14px; color: #0f172a; font-weight: 600; margin-top: 2px; }
 
+        /* Type pills in sidebar info card */
+        .jd-info-type-pills { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; }
+        .jd-info-type-pill {
+          font-size: 11px; font-weight: 700;
+          padding: 3px 10px; border-radius: 100px;
+          text-transform: uppercase; letter-spacing: 0.3px;
+        }
+
         /* Apply sidebar card */
         .jd-apply-sidebar { background: linear-gradient(135deg, #052e16, #14532d); border: 1px solid rgba(16,185,129,0.2); border-radius: 16px; padding: 24px; }
         .jd-apply-sidebar-title { font-size: 16px; font-weight: 700; color: white; margin-bottom: 6px; }
@@ -348,57 +380,6 @@ const JobDetail = () => {
           border-radius: 10px; font-size: 13px; font-weight: 600; color: #6ee7b7;
         }
 
-        /* ── Modal ── */
-        .jd-modal-overlay {
-          position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-          backdrop-filter: blur(4px); z-index: 1000;
-          display: flex; align-items: center; justify-content: center; padding: 16px;
-          animation: overlayIn 0.2s ease;
-        }
-        .jd-modal {
-          background: white; border-radius: 20px; padding: 32px;
-          width: 100%; max-width: 540px; position: relative;
-          animation: modalIn 0.25s ease; box-shadow: 0 24px 80px rgba(0,0,0,0.25);
-        }
-        .jd-modal-close {
-          position: absolute; top: 16px; right: 16px;
-          width: 32px; height: 32px; background: #f1f5f9; border: none; border-radius: 50%;
-          display: flex; align-items: center; justify-content: center; cursor: pointer; transition: all 0.2s;
-        }
-        .jd-modal-close:hover { background: #e2e8f0; }
-        .jd-modal-title { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-size: 24px; font-weight: 800; color: #0f172a; margin-bottom: 6px; letter-spacing: -0.5px; }
-        .jd-modal-sub { font-size: 14px; color: #64748b; margin-bottom: 24px; }
-        .jd-modal-job-pill { display: flex; align-items: center; gap: 10px; padding: 12px 14px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; margin-bottom: 24px; }
-        .jd-modal-job-name { font-size: 14px; font-weight: 700; color: #0f172a; }
-        .jd-modal-company { font-size: 12px; color: #64748b; }
-        .jd-modal-label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 8px; display: block; }
-        .jd-modal-textarea {
-          width: 100%; padding: 14px; font-size: 14px;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 10px; color: #0f172a;
-          outline: none; resize: vertical; min-height: 130px; line-height: 1.6; transition: all 0.2s;
-        }
-        .jd-modal-textarea:focus { border-color: #10b981; background: white; box-shadow: 0 0 0 3px rgba(16,185,129,0.08); }
-        .jd-modal-textarea.error { border-color: #fca5a5; background: #fff5f5; }
-        .jd-modal-error { font-size: 12px; color: #ef4444; margin-top: 6px; display: flex; align-items: center; gap: 4px; }
-        .jd-modal-hint { font-size: 12px; color: #94a3b8; margin-top: 6px; }
-        .jd-modal-actions { display: flex; gap: 10px; margin-top: 24px; }
-        .jd-modal-cancel {
-          flex: 1; padding: 13px; background: #f1f5f9; color: #64748b;
-          border: none; border-radius: 10px; font-size: 14px; font-weight: 600;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          cursor: pointer; transition: all 0.2s;
-        }
-        .jd-modal-cancel:hover { background: #e2e8f0; }
-        .jd-modal-submit {
-          flex: 2; padding: 13px; background: #10b981; color: white;
-          border: none; border-radius: 10px; font-size: 14px; font-weight: 700;
-          font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-          cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s;
-        }
-        .jd-modal-submit:hover:not(:disabled) { background: #059669; }
-        .jd-modal-submit:disabled { opacity: 0.5; cursor: not-allowed; }
-
         /* ── Breadcrumb ── */
         .jd-breadcrumb { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #64748b; margin-bottom: 24px; flex-wrap: wrap; }
         .jd-breadcrumb a { color: #94a3b8; text-decoration: none; transition: color 0.2s; }
@@ -412,6 +393,11 @@ const JobDetail = () => {
           .jd-title { font-size: 30px; }
           .jd-body { margin-top: -16px; }
           .jd-card { padding: 20px; }
+        }
+        @media (max-width: 480px) {
+          .jd-title { font-size: 24px; letter-spacing: -0.5px; }
+          .jd-hero { padding: 40px 16px 60px; }
+          .jd-body { padding: 0 16px; }
         }
       `}</style>
 
@@ -428,8 +414,21 @@ const JobDetail = () => {
 
             <div className="jd-hero-content">
               <div className="jd-hero-left">
+
+                {/* ── Type pills + Live badge ── */}
                 <div className="jd-tags">
-                  <span className="jd-tag jd-tag-type">{job.type}</span>
+                  {typeArr.map((t) => {
+                    const c = TYPE_COLORS[t] || defaultTypeColor;
+                    return (
+                      <span
+                        key={t}
+                        className="jd-tag"
+                        style={{ background: c.bg, borderColor: c.border, color: c.color }}
+                      >
+                        {t}
+                      </span>
+                    );
+                  })}
                   <span className="jd-tag jd-tag-live">
                     <span className="live-dot" /> Live
                   </span>
@@ -451,9 +450,30 @@ const JobDetail = () => {
                   </div>
                 </div>
 
+                {/* ── Meta chips row ── */}
                 <div className="jd-meta-chips">
                   <div className="jd-meta-chip"><MapPin size={14} color="#10b981" /> {job.location}</div>
-                  <div className="jd-meta-chip"><Briefcase size={14} color="#10b981" /> {job.type}</div>
+
+                  {/* Employment type: grouped pill-strip if multiple */}
+                  {typeArr.length === 1 ? (
+                    <div className="jd-meta-chip"><Briefcase size={14} color="#10b981" /> {typeArr[0]}</div>
+                  ) : (
+                    <div className="jd-meta-type-group">
+                      {typeArr.map((t, i) => {
+                        const c = TYPE_COLORS[t] || defaultTypeColor;
+                        return (
+                          <span
+                            key={t}
+                            className="jd-meta-type-pill"
+                            style={{ color: c.color, background: c.bg }}
+                          >
+                            {t}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
                   {rounds.length > 0 && (
                     <div className="jd-meta-chip"><Layers size={14} color="#10b981" /> {rounds.length} round{rounds.length !== 1 ? "s" : ""}</div>
                   )}
@@ -463,7 +483,7 @@ const JobDetail = () => {
                 </div>
               </div>
 
-              {/* Right CTA */}
+              {/* ── Right CTA ── */}
               <div className="jd-cta-card">
                 {pay && (
                   <div className="jd-pay-display" style={{ background: pay.bg, border: `1px solid ${pay.border}` }}>
@@ -599,22 +619,81 @@ const JobDetail = () => {
 
               <div className="jd-info-card">
                 <div className="jd-info-card-title">Job Overview</div>
-                {[
-                  { icon: Briefcase, label: "Role", value: job.title },
-                  { icon: Building2, label: "Company", value: job.company || job.business?.businessProfile?.businessName || "Direct Hire" },
-                  { icon: MapPin, label: "Location", value: job.location },
-                  { icon: Clock, label: "Employment", value: job.type },
-                  { icon: job.isPaid ? RupeeIcon : Gift, label: "Compensation", value: pay?.label || "Not specified" },
-                  { icon: Layers, label: "Rounds", value: `${rounds.length} stage${rounds.length !== 1 ? "s" : ""}` },
-                ].map(({ icon: Icon, label, value }) => (
-                  <div key={label} className="jd-info-item">
-                    <div className="jd-info-icon"><Icon size={15} color="#64748b" /></div>
-                    <div>
-                      <div className="jd-info-label">{label}</div>
-                      <div className="jd-info-value">{value}</div>
-                    </div>
+
+                {/* Role */}
+                <div className="jd-info-item">
+                  <div className="jd-info-icon"><Briefcase size={15} color="#64748b" /></div>
+                  <div>
+                    <div className="jd-info-label">Role</div>
+                    <div className="jd-info-value">{job.title}</div>
                   </div>
-                ))}
+                </div>
+
+                {/* Company */}
+                <div className="jd-info-item">
+                  <div className="jd-info-icon"><Building2 size={15} color="#64748b" /></div>
+                  <div>
+                    <div className="jd-info-label">Company</div>
+                    <div className="jd-info-value">{job.company || job.business?.businessProfile?.businessName || "Direct Hire"}</div>
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div className="jd-info-item">
+                  <div className="jd-info-icon"><MapPin size={15} color="#64748b" /></div>
+                  <div>
+                    <div className="jd-info-label">Location</div>
+                    <div className="jd-info-value">{job.location}</div>
+                  </div>
+                </div>
+
+                {/* Employment Type — pill group when multiple */}
+                <div className="jd-info-item">
+                  <div className="jd-info-icon"><Clock size={15} color="#64748b" /></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="jd-info-label">Employment</div>
+                    {typeArr.length === 1 ? (
+                      <div className="jd-info-value">{typeArr[0]}</div>
+                    ) : (
+                      <div className="jd-info-type-pills">
+                        {typeArr.map((t) => {
+                          const c = TYPE_COLORS_LIGHT[t] || defaultTypeColorLight;
+                          return (
+                            <span
+                              key={t}
+                              className="jd-info-type-pill"
+                              style={{ background: c.bg, color: c.color }}
+                            >
+                              {t}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Compensation */}
+                <div className="jd-info-item">
+                  <div className="jd-info-icon">
+                    {job.isPaid
+                      ? <RupeeIcon size={15} color="#64748b" />
+                      : <Gift size={15} color="#64748b" />}
+                  </div>
+                  <div>
+                    <div className="jd-info-label">Compensation</div>
+                    <div className="jd-info-value">{pay?.label || "Not specified"}</div>
+                  </div>
+                </div>
+
+                {/* Rounds */}
+                <div className="jd-info-item">
+                  <div className="jd-info-icon"><Layers size={15} color="#64748b" /></div>
+                  <div>
+                    <div className="jd-info-label">Rounds</div>
+                    <div className="jd-info-value">{rounds.length} stage{rounds.length !== 1 ? "s" : ""}</div>
+                  </div>
+                </div>
               </div>
 
               {skills.length > 0 && (

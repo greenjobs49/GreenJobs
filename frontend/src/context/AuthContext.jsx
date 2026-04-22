@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getStoredAuth, setStoredAuth, removeStoredAuth } from '../utils/auth';
 import API_BASE_URL from '../config/api';
 
@@ -26,22 +26,37 @@ export const AuthProvider = ({ children }) => {
   // ✅ Re-fetch the current user from the server and update context + localStorage.
   // Call this after any action that mutates user data (e.g. requestVerification,
   // completeProfile) so the UI reflects the new state without a full page reload.
-  const refreshUser = async (currentToken) => {
-    const authToken = currentToken || token;
-    if (!authToken) return;
-    try {
-      const res = await fetch(`${API_BASE_URL}/api/profile/me`, {
-        headers: { Authorization: `Bearer ${authToken}` },
-      });
-      const data = await res.json();
-      if (data.success && data.user) {
-        setUser(data.user);
-        setStoredAuth({ user: data.user, token: authToken });
-      }
-    } catch (err) {
-      console.error('refreshUser failed:', err);
+const refreshUser = useCallback(async (currentToken) => {
+  const authToken = currentToken || token;
+  if (!authToken) return;
+  try {
+    const res = await fetch(`${API_BASE_URL}/api/profile/me`, {
+      headers: { Authorization: `Bearer ${authToken}` },
+    });
+    const data = await res.json();
+    if (data.success && data.user) {
+      setUser(data.user);
+      setStoredAuth({ user: data.user, token: authToken });
+    } else if (res.status === 401) {
+      logout();
     }
+  } catch (err) {
+    console.error('refreshUser failed:', err);
+  }
+}, [token]);
+
+// ✅ ADD THIS — poll every 30s + refresh on tab focus
+useEffect(() => {
+  if (!token) return;
+  refreshUser();                                      // fresh data on mount/login
+  const interval = setInterval(refreshUser, 30_000); // poll every 30s
+  const onFocus  = () => refreshUser();               // refresh when tab regains focus
+  window.addEventListener('focus', onFocus);
+  return () => {
+    clearInterval(interval);
+    window.removeEventListener('focus', onFocus);
   };
+}, [token, refreshUser]);
 
   const value = {
     user,

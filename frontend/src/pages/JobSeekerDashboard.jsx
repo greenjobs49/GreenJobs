@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from '../components/common/Navbar';
 import MyApplications from './MyApplications';
 import {
@@ -25,7 +25,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 
 const JobSeekerDashboard = () => {
-  const { user } = useAuth();
+  const { user, refreshUser } = useAuth();
   const navigate  = useNavigate();
   const [showDetails, setShowDetails] = useState(false);
 
@@ -44,7 +44,7 @@ const stats = [
   { icon: Briefcase,   label: 'Profile Completion',  value: `${profileProgress}%`, color: '#3b82f6' },
   { icon: User,        label: 'Profile Status',       value: isProfileComplete ? 'Complete' : 'Incomplete', color: '#10b981' },
 ];
-
+useEffect(() => { refreshUser(); }, [refreshUser]);
   const detailSections = [
     {
       heading: 'Personal Info',

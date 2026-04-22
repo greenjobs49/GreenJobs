@@ -244,6 +244,43 @@ exports.uploadLogo = async (req, res) => {
 };
 
 /* =========================================================
+   UPLOAD PROFILE PICTURE (Avatar)
+========================================================= */
+exports.uploadProfilePicture = async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ success: false, message: "No image file uploaded" });
+
+    const user = await User.findById(req.user.id);
+    if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+    // Role check (Recruiter and Business only)
+    if (user.role !== "recruiter" && user.role !== "business") {
+      return res.status(403).json({ success: false, message: "Access restricted to recruiters and businesses" });
+    }
+
+    const oldAvatar = user.profilePicture;
+    if (oldAvatar) {
+      try {
+        const url = new URL(oldAvatar);
+        const key = decodeURIComponent(url.pathname.substring(1));
+        await s3.send(new DeleteObjectCommand({ Bucket: process.env.AWS_S3_BUCKET_NAME, Key: key }));
+      } catch (e) { console.warn("Skip old avatar delete:", e.message); }
+    }
+
+    const avatarUrl = req.file.location;
+    await User.updateOne(
+      { _id: user._id },
+      { $set: { profilePicture: avatarUrl } }
+    );
+
+    res.json({ success: true, avatarUrl, message: "Profile picture updated successfully" });
+  } catch (err) {
+    console.error("AVATAR UPLOAD ERROR:", err);
+    res.status(500).json({ success: false, message: err.message || "Avatar upload failed" });
+  }
+};
+
+/* =========================================================
    UPLOAD BUSINESS IMAGES
 ========================================================= */
 exports.uploadBusinessImages = async (req, res) => {

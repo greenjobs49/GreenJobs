@@ -1,3 +1,7 @@
+const crypto = require("crypto");
+
 module.exports = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit
+  // ✅ Cryptographically secure random 6-digit OTP
+  const otp = crypto.randomInt(100000, 999999).toString();
+  return otp;
 };

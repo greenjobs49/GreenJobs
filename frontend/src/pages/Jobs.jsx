@@ -38,6 +38,13 @@ const ROUND_TYPE_LABELS = {
   other: "Other",
 };
 
+/* ── helper: always return an array of types ── */
+const getTypeArr = (type) => {
+  if (Array.isArray(type)) return type.filter(Boolean);
+  if (typeof type === "string" && type.trim()) return [type.trim()];
+  return [];
+};
+
 /* ── Skill Dropdown Component ── */
 const SkillDropdown = ({ allSkills, skillFilter, setSkillFilter, skillCounts }) => {
   const [open, setOpen] = useState(false);
@@ -52,9 +59,7 @@ const SkillDropdown = ({ allSkills, skillFilter, setSkillFilter, skillCounts }) 
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
-  const filtered = allSkills.filter((s) =>
-    s.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = allSkills.filter((s) => s.toLowerCase().includes(search.toLowerCase()));
   const hasValue = !!skillFilter;
 
   return (
@@ -111,6 +116,40 @@ const SkillDropdown = ({ allSkills, skillFilter, setSkillFilter, skillCounts }) 
   );
 };
 
+/* ── Type tag colour map ── */
+const TYPE_COLORS = {
+  "Full Time":  { bg: "#dbeafe", color: "#1e40af" },
+  "Part Time":  { bg: "#ede9fe", color: "#6d28d9" },
+  "Internship": { bg: "#fef3c7", color: "#92400e" },
+  "Contract":   { bg: "#fee2e2", color: "#991b1b" },
+  "Remote":     { bg: "#d1fae5", color: "#065f46" },
+  "Freelance":  { bg: "#fce7f3", color: "#9d174d" },
+};
+const defaultTypeColor = { bg: "#f1f5f9", color: "#475569" };
+
+const TypeTags = ({ types, limit = 99 }) => {
+  const arr = getTypeArr(types);
+  const shown = arr.slice(0, limit);
+  const extra = arr.length - shown.length;
+  return (
+    <>
+      {shown.map((t) => {
+        const c = TYPE_COLORS[t] || defaultTypeColor;
+        return (
+          <span key={t} className="job-tag" style={{ background: c.bg, color: c.color }}>
+            {t}
+          </span>
+        );
+      })}
+      {extra > 0 && (
+        <span className="job-tag" style={{ background: "#f1f5f9", color: "#64748b" }}>
+          +{extra}
+        </span>
+      )}
+    </>
+  );
+};
+
 const Jobs = () => {
   const { user, token } = useAuth();
   const isJobSeeker = user?.role === "jobseeker";
@@ -124,14 +163,12 @@ const Jobs = () => {
   const [selectedPay, setSelectedPay] = useState("All");
   const [skillFilter, setSkillFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
-  /* applied filter toggle */
   const [showAppliedOnly, setShowAppliedOnly] = useState(false);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [error, setError] = useState(null);
   const [expandedRounds, setExpandedRounds] = useState({});
 
-  /* ── Applied jobs set ── */
   const [appliedJobIds, setAppliedJobIds] = useState(new Set());
   const [appliedLoading, setAppliedLoading] = useState(false);
 
@@ -139,7 +176,7 @@ const Jobs = () => {
   const loadingRef = useRef(false);
   const errorRef = useRef(null);
 
-  /* ── Fetch applied job IDs (jobseeker only) ── */
+  /* ── Fetch applied job IDs ── */
   useEffect(() => {
     if (!isJobSeeker || !token) return;
     const fetchApplied = async () => {
@@ -151,10 +188,7 @@ const Jobs = () => {
         });
         const apps = res.data?.applications || res.data || [];
         const ids = new Set(
-          apps.map((a) => {
-            // Handle both populated {job: {_id}} and plain {job: "id_string"}
-            return typeof a.job === "object" ? a.job?._id : a.job;
-          }).filter(Boolean)
+          apps.map((a) => (typeof a.job === "object" ? a.job?._id : a.job)).filter(Boolean)
         );
         setAppliedJobIds(ids);
       } catch (err) {
@@ -227,6 +261,7 @@ const Jobs = () => {
     [loading, hasMore, fetchJobs]
   );
 
+  /* ── Filter logic: type now matches against the array ── */
   useEffect(() => {
     let filtered = jobs;
     if (searchTerm.trim()) {
@@ -241,8 +276,11 @@ const Jobs = () => {
       );
     }
     if (selectedLocation !== "All") filtered = filtered.filter((job) => job.location === selectedLocation);
-    if (selectedType !== "All") filtered = filtered.filter((job) => job.type === selectedType);
-    if (selectedPay === "Paid") filtered = filtered.filter((job) => job.isPaid !== false);
+    if (selectedType !== "All") {
+      // match if the job's type array contains the selected type
+      filtered = filtered.filter((job) => getTypeArr(job.type).includes(selectedType));
+    }
+    if (selectedPay === "Paid")   filtered = filtered.filter((job) => job.isPaid !== false);
     if (selectedPay === "Unpaid") filtered = filtered.filter((job) => job.isPaid === false);
     if (skillFilter.trim()) {
       const sq = skillFilter.toLowerCase();
@@ -270,7 +308,11 @@ const Jobs = () => {
   const toggleRounds = (jobId) => setExpandedRounds((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
 
   const locations = Array.from(new Set(jobs.map((job) => job.location))).sort().filter(Boolean);
-  const types = Array.from(new Set(jobs.map((job) => job.type))).sort().filter(Boolean);
+  // Flatten all type arrays to build the unique types list for the filter dropdown
+  const types = Array.from(
+    new Set(jobs.flatMap((job) => getTypeArr(job.type)))
+  ).sort().filter(Boolean);
+
   const allSkills = Array.from(new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))).sort();
   const skillCounts = allSkills.reduce((acc, skill) => {
     acc[skill] = jobs.filter((j) => (j.skills || []).some((s) => s.toLowerCase() === skill.toLowerCase())).length;
@@ -373,7 +415,6 @@ const Jobs = () => {
         }
         .clear-btn:hover { background: #f8fafc; color: #475569; }
 
-        /* ── Applied filter toggle button ── */
         .applied-filter-btn {
           flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
           padding: 13px 16px; font-size: 14px; font-weight: 600;
@@ -418,7 +459,6 @@ const Jobs = () => {
         .stat-value { font-weight: 700; color: #0f172a; }
         .stat-divider { color: #e2e8f0; }
         .verified-badge { margin-left: auto; color: #10b981; font-weight: 600; display: flex; align-items: center; gap: 6px; font-size: 13px; white-space: nowrap; }
-        /* Applied stat pill in stats bar */
         .applied-stat {
           display: inline-flex; align-items: center; gap: 6px;
           background: #d1fae5; border: 1px solid #6ee7b7;
@@ -486,15 +526,12 @@ const Jobs = () => {
           min-width: 0; overflow: hidden; position: relative;
         }
         .job-card:hover { border-color: #10b981; box-shadow: 0 4px 24px rgba(16,185,129,0.1); }
-
-        /* Applied card style — green left border + subtle bg tint */
         .job-card.applied {
           border-color: #6ee7b7;
           background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 80px);
         }
         .job-card.applied:hover { border-color: #10b981; box-shadow: 0 4px 24px rgba(16,185,129,0.15); }
 
-        /* Applied ribbon */
         .applied-ribbon {
           position: absolute; top: 0; right: 0;
           background: #10b981; color: white;
@@ -505,12 +542,36 @@ const Jobs = () => {
           letter-spacing: 0.3px; text-transform: uppercase;
         }
 
-        .job-tags { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
-        .job-tag { padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; }
-        .tag-type { background: #dbeafe; color: #1e40af; }
-        .tag-live { background: #d1fae5; color: #065f46; display: flex; align-items: center; gap: 4px; }
+        /* ── Type tags row ── */
+        .job-tags {
+          display: flex; gap: 5px; margin-bottom: 14px;
+          flex-wrap: wrap; align-items: center;
+        }
+        .job-tag {
+          padding: 3px 9px; border-radius: 6px;
+          font-size: 11px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.4px;
+          white-space: nowrap; line-height: 1.5;
+        }
+        .tag-live {
+          background: #d1fae5; color: #065f46;
+          display: flex; align-items: center; gap: 4px;
+        }
         .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; flex-shrink: 0; }
-        .tag-pay { padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; border: 1px solid transparent; white-space: nowrap; }
+        .tag-pay {
+          padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700;
+          display: flex; align-items: center; gap: 4px; border: 1px solid transparent;
+          white-space: nowrap; text-transform: uppercase; letter-spacing: 0.4px;
+        }
+        /* type tags divider when more than one type exists */
+        .type-tags-group {
+          display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
+        }
+        .type-tags-divider {
+          width: 1px; height: 14px; background: #e2e8f0;
+          flex-shrink: 0; margin: 0 2px; display: none;
+        }
+
         .job-title { font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color 0.2s; word-break: break-word; }
         .job-card:hover .job-title { color: #10b981; }
         .job-company { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; min-width: 0; }
@@ -538,7 +599,6 @@ const Jobs = () => {
         .job-actions { display: flex; gap: 10px; padding-top: 14px; margin-top: auto; }
         .btn-view { flex: 1; background: #0f172a; color: white; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; text-decoration: none; font-family: 'Inter', sans-serif; white-space: nowrap; }
         .btn-view:hover { background: #10b981; }
-        /* Applied job — view button turns green immediately */
         .job-card.applied .btn-view { background: #059669; }
         .job-card.applied .btn-view:hover { background: #047857; }
 
@@ -625,12 +685,12 @@ const Jobs = () => {
                 <option value="All">All Locations</option>
                 {locations.map((loc) => <option key={loc}>{loc}</option>)}
               </select>
+              {/* Type filter now covers all unique values extracted from arrays */}
               <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="search-select">
                 <option value="All">All Types</option>
                 {types.map((type) => <option key={type}>{type}</option>)}
               </select>
 
-              {/* Applied filter — only for jobseekers */}
               {isJobSeeker && appliedCount > 0 && (
                 <button
                   type="button"
@@ -681,7 +741,6 @@ const Jobs = () => {
             <span className="stat-item"><span className="stat-value">{types.length}</span> types</span>
             <span className="stat-divider">|</span>
             <span className="stat-item"><span className="stat-value">{allSkills.length}</span> skills</span>
-            {/* Applied count pill — only for jobseekers */}
             {isJobSeeker && appliedCount > 0 && (
               <>
                 <span className="stat-divider">|</span>
@@ -689,7 +748,6 @@ const Jobs = () => {
                   className="applied-stat"
                   style={{ cursor: "pointer" }}
                   onClick={() => setShowAppliedOnly((p) => !p)}
-                  title={showAppliedOnly ? "Show all" : "Show applied only"}
                 >
                   <BookmarkCheck size={12} />
                   {appliedCount} applied
@@ -750,13 +808,14 @@ const Jobs = () => {
           ) : (
             <div className="jobs-grid">
               {filteredJobs.map((job, index) => {
-                const isLast = index === filteredJobs.length - 1;
-                const pay = formatPay(job);
-                const skills = job.skills || [];
-                const rounds = job.rounds || [];
+                const isLast     = index === filteredJobs.length - 1;
+                const pay        = formatPay(job);
+                const skills     = job.skills || [];
+                const rounds     = job.rounds || [];
                 const roundsOpen = expandedRounds[job._id];
                 const SKILL_LIMIT = 4;
-                const isApplied = isJobSeeker && appliedJobIds.has(job._id);
+                const isApplied  = isJobSeeker && appliedJobIds.has(job._id);
+                const typeArr    = getTypeArr(job.type);
 
                 return (
                   <div
@@ -764,7 +823,6 @@ const Jobs = () => {
                     ref={isLast ? lastJobRef : null}
                     className={`job-card${isApplied ? " applied" : ""}`}
                   >
-                    {/* Applied ribbon */}
                     {isApplied && (
                       <div className="applied-ribbon">
                         <BookmarkCheck size={10} />
@@ -772,10 +830,28 @@ const Jobs = () => {
                       </div>
                     )}
 
+                    {/* ── Tags row: type pills + live + pay ── */}
                     <div className="job-tags" style={{ paddingRight: isApplied ? 72 : 0 }}>
-                      <span className="job-tag tag-type">{job.type}</span>
-                      <span className="job-tag tag-live"><span className="live-dot" />Live</span>
-                      <span className="tag-pay" style={{ background: pay.bg, color: pay.color, borderColor: pay.border }}>{pay.label}</span>
+                      {/* Each employment type gets its own coloured pill */}
+                      {typeArr.map((t) => {
+                        const c = TYPE_COLORS[t] || defaultTypeColor;
+                        return (
+                          <span key={t} className="job-tag" style={{ background: c.bg, color: c.color }}>
+                            {t}
+                          </span>
+                        );
+                      })}
+
+                      <span className="job-tag tag-live">
+                        <span className="live-dot" />Live
+                      </span>
+
+                      <span
+                        className="tag-pay"
+                        style={{ background: pay.bg, color: pay.color, borderColor: pay.border }}
+                      >
+                        {pay.label}
+                      </span>
                     </div>
 
                     <h2 className="job-title">{job.title}</h2>
