@@ -203,6 +203,7 @@ const Jobs = () => {
   const fetchJobs = useCallback(async (pageNum = 1, append = false) => {
     if (loadingRef.current) return;
     loadingRef.current = true;
+    if (observerRef.current) observerRef.current.disconnect();
     try {
       if (pageNum === 1) setLoading(true);
       setError(null);
@@ -244,30 +245,26 @@ const Jobs = () => {
     }
   }, []);
 
-  const lastJobRef = useCallback(
+const lastJobRef = useCallback(
   (node) => {
-    if (loading || !hasMore) return;
     if (observerRef.current) observerRef.current.disconnect();
+    if (!node || !hasMore || loading) return;
+
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
-          // Add a small delay to prevent rapid firing
-          setTimeout(() => {
-            if (!loadingRef.current) {
-              setPage((prev) => {
-                const nextPage = prev + 1;
-                fetchJobs(nextPage, true);
-                return nextPage;
-              });
-            }
-          }, 300);
+        if (entries[0].isIntersecting) {
+          setPage((prev) => {
+            const nextPage = prev + 1;
+            fetchJobs(nextPage, true);
+            return nextPage;
+          });
         }
       },
       { threshold: 0.1, rootMargin: "100px" }
     );
-    if (node) observerRef.current.observe(node);
+    observerRef.current.observe(node);
   },
-  [loading, hasMore, fetchJobs]
+  [hasMore, loading, fetchJobs]
 );
 
   /* ── Filter logic: type now matches against the array ── */
