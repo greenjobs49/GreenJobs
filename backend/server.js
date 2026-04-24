@@ -46,8 +46,8 @@ app.use(cors(corsOptions));
 app.options("/{*path}", cors(corsOptions));
 
 // Body parsers with payload limits (Prevents DoS)
-app.use(express.json({ limit: "50kb" }));
-app.use(express.urlencoded({ extended: true, limit: "50kb" }));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 // DB connection
 connectDB();

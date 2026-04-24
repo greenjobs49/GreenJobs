@@ -245,21 +245,30 @@ const Jobs = () => {
   }, []);
 
   const lastJobRef = useCallback(
-    (node) => {
-      if (loading || !hasMore) return;
-      if (observerRef.current) observerRef.current.disconnect();
-      observerRef.current = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
-            setPage((prev) => { const nextPage = prev + 1; fetchJobs(nextPage, true); return nextPage; });
-          }
-        },
-        { threshold: 0.1 }
-      );
-      if (node) observerRef.current.observe(node);
-    },
-    [loading, hasMore, fetchJobs]
-  );
+  (node) => {
+    if (loading || !hasMore) return;
+    if (observerRef.current) observerRef.current.disconnect();
+    observerRef.current = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !loadingRef.current) {
+          // Add a small delay to prevent rapid firing
+          setTimeout(() => {
+            if (!loadingRef.current) {
+              setPage((prev) => {
+                const nextPage = prev + 1;
+                fetchJobs(nextPage, true);
+                return nextPage;
+              });
+            }
+          }, 300);
+        }
+      },
+      { threshold: 0.1, rootMargin: "100px" }
+    );
+    if (node) observerRef.current.observe(node);
+  },
+  [loading, hasMore, fetchJobs]
+);
 
   /* ── Filter logic: type now matches against the array ── */
   useEffect(() => {

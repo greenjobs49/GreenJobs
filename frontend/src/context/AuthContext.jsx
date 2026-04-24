@@ -49,7 +49,7 @@ const refreshUser = useCallback(async (currentToken) => {
 useEffect(() => {
   if (!token) return;
   refreshUser();                                      // fresh data on mount/login
-  const interval = setInterval(refreshUser, 30_000); // poll every 30s
+  const interval = setInterval(refreshUser, 300_000); // poll every 30s
   const onFocus  = () => refreshUser();               // refresh when tab regains focus
   window.addEventListener('focus', onFocus);
   return () => {
