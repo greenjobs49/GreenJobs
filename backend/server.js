@@ -78,8 +78,7 @@ app.use((err, req, res, next) => {
     message: isProd ? "Something went wrong processing your request" : err.message 
   });
 });
-
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
+const server = app.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
 server.keepAliveTimeout = 65000;
 server.headersTimeout = 66000;
