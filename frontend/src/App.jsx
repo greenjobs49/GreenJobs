@@ -32,11 +32,9 @@ import Home from "./pages/Home";
 import BusinessDetail from "./pages/BusinessDetail";
 
 import ProtectedRoute from "./components/common/ProtectedRoute";
-import { AuthProvider } from "./context/AuthContext";
 
 function App() {
   return (
-    <AuthProvider>
       <div className="App">
         <Toaster
   position="top-center"
@@ -187,7 +185,6 @@ function App() {
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </div>
-    </AuthProvider>
   );
 }
 

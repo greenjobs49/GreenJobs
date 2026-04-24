@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Navbar from "../components/common/Navbar";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
@@ -38,14 +38,12 @@ const ROUND_TYPE_LABELS = {
   other: "Other",
 };
 
-/* ── helper: always return an array of types ── */
 const getTypeArr = (type) => {
   if (Array.isArray(type)) return type.filter(Boolean);
   if (typeof type === "string" && type.trim()) return [type.trim()];
   return [];
 };
 
-/* ── Skill Dropdown Component ── */
 const SkillDropdown = ({ allSkills, skillFilter, setSkillFilter, skillCounts }) => {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -116,7 +114,6 @@ const SkillDropdown = ({ allSkills, skillFilter, setSkillFilter, skillCounts }) 
   );
 };
 
-/* ── Type tag colour map ── */
 const TYPE_COLORS = {
   "Full Time":  { bg: "#dbeafe", color: "#1e40af" },
   "Part Time":  { bg: "#ede9fe", color: "#6d28d9" },
@@ -127,58 +124,44 @@ const TYPE_COLORS = {
 };
 const defaultTypeColor = { bg: "#f1f5f9", color: "#475569" };
 
-const TypeTags = ({ types, limit = 99 }) => {
-  const arr = getTypeArr(types);
-  const shown = arr.slice(0, limit);
-  const extra = arr.length - shown.length;
-  return (
-    <>
-      {shown.map((t) => {
-        const c = TYPE_COLORS[t] || defaultTypeColor;
-        return (
-          <span key={t} className="job-tag" style={{ background: c.bg, color: c.color }}>
-            {t}
-          </span>
-        );
-      })}
-      {extra > 0 && (
-        <span className="job-tag" style={{ background: "#f1f5f9", color: "#64748b" }}>
-          +{extra}
-        </span>
-      )}
-    </>
-  );
-};
-
 const Jobs = () => {
   const { user, token } = useAuth();
   const isJobSeeker = user?.role === "jobseeker";
 
-  const [jobs, setJobs] = useState([]);
-  const [filteredJobs, setFilteredJobs] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedLocation, setSelectedLocation] = useState("All");
-  const [selectedType, setSelectedType] = useState("All");
-  const [selectedPay, setSelectedPay] = useState("All");
-  const [skillFilter, setSkillFilter] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
-  const [showAppliedOnly, setShowAppliedOnly] = useState(false);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
-  const [error, setError] = useState(null);
-  const [expandedRounds, setExpandedRounds] = useState({});
+  // ── Core state (simple, like Businesses.jsx) ──────────────────────────────
+  const [jobs, setJobs]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState(null);
 
-  const [appliedJobIds, setAppliedJobIds] = useState(new Set());
+  // ── Pagination ────────────────────────────────────────────────────────────
+  const [page, setPage]       = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const [searchTerm, setSearchTerm]           = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("All");
+  const [selectedType, setSelectedType]         = useState("All");
+  const [selectedPay, setSelectedPay]           = useState("All");
+  const [skillFilter, setSkillFilter]           = useState("");
+  const [showFilters, setShowFilters]           = useState(false);
+  const [showAppliedOnly, setShowAppliedOnly]   = useState(false);
+
+  // ── Applied jobs ──────────────────────────────────────────────────────────
+  const [appliedJobIds, setAppliedJobIds]   = useState(new Set());
   const [appliedLoading, setAppliedLoading] = useState(false);
 
-  const observerRef = useRef();
-  const loadingRef = useRef(false);
-  const errorRef = useRef(null);
+  // ── UI ────────────────────────────────────────────────────────────────────
+  const [expandedRounds, setExpandedRounds] = useState({});
 
-  /* ── Fetch applied job IDs ── */
+  // ── Refs ──────────────────────────────────────────────────────────────────
+  const observerRef = useRef(null);
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Fetch applied jobs (only for jobseekers)
+  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
-    if (!isJobSeeker || !token) return;
+    if (!token || !isJobSeeker) return;
     const fetchApplied = async () => {
       setAppliedLoading(true);
       try {
@@ -198,22 +181,32 @@ const Jobs = () => {
       }
     };
     fetchApplied();
-  }, [isJobSeeker, token]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // fetchJobs — simple and stateless like Businesses.jsx
+  // No loadingRef lock, no cache ref, no mutation during render.
+  // ─────────────────────────────────────────────────────────────────────────
   const fetchJobs = useCallback(async (pageNum = 1, append = false) => {
-    if (loadingRef.current) return;
-    loadingRef.current = true;
-    if (observerRef.current) observerRef.current.disconnect();
     try {
-      if (pageNum === 1) setLoading(true);
+      if (!append) setLoading(true);
+      else setLoadingMore(true);
       setError(null);
-      errorRef.current = null;
-      const response = await axios.get(`${API_BASE_URL}/api/jobs/public?page=${pageNum}&limit=12`, { timeout: 10000 });
+
+      const response = await axios.get(
+        `${API_BASE_URL}/api/jobs/public?page=${pageNum}&limit=12`,
+        { timeout: 10000 }
+      );
+
       let newJobs = [];
       if (response.data.jobs && Array.isArray(response.data.jobs)) newJobs = response.data.jobs;
       else if (Array.isArray(response.data)) newJobs = response.data;
-      const validJobs = newJobs.filter((job) => job && job._id && job.title && job.status === "approved");
-      if (append && validJobs.length > 0) {
+
+      const validJobs = newJobs.filter(
+        (job) => job && job._id && job.title && job.status === "approved"
+      );
+
+      if (append) {
         setJobs((prev) => {
           const existingIds = new Set(prev.map((j) => j._id));
           return [...prev, ...validJobs.filter((job) => !existingIds.has(job._id))];
@@ -221,55 +214,66 @@ const Jobs = () => {
       } else {
         setJobs(validJobs);
       }
+
       setHasMore(validJobs.length === 12);
     } catch (err) {
       console.error("Fetch error:", err);
-      if (err.code !== "ECONNABORTED" && !errorRef.current) {
+      setHasMore(false);
+      if (!append) {
+        // Try fallback endpoint
         try {
           const fallback = await axios.get(`${API_BASE_URL}/api/jobs`, { timeout: 5000 });
           const fallbackJobs = fallback.data.jobs || fallback.data || [];
-          setJobs(fallbackJobs.filter((job) => job.status === "approved"));
-          toast.success("Loaded via fallback");
+          const valid = fallbackJobs.filter((job) => job.status === "approved");
+          setJobs(valid);
         } catch {
           setError("No jobs available");
-          errorRef.current = "No jobs available";
-          toast.error("No jobs found");
         }
-      } else {
-        setError("Backend not responding");
-        errorRef.current = "Backend not responding";
       }
     } finally {
-      loadingRef.current = false;
       setLoading(false);
+      setLoadingMore(false);
     }
-  }, []);
+  }, []); // no dependencies — stable reference, like Businesses.jsx
 
-const lastJobRef = useCallback(
-  (node) => {
-    if (observerRef.current) observerRef.current.disconnect();
-    if (!node || !hasMore || loading) return;
+  // ─────────────────────────────────────────────────────────────────────────
+  // Initial fetch — runs ONCE on mount, never re-runs on parent re-renders
+  // ─────────────────────────────────────────────────────────────────────────
+  useEffect(() => {
+    fetchJobs(1, false);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // Infinite scroll — IntersectionObserver on last card sentinel
+  // ─────────────────────────────────────────────────────────────────────────
+  const sentinelRef = useCallback((node) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (!node || !hasMore || loadingMore) return;
 
     observerRef.current = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
+        if (entries[0].isIntersecting && !loadingMore) {
           setPage((prev) => {
-            const nextPage = prev + 1;
-            fetchJobs(nextPage, true);
-            return nextPage;
+            const next = prev + 1;
+            fetchJobs(next, true);
+            return next;
           });
         }
       },
-      { threshold: 0.1, rootMargin: "100px" }
+      { threshold: 0.1, rootMargin: "150px" }
     );
     observerRef.current.observe(node);
-  },
-  [hasMore, loading, fetchJobs]
-);
+  }, [hasMore, loadingMore, fetchJobs]);
 
-  /* ── Filter logic: type now matches against the array ── */
-  useEffect(() => {
+  // ─────────────────────────────────────────────────────────────────────────
+  // Client-side filtering (same logic as before)
+  // ─────────────────────────────────────────────────────────────────────────
+  const filteredJobs = useMemo(() => {
     let filtered = jobs;
+
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       filtered = filtered.filter(
@@ -281,23 +285,33 @@ const lastJobRef = useCallback(
           (job.business?.businessProfile?.businessName || "").toLowerCase().includes(q)
       );
     }
-    if (selectedLocation !== "All") filtered = filtered.filter((job) => job.location === selectedLocation);
-    if (selectedType !== "All") {
-      // match if the job's type array contains the selected type
+
+    if (selectedLocation !== "All")
+      filtered = filtered.filter((job) => job.location === selectedLocation);
+
+    if (selectedType !== "All")
       filtered = filtered.filter((job) => getTypeArr(job.type).includes(selectedType));
-    }
-    if (selectedPay === "Paid")   filtered = filtered.filter((job) => job.isPaid !== false);
-    if (selectedPay === "Unpaid") filtered = filtered.filter((job) => job.isPaid === false);
+
+    if (selectedPay === "Paid")
+      filtered = filtered.filter((job) => job.isPaid !== false);
+
+    if (selectedPay === "Unpaid")
+      filtered = filtered.filter((job) => job.isPaid === false);
+
     if (skillFilter.trim()) {
       const sq = skillFilter.toLowerCase();
       filtered = filtered.filter((job) => (job.skills || []).some((s) => s.toLowerCase().includes(sq)));
     }
-    if (showAppliedOnly) filtered = filtered.filter((job) => appliedJobIds.has(job._id));
-    setFilteredJobs(filtered);
+
+    if (showAppliedOnly)
+      filtered = filtered.filter((job) => appliedJobIds.has(job._id));
+
+    return filtered;
   }, [searchTerm, selectedLocation, selectedType, selectedPay, skillFilter, showAppliedOnly, appliedJobIds, jobs]);
 
-  useEffect(() => { fetchJobs(1, false); }, []);
-
+  // ─────────────────────────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────────────────────────
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedLocation("All");
@@ -306,26 +320,26 @@ const lastJobRef = useCallback(
     setSkillFilter("");
     setShowAppliedOnly(false);
     setPage(1);
-    setJobs([]);
-    setHasMore(true);
     fetchJobs(1, false);
   };
 
-  const toggleRounds = (jobId) => setExpandedRounds((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
+  const toggleRounds = (jobId) =>
+    setExpandedRounds((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
 
-  const locations = Array.from(new Set(jobs.map((job) => job.location))).sort().filter(Boolean);
-  // Flatten all type arrays to build the unique types list for the filter dropdown
-  const types = Array.from(
-    new Set(jobs.flatMap((job) => getTypeArr(job.type)))
-  ).sort().filter(Boolean);
+  const locations  = Array.from(new Set(jobs.map((job) => job.location))).sort().filter(Boolean);
+  const types      = Array.from(new Set(jobs.flatMap((job) => getTypeArr(job.type)))).sort().filter(Boolean);
+  const allSkills  = Array.from(new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))).sort();
 
-  const allSkills = Array.from(new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))).sort();
   const skillCounts = allSkills.reduce((acc, skill) => {
-    acc[skill] = jobs.filter((j) => (j.skills || []).some((s) => s.toLowerCase() === skill.toLowerCase())).length;
+    acc[skill] = jobs.filter((j) =>
+      (j.skills || []).some((s) => s.toLowerCase() === skill.toLowerCase())
+    ).length;
     return acc;
   }, {});
 
-  const hasActiveFilters = searchTerm || selectedLocation !== "All" || selectedType !== "All" || selectedPay !== "All" || skillFilter || showAppliedOnly;
+  const hasActiveFilters =
+    searchTerm || selectedLocation !== "All" || selectedType !== "All" ||
+    selectedPay !== "All" || skillFilter || showAppliedOnly;
 
   const formatPay = (job) => {
     if (!job.isPaid) return { label: "Unpaid", color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0" };
@@ -339,6 +353,9 @@ const lastJobRef = useCallback(
 
   const appliedCount = jobs.filter((j) => appliedJobIds.has(j._id)).length;
 
+  // ─────────────────────────────────────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -355,7 +372,6 @@ const lastJobRef = useCallback(
 
         .jobs-wrapper { background: #f8fafc; min-height: 100vh; width: 100%; overflow-x: hidden; }
 
-        /* ── Hero ── */
         .hero-section {
           background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
           padding: 64px 24px 88px; position: relative; overflow: hidden; width: 100%;
@@ -381,7 +397,6 @@ const lastJobRef = useCallback(
         .hero-title { font-size: 40px; font-weight: 700; color: white; margin-bottom: 16px; line-height: 1.2; }
         .hero-subtitle { font-size: 17px; color: #94a3b8; max-width: 600px; margin: 0 auto 40px; }
 
-        /* ── Search ── */
         .search-container { max-width: 900px; margin: 0 auto; position: relative; z-index: 10; width: 100%; }
         .search-box {
           background: white; border-radius: 12px; padding: 8px;
@@ -437,7 +452,6 @@ const lastJobRef = useCallback(
         }
         .applied-filter-btn.active .applied-count { background: #065f46; }
 
-        /* ── Adv filters ── */
         .adv-filters {
           max-width: 900px; margin: 10px auto 0; background: white;
           border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px;
@@ -454,7 +468,6 @@ const lastJobRef = useCallback(
         }
         .pay-chip.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
 
-        /* ── Stats bar ── */
         .stats-bar { max-width: 1200px; margin: -24px auto 36px; padding: 0 24px; position: relative; z-index: 5; }
         .stats-card {
           background: white; border: 1px solid #e2e8f0; border-radius: 10px;
@@ -472,7 +485,6 @@ const lastJobRef = useCallback(
           color: #065f46; font-size: 12px; font-weight: 700;
         }
 
-        /* ── Skill bar ── */
         .skill-bar { max-width: 1200px; margin: 0 auto 20px; padding: 0 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
         .skill-bar-label { font-size: 12px; color: #94a3b8; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
         .skill-dropdown-wrap { position: relative; }
@@ -520,11 +532,9 @@ const lastJobRef = useCallback(
         .skill-active-tag button { background: none; border: none; cursor: pointer; display: flex; align-items: center; color: #065f46; padding: 0; opacity: 0.7; transition: opacity 0.15s; flex-shrink: 0; }
         .skill-active-tag button:hover { opacity: 1; }
 
-        /* ── Jobs grid ── */
         .jobs-container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; width: 100%; }
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 
-        /* ── Job card ── */
         .job-card {
           background: white; border: 1px solid #e2e8f0; border-radius: 14px;
           padding: 22px; transition: border-color 0.2s, box-shadow 0.2s;
@@ -548,34 +558,17 @@ const lastJobRef = useCallback(
           letter-spacing: 0.3px; text-transform: uppercase;
         }
 
-        /* ── Type tags row ── */
-        .job-tags {
-          display: flex; gap: 5px; margin-bottom: 14px;
-          flex-wrap: wrap; align-items: center;
-        }
+        .job-tags { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
         .job-tag {
-          padding: 3px 9px; border-radius: 6px;
-          font-size: 11px; font-weight: 700;
-          text-transform: uppercase; letter-spacing: 0.4px;
-          white-space: nowrap; line-height: 1.5;
+          padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700;
+          text-transform: uppercase; letter-spacing: 0.4px; white-space: nowrap; line-height: 1.5;
         }
-        .tag-live {
-          background: #d1fae5; color: #065f46;
-          display: flex; align-items: center; gap: 4px;
-        }
+        .tag-live { background: #d1fae5; color: #065f46; display: flex; align-items: center; gap: 4px; }
         .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; flex-shrink: 0; }
         .tag-pay {
           padding: 3px 9px; border-radius: 6px; font-size: 11px; font-weight: 700;
           display: flex; align-items: center; gap: 4px; border: 1px solid transparent;
           white-space: nowrap; text-transform: uppercase; letter-spacing: 0.4px;
-        }
-        /* type tags divider when more than one type exists */
-        .type-tags-group {
-          display: flex; flex-wrap: wrap; gap: 4px; align-items: center;
-        }
-        .type-tags-divider {
-          width: 1px; height: 14px; background: #e2e8f0;
-          flex-shrink: 0; margin: 0 2px; display: none;
         }
 
         .job-title { font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 14px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; transition: color 0.2s; word-break: break-word; }
@@ -608,7 +601,6 @@ const lastJobRef = useCallback(
         .job-card.applied .btn-view { background: #059669; }
         .job-card.applied .btn-view:hover { background: #047857; }
 
-        /* ── State screens ── */
         .loading-state, .error-state, .empty-state { text-align: center; padding: 80px 24px; }
         .state-icon { width: 64px; height: 64px; margin: 0 auto 24px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .state-title { font-size: 20px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
@@ -661,7 +653,6 @@ const lastJobRef = useCallback(
       <Navbar />
 
       <div className="jobs-wrapper">
-        {/* ── Hero ── */}
         <div className="hero-section">
           <div className="hero-glow" />
           <div className="hero-container">
@@ -681,18 +672,19 @@ const lastJobRef = useCallback(
                 <Search className="search-icon" size={18} color="#94a3b8" />
                 <input
                   type="text"
+                  name="job-search-input"
+                  autoComplete="off"
                   placeholder="Job title, company, skill..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="search-input"
                 />
               </div>
-              <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="search-select">
+              <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="search-select" name="location-select">
                 <option value="All">All Locations</option>
                 {locations.map((loc) => <option key={loc}>{loc}</option>)}
               </select>
-              {/* Type filter now covers all unique values extracted from arrays */}
-              <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="search-select">
+              <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="search-select" name="type-select">
                 <option value="All">All Types</option>
                 {types.map((type) => <option key={type}>{type}</option>)}
               </select>
@@ -737,7 +729,6 @@ const lastJobRef = useCallback(
           </div>
         </div>
 
-        {/* ── Stats bar ── */}
         <div className="stats-bar">
           <div className="stats-card">
             <span className="stat-item"><span className="stat-value">{filteredJobs.length}</span> jobs</span>
@@ -750,11 +741,7 @@ const lastJobRef = useCallback(
             {isJobSeeker && appliedCount > 0 && (
               <>
                 <span className="stat-divider">|</span>
-                <span
-                  className="applied-stat"
-                  style={{ cursor: "pointer" }}
-                  onClick={() => setShowAppliedOnly((p) => !p)}
-                >
+                <span className="applied-stat" style={{ cursor: "pointer" }} onClick={() => setShowAppliedOnly((p) => !p)}>
                   <BookmarkCheck size={12} />
                   {appliedCount} applied
                 </span>
@@ -767,7 +754,6 @@ const lastJobRef = useCallback(
           </div>
         </div>
 
-        {/* ── Skill dropdown bar ── */}
         {allSkills.length > 0 && (
           <div className="skill-bar">
             <span className="skill-bar-label"><Code2 size={12} />Skills:</span>
@@ -781,14 +767,16 @@ const lastJobRef = useCallback(
           </div>
         )}
 
-        {/* ── Jobs grid ── */}
         <div className="jobs-container">
-          {loading && filteredJobs.length === 0 ? (
+          {/* ── Initial loading ── */}
+          {loading ? (
             <div className="loading-state">
               <div className="state-icon"><Loader2 size={32} color="#10b981" className="spinner" /></div>
               <p className="state-title">Finding opportunities...</p>
             </div>
-          ) : error && filteredJobs.length === 0 ? (
+
+          /* ── Error (no jobs at all) ── */
+          ) : error && jobs.length === 0 ? (
             <div className="error-state">
               <div className="state-icon"><Briefcase size={32} color="#cbd5e1" /></div>
               <h3 className="state-title">{error}</h3>
@@ -798,6 +786,8 @@ const lastJobRef = useCallback(
                 <button type="button" onClick={() => fetchJobs(1, false)} className="btn-action btn-action-secondary">Retry</button>
               </div>
             </div>
+
+          /* ── Empty filtered results ── */
           ) : filteredJobs.length === 0 ? (
             <div className="empty-state">
               <div className="state-icon"><Search size={32} color="#cbd5e1" /></div>
@@ -811,6 +801,8 @@ const lastJobRef = useCallback(
                 {showAppliedOnly ? "Browse All Jobs" : "Clear Filters"}
               </button>
             </div>
+
+          /* ── Job cards ── */
           ) : (
             <div className="jobs-grid">
               {filteredJobs.map((job, index) => {
@@ -826,7 +818,7 @@ const lastJobRef = useCallback(
                 return (
                   <div
                     key={job._id}
-                    ref={isLast ? lastJobRef : null}
+                    ref={isLast ? sentinelRef : null}
                     className={`job-card${isApplied ? " applied" : ""}`}
                   >
                     {isApplied && (
@@ -836,9 +828,7 @@ const lastJobRef = useCallback(
                       </div>
                     )}
 
-                    {/* ── Tags row: type pills + live + pay ── */}
                     <div className="job-tags" style={{ paddingRight: isApplied ? 72 : 0 }}>
-                      {/* Each employment type gets its own coloured pill */}
                       {typeArr.map((t) => {
                         const c = TYPE_COLORS[t] || defaultTypeColor;
                         return (
@@ -847,15 +837,10 @@ const lastJobRef = useCallback(
                           </span>
                         );
                       })}
-
                       <span className="job-tag tag-live">
                         <span className="live-dot" />Live
                       </span>
-
-                      <span
-                        className="tag-pay"
-                        style={{ background: pay.bg, color: pay.color, borderColor: pay.border }}
-                      >
+                      <span className="tag-pay" style={{ background: pay.bg, color: pay.color, borderColor: pay.border }}>
                         {pay.label}
                       </span>
                     </div>
@@ -927,7 +912,8 @@ const lastJobRef = useCallback(
             </div>
           )}
 
-          {hasMore && jobs.length > 0 && !loading && (
+          {/* ── Load more spinner (infinite scroll) ── */}
+          {loadingMore && (
             <div className="load-more">
               <Loader2 size={24} color="#10b981" className="spinner" />
               <p className="load-more-text">Loading more...</p>
