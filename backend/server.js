@@ -22,8 +22,9 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
   "https://green-jobs-six.vercel.app",
-  process.env.FRONTEND_URL
-].filter(Boolean); // removes undefined values
+  "https://jobs.solarisourpassion.com",
+  ...(process.env.FRONTEND_URL ? process.env.FRONTEND_URL.split(',').map(o => o.trim()) : [])
+].filter(Boolean);
 
 const corsOptions = {
   origin: function (origin, callback) {
