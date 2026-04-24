@@ -21,7 +21,7 @@ app.use(
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://green-jobs-alpha.vercel.app",
+  "https://green-jobs-six.vercel.app",
   process.env.FRONTEND_URL
 ].filter(Boolean); // removes undefined values
 
