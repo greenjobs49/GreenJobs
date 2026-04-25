@@ -1045,7 +1045,7 @@ const sendJobRevokedByAdminEmail = async (email, name, jobTitle, companyName, re
         </ul>
       </td></tr>
     </table>
-    ${ctaButton("Contact Support", "mailto:support@greenjobs.in", "#dc2626")}
+    ${ctaButton("Contact Support", "mailto:greenjobs111@gmail.com", "#dc2626")}
     ${divider()}
     <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
     <strong style="color:#475569;">The Green Jobs Trust & Safety Team</strong></p>
