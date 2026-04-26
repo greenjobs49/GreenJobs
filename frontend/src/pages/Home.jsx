@@ -979,8 +979,8 @@ export default function GreenJobsHomepage() {
           <div>
             <div className="footer-title">Contact</div>
             <div className="footer-links">
-              <span className="footer-link">Address: Delhi</span>
-              <span className="footer-link">Phone No.</span>
+              <span className="footer-link">Address: Raghubar niwas, Lane A10, Gurudwara Colony, Lohegaon, Pune, Maharashtra 411047</span>
+              <span className="footer-link">Phone No.: +919582819668</span>
             </div>
           </div>
         </div>
