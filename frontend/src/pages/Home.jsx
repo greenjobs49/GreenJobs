@@ -965,7 +965,8 @@ export default function GreenJobsHomepage() {
             <div className="footer-title">Quick Links</div>
             <div className="footer-links">
               <span className="footer-link" onClick={() => navigate("/")}>Home</span>
-              <span className="footer-link">About Us</span>
+              <span className="footer-link" onClick={() => navigate("/jobs")}>Jobs</span>
+              <span className="footer-link" onClick={() => navigate("/businesses")}>Companies</span>
             </div>
           </div>
           <div>
