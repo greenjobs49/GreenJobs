@@ -97,19 +97,24 @@ exports.updateAd = async (req, res) => {
     // If a new file was uploaded, overwrite imageUrl (old S3 key is left to age out
     // or you can delete it explicitly — see optional block below)
     if (req.file?.location) {
-      // Optional: delete old image from S3
-      if (ad.imageUrl) {
-        const oldKey = ad.imageUrl.split(".amazonaws.com/")[1];
-        if (oldKey) {
-          const s3 = require("../config/s3");
-          s3.deleteObject(
-            { Bucket: process.env.AWS_S3_BUCKET_NAME, Key: oldKey },
-            (err) => { if (err) console.warn("S3 delete old ad image failed:", err); }
-          );
-        }
+  // Delete old image from S3 using SDK v3
+  if (ad.imageUrl && ad.imageUrl.includes(".amazonaws.com/")) {
+    try {
+      const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+      const s3 = require("../config/s3");
+      const oldKey = ad.imageUrl.split(".amazonaws.com/")[1];
+      if (oldKey && process.env.AWS_S3_BUCKET_NAME) {
+        await s3.send(new DeleteObjectCommand({
+          Bucket: process.env.AWS_S3_BUCKET_NAME,
+          Key: oldKey,
+        }));
       }
-      ad.imageUrl = req.file.location;
+    } catch (s3Err) {
+      console.warn("S3 delete old ad image failed (non-fatal):", s3Err.message);
     }
+  }
+  ad.imageUrl = req.file.location;
+}
 
     const fields = [
       "title", "subtitle", "tag", "ctaText", "ctaUrl",

@@ -153,9 +153,9 @@ export default function GreenJobsHomepage() {
     if (!job.isPaid) return "Unpaid / Volunteer";
     if (job.stipend) {
       const p = { monthly: "/mo", yearly: "/yr", weekly: "/wk", hourly: "/hr", project: "/project" };
-      return `${job.stipend} ${p[job.stipendPeriod] || ""}`.trim();
+      return `₹${job.stipend} ${p[job.stipendPeriod] || ""}`.trim();
     }
-    if (job.salary) return job.salary;
+    if (job.salary) return job.salary.startsWith("₹") ? job.salary : `₹${job.salary}`;
     return "Paid";
   };
 
@@ -417,7 +417,6 @@ export default function GreenJobsHomepage() {
 
         .job-tags { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
         .job-tag { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
-        .tag-type { background: #dbeafe; color: #1e40af; }
         .tag-live { background: #d1fae5; color: #065f46; display: flex; align-items: center; gap: 4px; }
         .live-dot { width: 6px; height: 6px; background: #10b981; border-radius: 50%; animation: pulse 2s infinite; }
         .tag-pay { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
@@ -721,10 +720,31 @@ export default function GreenJobsHomepage() {
                     <div key={job._id} className="job-card" onClick={() => navigate(`/jobs/${job._id}`)}>
 
                       {/* Tags row */}
+                      {/* Tags row */}
                       <div className="job-tags">
-                        {job.type && <span className="job-tag tag-type">{job.type}</span>}
+                        {(Array.isArray(job.type)
+                          ? job.type.filter(Boolean)
+                          : job.type?.trim() ? [job.type.trim()] : []
+                        ).map((t) => {
+                          const typeColors = {
+                            "Full Time":  { bg: "#dbeafe", color: "#1e40af" },
+                            "Part Time":  { bg: "#ede9fe", color: "#6d28d9" },
+                            "Internship": { bg: "#fef3c7", color: "#92400e" },
+                            "Contract":   { bg: "#fee2e2", color: "#991b1b" },
+                            "Remote":     { bg: "#d1fae5", color: "#065f46" },
+                            "Freelance":  { bg: "#fce7f3", color: "#9d174d" },
+                          };
+                          const c = typeColors[t] || { bg: "#f1f5f9", color: "#475569" };
+                          return (
+                            <span key={t} className="job-tag" style={{ background: c.bg, color: c.color }}>
+                              {t}
+                            </span>
+                          );
+                        })}
                         <span className="job-tag tag-live"><span className="live-dot" />Live</span>
-                        <span className={`job-tag ${job.isPaid ? "tag-pay" : "tag-unpaid"}`}>{job.isPaid ? "Paid" : "Unpaid"}</span>
+                        <span className={`job-tag ${job.isPaid ? "tag-pay" : "tag-unpaid"}`}>
+                          {job.isPaid ? "Paid" : "Unpaid"}
+                        </span>
                       </div>
 
                       {/* Title — always 2 lines tall */}
