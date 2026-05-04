@@ -1,7 +1,8 @@
 const User = require("../models/User");
 const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
 const s3 = require("../config/s3");
-const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+const { DeleteObjectCommand,GetObjectCommand } = require("@aws-sdk/client-s3");
+const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 const email = require("../services/emailService");
 
 const calculateProgress = (requiredFields, data) => {
@@ -209,6 +210,48 @@ exports.uploadResume = async (req, res) => {
   } catch (err) {
     console.error("RESUME ERROR:", err);
     res.status(500).json({ success: false, message: err.message || "Resume upload failed" });
+  }
+};
+
+/* =========================================================
+   GET RESUME VIEW URL (signed, with correct headers)
+========================================================= */
+exports.getResumeViewUrl = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id);
+    if (!user || user.role !== "jobseeker")
+      return res.status(403).json({ success: false, message: "Jobseeker profile required" });
+
+    const resume = user.jobSeekerProfile?.resume;
+    if (!resume)
+      return res.status(404).json({ success: false, message: "No resume uploaded yet" });
+
+    console.log("Resume URL from DB:", resume); // <-- add this
+
+    const urlObj = new URL(resume);
+    const key    = decodeURIComponent(urlObj.pathname.substring(1));
+
+    console.log("Extracted S3 key:", key); // <-- and this
+
+    const isPdf = key.toLowerCase().endsWith(".pdf");
+
+    const command = new GetObjectCommand({
+      Bucket:                     process.env.AWS_S3_BUCKET_NAME,
+      Key:                        key,
+      ResponseContentType:        isPdf
+        ? "application/pdf"
+        : "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      ResponseContentDisposition: isPdf
+        ? "inline"
+        : 'attachment; filename="resume.docx"',
+    });
+
+    const signedUrl = await getSignedUrl(s3, command, { expiresIn: 3600 });
+    res.json({ success: true, url: signedUrl, type: isPdf ? "pdf" : "docx" });
+
+  } catch (err) {
+    console.error("RESUME VIEW URL ERROR:", err); // check your server logs for the full error
+    res.status(500).json({ success: false, message: "Could not generate resume URL" });
   }
 };
 

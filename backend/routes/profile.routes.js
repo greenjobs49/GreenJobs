@@ -27,7 +27,8 @@ const {
   getLinkedRecruiters,
   removeRecruiterFromBusiness,
   getLinkedBusinessDetails,
-  requestVerification,         
+  requestVerification,
+  getResumeViewUrl,         
 } = require("../controllers/profile.controller");
 
 // Core profile
@@ -36,6 +37,7 @@ router.get("/me",        auth, getMyProfile);
 
 // File uploads
 router.post("/upload-resume",          auth, role("jobseeker"), uploadResume.single("resume"), uploadResumeCtrl);
+router.get("/resume-view-url",  auth, role("jobseeker"), getResumeViewUrl);
 router.post("/upload-logo",            auth, role("recruiter"), uploadLogo.single("logo"),     uploadLogoCtrl);
 router.post("/upload-business-images", auth, role("business"),  uploadImage.array("images", 5), uploadBusinessImages);
 router.post("/upload-avatar",          auth, uploadAvatar.single("avatar"), uploadProfilePicture);

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Navbar from '../components/common/Navbar';
+import toast from "react-hot-toast";
 import MyApplications from './MyApplications';
 import {
   Briefcase, FileText, User, Upload, AlertCircle, CheckCircle,
@@ -24,7 +25,7 @@ const normalizeAd = (ad) => ({
 });
 
 export default function JobSeekerDashboard() {
-  const { user, refreshUser } = useAuth();
+  const { user, refreshUser, token } = useAuth();
   const navigate = useNavigate();
 
   /* profile data */
@@ -129,7 +130,23 @@ export default function JobSeekerDashboard() {
     { icon: TrendingUp, label: 'Profile Score', value: `${profileProgress}%`, sub: 'completion',  color: '#6366f1', bg: '#eef2ff' },
     { icon: Star,       label: 'Profile',        value: isProfileComplete ? 'Active' : 'Incomplete', sub: 'status', color: '#f59e0b', bg: '#fffbeb' },
   ];
-
+const handleViewResume = async () => {
+  try {
+    const res = await axios.get(`${API_BASE_URL}/api/profile/resume-view-url`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (res.data.type === "pdf") {
+      window.open(res.data.url, "_blank");
+    } else {
+      const a = document.createElement("a");
+      a.href = res.data.url;
+      a.download = "resume.docx";
+      a.click();
+    }
+  } catch {
+    toast.error("Could not open resume");
+  }
+};
   return (
     <>
       <style>{`
@@ -441,9 +458,9 @@ export default function JobSeekerDashboard() {
                   <User size={15} /> {isProfileComplete ? 'Update Profile' : 'Complete Profile'}
                 </button>
                 {resumeUrl && (
-                  <button className="hero-btn hero-btn-ghost" onClick={() => window.open(resumeUrl,'_blank')}>
-                    <FileText size={15} /> View Resume
-                  </button>
+                  <button className="hero-btn hero-btn-ghost" onClick={handleViewResume}>
+                  <FileText size={15} /> View Resume
+                </button>
                 )}
               </div>
               <div className="jsd-progress-row">
@@ -520,7 +537,7 @@ export default function JobSeekerDashboard() {
                     <Search size={15} /> Browse Jobs
                   </button>
                   {resumeUrl ? (
-                    <button className="action-btn action-btn-outline" onClick={() => window.open(resumeUrl,'_blank')}>
+                    <button className="action-btn action-btn-outline" onClick={handleViewResume}>
                       <FileText size={15} /> View Resume
                     </button>
                   ) : (

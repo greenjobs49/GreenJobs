@@ -205,16 +205,34 @@ const CompleteProfile = () => {
 
   /* ── File uploads (called after crop) ── */
   const handleResumeUpload = async (file) => {
-    if (!file) return;
-    setUploading(true);
-    const data = new FormData(); data.append("resume", file);
-    try {
-      const res = await axios.post(`${API}/upload-resume`, data, { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } });
-      setForm((p) => ({ ...p, resume: res.data.resumeUrl }));
-      toast.success("Resume uploaded!");
-    } catch { toast.error("Upload failed."); }
-    finally { setUploading(false); }
-  };
+  if (!file) return;
+
+  const ALLOWED = new Set([
+    "application/pdf",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ]);
+  if (!ALLOWED.has(file.type)) {
+    return toast.error("Only PDF or DOCX files are accepted");
+  }
+  if (file.size > 5 * 1024 * 1024) {
+    return toast.error("File must be under 5 MB");
+  }
+
+  setUploading(true);
+  const data = new FormData();
+  data.append("resume", file);
+  try {
+    const res = await axios.post(`${API}/upload-resume`, data, {
+      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+    });
+    setForm((p) => ({ ...p, resume: res.data.resumeUrl }));
+    toast.success("Resume uploaded!");
+  } catch (err) {
+    toast.error(err.response?.data?.message || "Upload failed.");
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleLogoCropDone = async (blob) => {
     setLogoCropOpen(false);
@@ -361,10 +379,17 @@ const handleBizCropDone = async (blob) => {
               </div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "white", marginBottom: 4 }}>Upload Your Resume</div>
-                <div style={{ fontSize: 13.5, color: "#94a3b8" }}>Supported: PDF, DOC, DOCX — Max 5MB</div>
+                <div style={{ fontSize: 13.5, color: "#94a3b8" }}>Supported: PDF or DOCX — Max 5MB</div>
               </div>
             </div>
-            <input type="file" accept=".pdf,.doc,.docx" onChange={(e) => handleResumeUpload(e.target.files[0])} className="cp-file-input" id="resume-upload" disabled={uploading} />
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(e) => handleResumeUpload(e.target.files[0])}
+              className="cp-file-input"
+              id="resume-upload"
+              disabled={uploading}
+            />
             <label htmlFor="resume-upload" className="cp-upload-label">
               <Upload size={16} />{uploading ? "Uploading…" : "Choose File"}
             </label>
