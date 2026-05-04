@@ -97,7 +97,7 @@ export default function MyProfile() {
     formData.append("avatar", blob, "avatar.jpg");
     try {
       await apiClient.post("/profile/upload-avatar", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
       });
       await refreshUser();
     } catch (err) {
@@ -115,7 +115,7 @@ export default function MyProfile() {
     formData.append("logo", blob, "logo.jpg");
     try {
       await apiClient.post("/profile/upload-logo", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
       });
       await refreshUser();
     } catch (err) {
@@ -134,7 +134,7 @@ export default function MyProfile() {
       const formData = new FormData();
       formData.append("images", blob, "business.jpg");
       await apiClient.post("/profile/upload-business-images", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+        headers: { "Content-Type": undefined },
       });
       await refreshUser();
     } catch (err) {
@@ -300,48 +300,36 @@ export default function MyProfile() {
           {/* ── Hero ── */}
           <div className="mp-hero">
 
-            {/* Avatar */}
+            {/* Avatar — editable for ALL roles */}
             <div
               className="mp-avatar"
-              onClick={() => {
-                if (role === "business" || role === "recruiter") {
-                  fileInputAvatarRef.current?.click();
-                }
-              }}
+              onClick={() => fileInputAvatarRef.current?.click()}
             >
-              {user?.profilePicture ? (
-                <img src={user.profilePicture} alt={user.name} />
-              ) : (
-                user?.name?.charAt(0)?.toUpperCase() || "U"
-              )}
-              {(role === "business" || role === "recruiter") && !uploadingAvatar && (
-                <div className="mp-avatar-edit">
-                  {uploadingAvatar ? "…" : "EDIT"}
-                </div>
-              )}
+              {user?.profilePicture
+                ? <img src={user.profilePicture} alt={user.name} />
+                : user?.name?.charAt(0)?.toUpperCase() || 'U'
+              }
+              {!uploadingAvatar && <div className="mp-avatar-edit">EDIT</div>}
               {uploadingAvatar && (
                 <div className="mp-avatar-uploading">
-                  <span style={{ color: "white", fontSize: 11, fontWeight: 700 }}>Saving…</span>
+                  <span style={{ color:'white', fontSize:11, fontWeight:700 }}>Saving…</span>
                 </div>
               )}
             </div>
 
-            {/* Hidden avatar file input */}
-            {(role === "business" || role === "recruiter") && (
-              <input
-                ref={fileInputAvatarRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setAvatarRawSrc(URL.createObjectURL(file));
-                  setAvatarCropOpen(true);
-                  e.target.value = "";
-                }}
-              />
-            )}
+            <input
+              ref={fileInputAvatarRef}
+              type="file"
+              accept="image/*"
+              style={{ display:'none' }}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setAvatarRawSrc(URL.createObjectURL(file));
+                setAvatarCropOpen(true);
+                e.target.value = '';
+              }}
+            />
 
             <div className="mp-hero-info">
               <div className="mp-name">{user?.name || "User"}</div>
@@ -419,31 +407,35 @@ export default function MyProfile() {
             <>
               <Section title="Personal Information" icon={User} accent="#10b981">
                 <div className="mp-fields-grid">
-                  <Field label="Full Name"  value={profile.fullName || `${profile.firstName || ""} ${profile.lastName || ""}`.trim()} icon={User} />
-                  <Field label="Mobile"     value={profile.mobile}   icon={Phone} />
-                  <Field label="City"       value={profile.city}     icon={MapPin} />
-                  <Field label="Pincode"    value={profile.pincode}  icon={MapPin} />
-                  <Field label="Email"      value={user?.email}      icon={Mail} />
+                  <Field label="Full Name"   value={profile.fullName || `${profile.firstName||''} ${profile.lastName||''}`.trim()} icon={User} />
+                  <Field label="Mobile"      value={profile.mobile}    icon={Phone} />
+                  <Field label="City"        value={profile.city}      icon={MapPin} />
+                  <Field label="Pincode"     value={profile.pincode}   icon={MapPin} />
+                  <Field label="Email"       value={user?.email}       icon={Mail} />
+                  <Field label="Ready to Relocate" value={profile.readyToRelocate ? 'Yes' : 'No'} icon={MapPin} />
                 </div>
               </Section>
+
               <Section title="Professional Details" icon={Briefcase} accent="#0f172a">
                 <div className="mp-fields-grid">
-                  <Field label="Education"      value={profile.education}     icon={GraduationCap} />
-                  <Field label="Experience"     value={profile.experience ? `${profile.experience} years` : null} icon={Clock} />
-                  <Field label="Preferred Role" value={profile.preferredRole} icon={Star} />
+                  <Field label="Education"       value={profile.education}     icon={GraduationCap} />
+                  <Field label="Experience"      value={profile.experience ? `${profile.experience} years` : null} icon={Clock} />
+                  <Field label="Preferred Role"  value={profile.preferredRole} icon={Star} />
                   <Field label="Expected Salary" value={profile.expectedSalary} icon={DollarSign} />
-                  <Field label="LinkedIn"       value={profile.linkedin}      icon={Linkedin} isLink />
-                  <Field label="Portfolio"      value={profile.portfolio}     icon={Globe}    isLink />
+                  <Field label="LinkedIn"        value={profile.linkedin}      icon={Linkedin} isLink />
+                  <Field label="Portfolio"       value={profile.portfolio}     icon={Globe}    isLink />
                 </div>
               </Section>
+
               {(profile.about || profile.accomplishments) && (
                 <Section title="About" icon={FileText} accent="#059669">
-                  <div style={{ padding: "4px 0" }}>
-                    <Field label="About Me"       value={profile.about}           multiline />
+                  <div style={{ padding:'4px 0' }}>
+                    <Field label="About Me"        value={profile.about}           multiline />
                     <Field label="Accomplishments" value={profile.accomplishments} multiline />
                   </div>
                 </Section>
               )}
+
               {profile.skills?.length > 0 && (
                 <Section title="Skills" icon={Award} accent="#10b981">
                   <div className="mp-skills-wrap">
@@ -451,9 +443,27 @@ export default function MyProfile() {
                   </div>
                 </Section>
               )}
+
+              {/* References */}
+              {profile.references?.filter(r => r.name || r.phone).length > 0 && (
+                <Section title="References" icon={User} accent="#6366f1">
+                  <div className="mp-fields-grid">
+                    {profile.references.filter(r => r.name || r.phone).map((ref, i) => (
+                      <div key={i} className="mp-field">
+                        <div className="mp-field-label"><User size={11} /> Reference {i + 1}</div>
+                        <div className="mp-field-value" style={{ fontWeight:600 }}>{ref.name || '—'}</div>
+                        {ref.phone && (
+                          <div className="mp-field-value" style={{ fontSize:13, color:'#64748b', marginTop:2 }}>{ref.phone}</div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </Section>
+              )}
+
               {profile.resume && (
                 <Section title="Resume" icon={FileText} accent="#0f172a">
-                  <div style={{ padding: "18px 22px" }}>
+                  <div style={{ padding:'18px 22px' }}>
                     <a href={profile.resume} target="_blank" rel="noreferrer" className="mp-resume-link">
                       <FileText size={15} /> View Resume <ExternalLink size={13} />
                     </a>

@@ -65,6 +65,20 @@ const userSchema = new mongoose.Schema(
       education: { type: String, trim: true, maxlength: 200 },
       experience: { type: String, trim: true, maxlength: 100 },
       accomplishments: { type: String, trim: true, maxlength: 2000 },
+      readyToRelocate: { type: Boolean, default: false },
+      references: {
+        type: [
+          {
+            name:  { type: String, trim: true, maxlength: 100 },
+            phone: { type: String, trim: true, maxlength: 20  },
+          },
+        ],
+        default: [],
+        validate: {
+          validator: (v) => v.length <= 5,
+          message: "Maximum 5 references allowed",
+        },
+      },
       skills: {
         type: [String],
         default: [],

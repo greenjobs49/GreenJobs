@@ -34,6 +34,7 @@ export default function JobSeekerDashboard() {
   const profileProgress   = user?.profileProgress  || 0;
   const isProfileComplete = user?.profileCompleted;
   const firstName = profile.firstName || user?.name?.split(' ')[0] || 'User';
+  const avatarInitial = (profile.firstName || user?.name || 'U').charAt(0).toUpperCase();
   const fullName  = profile.firstName && profile.lastName
     ? `${profile.firstName} ${profile.lastName}`
     : profile.fullName || user?.name || '—';
@@ -97,23 +98,24 @@ export default function JobSeekerDashboard() {
     {
       heading: 'Personal Info', icon: User, color: '#6366f1',
       fields: [
-        { label: 'First Name', value: profile.firstName },
-        { label: 'Last Name',  value: profile.lastName  },
-        { label: 'Email',      value: user?.email,  icon: Mail  },
-        { label: 'Mobile',     value: profile.mobile || user?.mobile, icon: Phone },
-        { label: 'City',       value: profile.city,    icon: MapPin },
-        { label: 'Pincode',    value: profile.pincode  },
+        { label: 'First Name',         value: profile.firstName },
+        { label: 'Last Name',          value: profile.lastName  },
+        { label: 'Email',              value: user?.email,                   icon: Mail   },
+        { label: 'Mobile',             value: profile.mobile || user?.mobile, icon: Phone },
+        { label: 'City',               value: profile.city,                  icon: MapPin },
+        { label: 'Pincode',            value: profile.pincode  },
+        { label: 'Ready to Relocate',  value: profile.readyToRelocate ? 'Yes' : 'No' },
       ],
     },
     {
       heading: 'Professional', icon: Briefcase, color: '#f59e0b',
       fields: [
         { label: 'Education',        value: profile.education,     icon: GraduationCap },
-        { label: 'Experience (yrs)', value: profile.experience,    icon: Clock },
-        { label: 'Preferred Role',   value: profile.preferredRole  },
-        { label: 'Expected Salary',  value: profile.expectedSalary },
-        { label: 'LinkedIn',         value: profile.linkedin, icon: Linkedin, isLink: true },
-        { label: 'Portfolio',        value: profile.portfolio,     isLink: true },
+        { label: 'Experience (yrs)', value: profile.experience,    icon: Clock         },
+        { label: 'Preferred Role',   value: profile.preferredRole                      },
+        { label: 'Expected Salary',  value: profile.expectedSalary                     },
+        { label: 'LinkedIn',         value: profile.linkedin,      icon: Linkedin, isLink: true },
+        { label: 'Portfolio',        value: profile.portfolio,     isLink: true         },
       ],
     },
     {
@@ -192,8 +194,19 @@ const handleViewResume = async () => {
           pointer-events:none; opacity:1;
         }
         .jsd-hero-content { position:relative; z-index:2; }
-        .jsd-greeting    { font-family:'Inter',sans-serif; font-size:28px; font-weight:800; color:#fff; line-height:1.15; margin-bottom:6px; letter-spacing:-0.5px; }
-        .jsd-greeting span { color:#10b981; }
+        .jsd-hero-top { display:flex; align-items:center; gap:18px; margin-bottom:6px; }
+.jsd-avatar {
+  width:58px; height:58px; border-radius:14px; flex-shrink:0;
+  background:linear-gradient(135deg,#1e293b,#0f172a);
+  border:2px solid rgba(16,185,129,.45);
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; font-weight:800; color:#10b981;
+  overflow:hidden; box-shadow:0 4px 16px rgba(0,0,0,.3);
+}
+.jsd-avatar img { width:100%; height:100%; object-fit:cover; }
+.jsd-greeting { font-family:'Inter',sans-serif; font-size:28px; font-weight:800; color:#fff; line-height:1.15; letter-spacing:-0.5px; }
+.jsd-greeting span { color:#10b981; }
+.jsd-hero-sub { font-size:14px; color:rgba(255,255,255,.55); margin-bottom:28px; font-weight:400; }
         .jsd-hero-sub    { font-size:14px; color:rgba(255,255,255,.55); margin-bottom:28px; font-weight:400; }
         .jsd-hero-actions { display:flex; gap:10px; flex-wrap:wrap; }
         .hero-btn {
@@ -444,12 +457,22 @@ const handleViewResume = async () => {
           {/* ═══ HERO STRIP ═══ */}
           <div className="jsd-hero">
             <div className="jsd-hero-content">
-              <div className="jsd-greeting">
-                {greeting}, <span>{firstName}</span>
+              <div className="jsd-hero-top">
+                <div className="jsd-avatar">
+                  {user?.profilePicture
+                    ? <img src={user.profilePicture} alt={firstName} />
+                    : avatarInitial
+                  }
+                </div>
+                <div>
+                  <div className="jsd-greeting">
+                    {greeting}, <span>{firstName}</span>
+                  </div>
+                  <p className="jsd-hero-sub">
+                    Your dashboard — track progress, discover jobs, manage applications.
+                  </p>
+                </div>
               </div>
-              <p className="jsd-hero-sub">
-                Your dashboard — track progress, discover jobs, manage applications.
-              </p>
               <div className="jsd-hero-actions">
                 <button className="hero-btn hero-btn-primary" onClick={() => navigate('/jobs')}>
                   <Search size={15} /> Browse Jobs
@@ -462,6 +485,9 @@ const handleViewResume = async () => {
                   <FileText size={15} /> View Resume
                 </button>
                 )}
+                <button className="hero-btn hero-btn-ghost" onClick={() => window.open('/sample-resume.pdf', '_blank')}              >
+                <BookOpen size={15} /> How a Good CV Looks
+              </button>
               </div>
               <div className="jsd-progress-row">
                 <div className="jsd-progress-label">

@@ -40,7 +40,15 @@ router.post("/upload-resume",          auth, role("jobseeker"), uploadResume.sin
 router.get("/resume-view-url",  auth, role("jobseeker"), getResumeViewUrl);
 router.post("/upload-logo",            auth, role("recruiter"), uploadLogo.single("logo"),     uploadLogoCtrl);
 router.post("/upload-business-images", auth, role("business"),  uploadImage.array("images", 5), uploadBusinessImages);
-router.post("/upload-avatar",          auth, uploadAvatar.single("avatar"), uploadProfilePicture);
+router.post("/upload-avatar", auth, (req, res, next) => {
+  uploadAvatar.single("avatar")(req, res, (err) => {
+    if (err) {
+      console.error("MULTER AVATAR ERROR:", err.message, err.code);
+      return res.status(400).json({ success: false, message: err.message });
+    }
+    next();
+  });
+}, uploadProfilePicture);
 
 // ── Admin business approval
 router.get("/business/pending",         auth, role("admin"), getPendingBusinesses);

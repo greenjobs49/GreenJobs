@@ -74,8 +74,8 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
     <div className="um-panel">
       <div className="um-header">
         <div className="um-avatar-lg">
-          {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
-            <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "inherit", objectFit: "cover" }} />
+          {user?.profilePicture ? (
+            <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
           ) : (
             user?.name?.charAt(0).toUpperCase() || "U"
           )}
@@ -538,7 +538,7 @@ const Navbar = ({ title }) => {
                 <div className="user-menu-wrap" ref={userMenuRef}>
                   <div className={`user-chip${userMenuOpen ? " open" : ""}`} onClick={() => setUserMenuOpen((v) => !v)}>
                     <div className="user-avatar">
-                      {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
+                      {user?.profilePicture ? (
                         <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         user?.name?.charAt(0).toUpperCase() || "U"
@@ -610,11 +610,11 @@ const Navbar = ({ title }) => {
         {isAuthenticated && (
           <div className="md-user-card">
             <div className="md-user-avatar">
-              {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
-                <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-              ) : (
-                user?.name?.charAt(0).toUpperCase() || "U"
-              )}
+              {user?.profilePicture ? (
+                  <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                ) : (
+                  user?.name?.charAt(0).toUpperCase() || "U"
+                )}
             </div>
             <div className="md-user-info">
               <div className="md-user-name">{user?.name || "User"}</div>

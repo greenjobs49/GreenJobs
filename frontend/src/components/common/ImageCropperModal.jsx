@@ -64,48 +64,43 @@ export default function ImageCropperModal({
   ───────────────────────────────────────────────────────────── */
   const minZoom = useCallback((cropW, cropH, nw, nh, bs) => {
     if (!cropW || !cropH || !nw || !nh || !bs) return 1;
-    // at zoom=z, image in canvas pixels is nw*bs*z × nh*bs*z
-    // we need nw*bs*z >= cropW  AND  nh*bs*z >= cropH
-    const zx = cropW / (nw * bs);
-    const zy = cropH / (nh * bs);
-    return Math.max(zx, zy, 0.1);          // whichever axis needs more zoom
-  }, []);
+    const zx = cropW / nw;  // fraction of image width the crop occupies
+    const zy = cropH / nh;
+    return Math.max(Math.max(zx, zy), 0.05);
+}, []);
 
   /* ─────────────────────────────────────────────────────────────
      Clamp pan so the crop box never reveals the grey background
   ───────────────────────────────────────────────────────────── */
-  const clampPan = useCallback((px, py, cropW, cropH, nw, nh, bs, z) => {
-    const imgW = nw * bs * z;
-    const imgH = nh * bs * z;
+const clampPan = useCallback((px, py, cropW, cropH, nw, nh, bs, z) => {
+  const imgW = nw * bs * z;
+  const imgH = nh * bs * z;
 
-    // crop box centre in canvas coords
-    const cropCX = canvasW / 2;
-    const cropCY = canvasH / 2;
+  // Image top-left position when pan=0
+  const ox0 = (canvasW - imgW) / 2;
+  const oy0 = (canvasH - imgH) / 2;
 
-    // image origin (top-left) when pan = 0
-    // draw: ctx.drawImage at (ox, oy) where ox = panX + (canvasW - imgW) / 2
-    // crop in canvas: cx = crop.x * bs * z + ox
-    // For the crop left edge (canvas) not to go left of image left:
-    //   crop.x * bs*z + (px + (canvasW - imgW)/2) >= 0
-    //   px >= -crop.x * bs*z - (canvasW - imgW)/2
-    // For crop right edge not to exceed image right:
-    //   (crop.x + crop.w) * bs*z + (px + (canvasW - imgW)/2) <= imgW
-    //   px <= imgW - (crop.x + crop.w) * bs*z - (canvasW - imgW)/2
+  // Crop box in canvas coords when pan=0
+  const cropCanvasX = crop.x * bs * z + ox0;
+  const cropCanvasY = crop.y * bs * z + oy0;
+  const cropCanvasW = cropW * bs * z;
+  const cropCanvasH = cropH * bs * z;
 
-    const ox0 = (canvasW - imgW) / 2;  // image left when pan=0
-    const oy0 = (canvasH - imgH) / 2;
+  // Ideal: crop box centered in canvas
+  const idealCropX = (canvasW - cropCanvasW) / 2;
+  const idealCropY = (canvasH - cropCanvasH) / 2;
 
-    const minPx = -(crop.x * bs * z + ox0);                          // crop left = image left
-    const maxPx = imgW - (crop.x + cropW) * bs * z - ox0;            // crop right = image right
+  // Real constraint: keep image from going out of canvas view completely
+  const minPx = -(ox0 + imgW - canvasW);   // image right at canvas right
+  const maxPx = -ox0;                        // image left at canvas left
+  const minPy = -(oy0 + imgH - canvasH);
+  const maxPy = -oy0;
 
-    const minPy = -(crop.y * bs * z + oy0);
-    const maxPy = imgH - (crop.y + cropH) * bs * z - oy0;
-
-    return {
-      px: clamp(px, Math.min(minPx, maxPx), Math.max(minPx, maxPx)),
-      py: clamp(py, Math.min(minPy, maxPy), Math.max(minPy, maxPy)),
-    };
-  }, [canvasW, canvasH, crop]);
+  return {
+    px: clamp(px, Math.min(minPx, maxPx), Math.max(minPx, maxPx)),
+    py: clamp(py, Math.min(minPy, maxPy), Math.max(minPy, maxPy)),
+  };
+}, [canvasW, canvasH, crop]);
 
   /* ─────────────────────────────────────────────────────────────
      Load / reset when imageSrc or aspectRatio changes
@@ -145,10 +140,20 @@ export default function ImageCropperModal({
       setCrop(newCrop);
 
       // Initial zoom: cover the crop exactly
-      const mz = Math.max(cropW / (nw * s), cropH / (nh * s), 0.1);
-      setZoom(mz);
-      setPanX(0);
-      setPanY(0);
+      const zx = (cw * 0.9) / (cropW * s);
+      const zy = (ch * 0.9) / (cropH * s);
+      const initZoom = Math.min(zx, zy, 4);
+      setZoom(initZoom);
+
+      // Center the canvas view on the crop box
+      const imgW = nw * s * initZoom;
+      const imgH = nh * s * initZoom;
+      const ox0  = (cw - imgW) / 2;
+      const oy0  = (ch - imgH) / 2;
+      const cropCX = cx * s * initZoom + ox0 + (cropW * s * initZoom) / 2;
+      const cropCY = cy * s * initZoom + oy0 + (cropH * s * initZoom) / 2;
+      setPanX(cw / 2 - cropCX);
+      setPanY(ch / 2 - cropCY);
       setLoading(false);
     };
     img.src = imageSrc;
@@ -381,12 +386,23 @@ export default function ImageCropperModal({
   /* ─────────────────────────────────────────────────────────────
      "Fit" — snap image to cover the crop perfectly, centred
   ───────────────────────────────────────────────────────────── */
-  const fitToCrop = () => {
-    const mz = minZoom(crop.w, crop.h, naturalW, naturalH, baseScale);
-    setZoom(mz);
-    setPanX(0);
-    setPanY(0);
-  };
+const fitToCrop = () => {
+  // Zoom so the crop box fills ~85% of the canvas
+  const zx = (canvasW * 0.85) / (crop.w * baseScale);
+  const zy = (canvasH * 0.85) / (crop.h * baseScale);
+  const newZoom = Math.min(zx, zy, 4);
+  setZoom(newZoom);
+
+  // Center the crop in the canvas
+  const imgW = naturalW * baseScale * newZoom;
+  const imgH = naturalH * baseScale * newZoom;
+  const ox0 = (canvasW - imgW) / 2;
+  const oy0 = (canvasH - imgH) / 2;
+  const cropCX = crop.x * baseScale * newZoom + ox0 + (crop.w * baseScale * newZoom) / 2;
+  const cropCY = crop.y * baseScale * newZoom + oy0 + (crop.h * baseScale * newZoom) / 2;
+  setPanX(canvasW / 2 - cropCX);
+  setPanY(canvasH / 2 - cropCY);
+};
 
   /* ─────────────────────────────────────────────────────────────
      Zoom slider — enforce floor

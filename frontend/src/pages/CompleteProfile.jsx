@@ -25,6 +25,8 @@ const sectionDefs = {
     { id: "education",       label: "Education",        icon: GraduationCap,  required: true  },
     { id: "experience",      label: "Work Experience",  icon: Briefcase,      required: true  },
     { id: "accomplishments", label: "Accomplishments",  icon: Trophy,         required: false },
+    // ✅ Change 1: References section added
+    { id: "references",      label: "References",       icon: User,           required: false },
   ],
   recruiter: [
     { id: "basicDetails",   label: "Company Basics",  icon: Building2,     required: true },
@@ -47,6 +49,8 @@ const requiredFieldsBySection = {
     education:       ["education"],
     experience:      ["experience"],
     accomplishments: [],
+    // ✅ Change 2: References entry added
+    references:      [],
   },
   recruiter: {
     basicDetails:   ["companyName", "companyWebsite", "contactNumber"],
@@ -139,6 +143,9 @@ const CompleteProfile = () => {
     description:    seedProfile.description    || "",
     images:         seedProfile.images         || [],
     profilePicture: user?.profilePicture       || "",
+    // ✅ Change 3: readyToRelocate and references added to form state
+    readyToRelocate: seedProfile.readyToRelocate || false,
+    references: seedProfile.references || [{ name: "", phone: "" }],
   }));
 
   const [uploading,      setUploading]      = useState(false);
@@ -204,35 +211,36 @@ const CompleteProfile = () => {
   };
 
   /* ── File uploads (called after crop) ── */
+  // ✅ Change 5: Client-side file type + size validation added; error message surfaced from server
   const handleResumeUpload = async (file) => {
-  if (!file) return;
+    if (!file) return;
 
-  const ALLOWED = new Set([
-    "application/pdf",
-    "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ]);
-  if (!ALLOWED.has(file.type)) {
-    return toast.error("Only PDF or DOCX files are accepted");
-  }
-  if (file.size > 5 * 1024 * 1024) {
-    return toast.error("File must be under 5 MB");
-  }
+    const ALLOWED = new Set([
+      "application/pdf",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ]);
+    if (!ALLOWED.has(file.type)) {
+      return toast.error("Only PDF or DOCX files are accepted");
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      return toast.error("File must be under 5 MB");
+    }
 
-  setUploading(true);
-  const data = new FormData();
-  data.append("resume", file);
-  try {
-    const res = await axios.post(`${API}/upload-resume`, data, {
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
-    });
-    setForm((p) => ({ ...p, resume: res.data.resumeUrl }));
-    toast.success("Resume uploaded!");
-  } catch (err) {
-    toast.error(err.response?.data?.message || "Upload failed.");
-  } finally {
-    setUploading(false);
-  }
-};
+    setUploading(true);
+    const data = new FormData();
+    data.append("resume", file);
+    try {
+      const res = await axios.post(`${API}/upload-resume`, data, {
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" },
+      });
+      setForm((p) => ({ ...p, resume: res.data.resumeUrl }));
+      toast.success("Resume uploaded!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleLogoCropDone = async (blob) => {
     setLogoCropOpen(false);
@@ -261,33 +269,33 @@ const CompleteProfile = () => {
   };
 
   /* Business images — one at a time through the queue */
-const handleBizCropDone = async (blob) => {
-  setUploading(true);
-  try {
-    const data = new FormData();
-    data.append("images", blob, "business.jpg");
-    const res = await axios.post(
-      `${API}/upload-business-images`,
-      data,
-      { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
-    );
-    setForm(p => ({ ...p, images: [...(p.images || []), ...res.data.images] }));
-    toast.success("Image uploaded!");
-  } catch {
-    toast.error("Images upload failed.");
-  } finally {
-    setUploading(false);
-  }
+  const handleBizCropDone = async (blob) => {
+    setUploading(true);
+    try {
+      const data = new FormData();
+      data.append("images", blob, "business.jpg");
+      const res = await axios.post(
+        `${API}/upload-business-images`,
+        data,
+        { headers: { Authorization: `Bearer ${token}`, "Content-Type": "multipart/form-data" } }
+      );
+      setForm(p => ({ ...p, images: [...(p.images || []), ...res.data.images] }));
+      toast.success("Image uploaded!");
+    } catch {
+      toast.error("Images upload failed.");
+    } finally {
+      setUploading(false);
+    }
 
-  if (bizCropQueue.length > 0) {
-    const [next, ...rest] = bizCropQueue;
-    setBizRawSrc(URL.createObjectURL(next));
-    setBizCropQueue(rest);
-    setBizCropOpen(true);
-  } else {
-    setBizCropOpen(false);
-  }
-};
+    if (bizCropQueue.length > 0) {
+      const [next, ...rest] = bizCropQueue;
+      setBizRawSrc(URL.createObjectURL(next));
+      setBizCropQueue(rest);
+      setBizCropOpen(true);
+    } else {
+      setBizCropOpen(false);
+    }
+  };
 
   const handleSaveAndNext = () => {
     const sec = allSections.find((s) => s.id === currentSection);
@@ -317,6 +325,9 @@ const handleBizCropDone = async (blob) => {
           experience: form.experience?.toString().trim() || "0",
           accomplishments: form.accomplishments?.trim() || "",
           linkedin: form.linkedin?.trim() || "", resume: form.resume, skills: selectedSkills,
+          // ✅ Change 4: readyToRelocate and filtered references added to submit payload
+          readyToRelocate: form.readyToRelocate,
+          references: form.references.filter(r => r.name && r.phone),
         };
       } else if (user.role === "recruiter") {
         payload = {
@@ -367,21 +378,78 @@ const handleBizCropDone = async (blob) => {
               <Field label="City" required><input name="city" value={form.city || ""} onChange={handleChange} placeholder="e.g. Mumbai" style={inputStyle} className="cp-input" /></Field>
               <Field label="Pincode" required><input name="pincode" value={form.pincode || ""} onChange={handleChange} placeholder="e.g. 400001" maxLength={10} style={inputStyle} className="cp-input" /></Field>
               <Field label="LinkedIn Profile"><input name="linkedin" value={form.linkedin || ""} onChange={handleChange} placeholder="https://linkedin.com/in/yourname" style={inputStyle} className="cp-input" /></Field>
+
+              {/* ✅ Change 8a: Ready to Relocate field added */}
+              <Field label="Ready to Relocate">
+                <select
+                  value={form.readyToRelocate ? "yes" : "no"}
+                  onChange={(e) =>
+                    setForm((p) => ({
+                      ...p,
+                      readyToRelocate: e.target.value === "yes",
+                    }))
+                  }
+                  style={inputStyle}
+                  className="cp-input"
+                >
+                  <option value="no">No</option>
+                  <option value="yes">Yes</option>
+                </select>
+              </Field>
+
+              {/* ✅ Change 8b: Profile Picture field added */}
+              <Field label="Profile Picture">
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="cp-file-input"
+                  id="avatar-upload-jobseeker"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setAvatarRawSrc(URL.createObjectURL(file));
+                    setAvatarCropOpen(true);
+                    e.target.value = "";
+                  }}
+                />
+                <label htmlFor="avatar-upload-jobseeker" className="cp-upload-label">
+                  <Camera size={16} /> {uploading ? "Uploading…" : "Choose Profile Picture"}
+                </label>
+              </Field>
+
+              {form.profilePicture && (
+                <img
+                  src={form.profilePicture}
+                  alt="Profile"
+                  style={{
+                    width: 80,
+                    height: 80,
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    marginTop: 10,
+                    border: "2px solid #10b981",
+                  }}
+                />
+              )}
             </div>
           </div>
         );
+
         case "resume": return (
           <div>
-            <SectionHeader title="Resume" subtitle="Upload your latest resume — PDF, DOC or DOCX" />
+            <SectionHeader title="Resume" subtitle="Upload your latest resume — PDF or DOCX" />
             <div style={{ background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)", borderRadius: 16, padding: "28px 32px", display: "flex", alignItems: "center", gap: 20, marginBottom: 28 }}>
               <div style={{ width: 52, height: 52, background: "rgba(16,185,129,0.2)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <FileText size={26} color="#10b981" />
               </div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "white", marginBottom: 4 }}>Upload Your Resume</div>
+                {/* ✅ Change 7: Banner text updated — DOC removed */}
                 <div style={{ fontSize: 13.5, color: "#94a3b8" }}>Supported: PDF or DOCX — Max 5MB</div>
               </div>
             </div>
+            {/* ✅ Change 6: accept updated — .doc removed, explicit MIME types added */}
             <input
               type="file"
               accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
@@ -400,6 +468,7 @@ const handleBizCropDone = async (blob) => {
             )}
           </div>
         );
+
         case "about": return (
           <div>
             <SectionHeader title="About You" subtitle="Write a compelling summary for recruiters" />
@@ -408,6 +477,7 @@ const handleBizCropDone = async (blob) => {
             </Field>
           </div>
         );
+
         case "skills": return (
           <div>
             <SectionHeader title="Skills" subtitle="Add skills that match the roles you're targeting" />
@@ -436,6 +506,7 @@ const handleBizCropDone = async (blob) => {
             </Field>
           </div>
         );
+
         case "education": return (
           <div>
             <SectionHeader title="Education" subtitle="Your highest qualification" />
@@ -444,6 +515,7 @@ const handleBizCropDone = async (blob) => {
             </Field>
           </div>
         );
+
         case "experience": return (
           <div>
             <SectionHeader title="Work Experience" subtitle="Enter 0 if you're a fresher — this field is required" />
@@ -452,6 +524,7 @@ const handleBizCropDone = async (blob) => {
             </Field>
           </div>
         );
+
         case "accomplishments": return (
           <div>
             <SectionHeader title="Accomplishments & Initiatives" subtitle="Awards, certifications, projects" />
@@ -460,6 +533,56 @@ const handleBizCropDone = async (blob) => {
             </Field>
           </div>
         );
+
+        // ✅ Change 9: References section UI added
+        case "references": return (
+          <div>
+            <SectionHeader
+              title="References"
+              subtitle="Add industry references (optional)"
+            />
+            {form.references.map((ref, index) => (
+              <div key={index} style={{ marginBottom: 16 }}>
+                <Field label="Reference Name">
+                  <input
+                    value={ref.name}
+                    onChange={(e) => {
+                      const updated = [...form.references];
+                      updated[index].name = e.target.value;
+                      setForm((p) => ({ ...p, references: updated }));
+                    }}
+                    placeholder="Enter name"
+                    style={inputStyle}
+                  />
+                </Field>
+                <Field label="Phone Number">
+                  <input
+                    value={ref.phone}
+                    onChange={(e) => {
+                      const updated = [...form.references];
+                      updated[index].phone = e.target.value;
+                      setForm((p) => ({ ...p, references: updated }));
+                    }}
+                    placeholder="Enter phone"
+                    style={inputStyle}
+                  />
+                </Field>
+              </div>
+            ))}
+            <button
+              onClick={() =>
+                setForm((p) => ({
+                  ...p,
+                  references: [...p.references, { name: "", phone: "" }],
+                }))
+              }
+              className="cp-suggestion-tag"
+            >
+              + Add Another Reference
+            </button>
+          </div>
+        );
+
         default: return null;
       }
     }
@@ -491,8 +614,6 @@ const handleBizCropDone = async (blob) => {
         case "branding": return (
           <div>
             <SectionHeader title="Branding" subtitle="Upload your company logo" />
-
-            {/* Logo — opens cropper */}
             <Field label="Company Logo" required>
               <input
                 type="file" accept="image/*"
@@ -513,8 +634,6 @@ const handleBizCropDone = async (blob) => {
             {form.companyLogo && (
               <img src={form.companyLogo} alt="Logo" style={{ width: 120, height: 120, objectFit: "contain", marginTop: 16, borderRadius: 12, border: "1px solid #e2e8f0", padding: 8, background: "#f8fafc" }} />
             )}
-
-            {/* Avatar — opens cropper */}
             <div style={{ marginTop: 24 }}>
               <Field label="Personal Profile Picture">
                 <input
@@ -591,8 +710,6 @@ const handleBizCropDone = async (blob) => {
                 <div style={{ fontSize: 13, color: "#94a3b8" }}>Up to 5 images — Max 5MB each</div>
               </div>
             </div>
-
-            {/* Business images — opens cropper */}
             <input
               type="file" accept="image/*" multiple
               className="cp-file-input" id="business-images"
@@ -610,7 +727,6 @@ const handleBizCropDone = async (blob) => {
             <label htmlFor="business-images" className="cp-upload-label">
               <Upload size={16} />{uploading ? "Uploading…" : "Choose Images"}
             </label>
-
             {form.images?.length > 0 && (
               <div style={{ marginTop: 20 }}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12 }}>
@@ -632,8 +748,6 @@ const handleBizCropDone = async (blob) => {
                 </div>
               </div>
             )}
-
-            {/* Avatar — opens cropper */}
             <div style={{ marginTop: 24 }}>
               <Field label="Personal Profile Picture">
                 <input
@@ -666,7 +780,7 @@ const handleBizCropDone = async (blob) => {
     return null;
   };
 
-  const currentIdx    = allSections.findIndex((s) => s.id === currentSection);
+  const currentIdx     = allSections.findIndex((s) => s.id === currentSection);
   const hasNextSection = currentIdx < allSections.length - 1;
 
   return (
@@ -753,8 +867,8 @@ const handleBizCropDone = async (blob) => {
             </div>
             <nav className="cp-nav">
               {allSections.map((sec) => {
-                const Icon     = sec.icon;
-                const prog     = getSectionProgress(sec.id);
+                const Icon       = sec.icon;
+                const prog       = getSectionProgress(sec.id);
                 const isComplete = prog === 100;
                 const isActive   = currentSection === sec.id;
                 return (

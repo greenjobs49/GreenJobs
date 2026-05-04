@@ -41,11 +41,19 @@ const calculateProgress = (requiredFields, data) => {
       progress  = calculateProgress(required, data);
       if (progress < 100) return res.status(400).json({ success: false, message: "Fill all required fields" });
       if (!data.fullName || data.fullName.trim() === "") {
-  data.fullName = `${data.firstName || ""} ${data.lastName || ""}`.trim();
-}
+        data.fullName = `${data.firstName || ""} ${data.lastName || ""}`.trim();
+      }
+        const sanitizedReferences = Array.isArray(data.references)
+        ? data.references.filter(r => r.name?.trim() && r.phone?.trim())
+        : [];
       await User.updateOne(
         { _id: user._id },
-        { $set: { jobSeekerProfile: { ...user.jobSeekerProfile, ...data }, profileCompleted: true, profileProgress: progress } }
+        { $set: { jobSeekerProfile: {
+          ...user.jobSeekerProfile,
+          ...data,
+          readyToRelocate: data.readyToRelocate ?? false,
+          references: sanitizedReferences, 
+        }, profileCompleted: true, profileProgress: progress } }
       );
     }
 
@@ -291,14 +299,16 @@ exports.uploadLogo = async (req, res) => {
 ========================================================= */
 exports.uploadProfilePicture = async (req, res) => {
   try {
+    console.log("AVATAR UPLOAD HIT — user:", req.user); // ADD THIS
+    console.log("AVATAR UPLOAD HIT — file:", req.file);
     if (!req.file) return res.status(400).json({ success: false, message: "No image file uploaded" });
 
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     // Role check (Recruiter and Business only)
-    if (user.role !== "recruiter" && user.role !== "business") {
-      return res.status(403).json({ success: false, message: "Access restricted to recruiters and businesses" });
+    if (!["jobseeker", "recruiter", "business"].includes(user.role)) {
+      return res.status(403).json({ success: false, message: "Access restricted" });
     }
 
     const oldAvatar = user.profilePicture;
