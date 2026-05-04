@@ -669,7 +669,6 @@ export default function JobSeekerDashboard() {
                   { icon: Search,   label: 'Browse all jobs',       path: '/jobs' },
                   { icon: BookOpen, label: 'Green energy careers',  path: '/jobs?category=Solar+%26+Renewable' },
                   { icon: Award,    label: 'Featured companies',    path: '/businesses' },
-                  { icon: Bell,     label: 'Update notifications',  path: '/complete-profile' },
                 ].map((item,i) => {
                   const Icon = item.icon;
                   return (
