@@ -254,9 +254,6 @@ exports.uploadProfilePicture = async (req, res) => {
     if (!user) return res.status(404).json({ success: false, message: "User not found" });
 
     // Role check (Recruiter and Business only)
-    if (user.role !== "recruiter" && user.role !== "business") {
-      return res.status(403).json({ success: false, message: "Access restricted to recruiters and businesses" });
-    }
 
     const oldAvatar = user.profilePicture;
     if (oldAvatar) {

@@ -10,14 +10,13 @@ const apiClient = axios.create({
   },
 });
 
-apiClient.interceptors.request.use(
-  (config) => {
-    const auth = getStoredAuth();
-    if (auth?.token) {
-      config.headers.Authorization = `Bearer ${auth.token}`;
-    }
-    return config;
-  },
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+},
   (error) => {
     return Promise.reject(error);
   }

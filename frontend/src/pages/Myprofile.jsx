@@ -97,8 +97,10 @@ export default function MyProfile() {
     formData.append("avatar", blob, "avatar.jpg");
     try {
       await apiClient.post("/profile/upload-avatar", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+  headers: {
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  },
+});
       await refreshUser();
     } catch (err) {
       console.error("Avatar upload failed", err);

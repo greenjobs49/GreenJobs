@@ -29,7 +29,8 @@ export default function JobSeekerDashboard() {
 
   /* profile data */
   const profile           = user?.jobSeekerProfile || {};
-  const resumeUrl         = profile.resume;
+const resumeUrl = profile.resume; // only real resume
+const sampleResumeUrl = '/sample-resume.pdf';
   const profileProgress   = user?.profileProgress  || 0;
   const isProfileComplete = user?.profileCompleted;
   const firstName = profile.firstName || user?.name?.split(' ')[0] || 'User';
@@ -445,6 +446,12 @@ export default function JobSeekerDashboard() {
                     <FileText size={15} /> View Resume
                   </button>
                 )}
+                <button
+  className="hero-btn hero-btn-ghost"
+  onClick={() => window.open('/sample-resume.pdf', '_blank')}
+>
+  <BookOpen size={15} /> How a Good CV Looks
+</button>
               </div>
               <div className="jsd-progress-row">
                 <div className="jsd-progress-label">

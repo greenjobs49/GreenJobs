@@ -18,14 +18,15 @@ import {
 
 const sectionDefs = {
   jobseeker: [
-    { id: "basicDetails",    label: "Basic Details",   icon: User,          required: true  },
-    { id: "resume",          label: "Resume",           icon: FileText,       required: true  },
-    { id: "about",           label: "About",            icon: Info,           required: true  },
-    { id: "skills",          label: "Skills",           icon: Zap,            required: true  },
-    { id: "education",       label: "Education",        icon: GraduationCap,  required: true  },
-    { id: "experience",      label: "Work Experience",  icon: Briefcase,      required: true  },
-    { id: "accomplishments", label: "Accomplishments",  icon: Trophy,         required: false },
-  ],
+  { id: "basicDetails",    label: "Basic Details",   icon: User,          required: true  },
+  { id: "resume",          label: "Resume",          icon: FileText,      required: true  },
+  { id: "about",           label: "About",           icon: Info,          required: true  },
+  { id: "skills",          label: "Skills",          icon: Zap,           required: true  },
+  { id: "education",       label: "Education",       icon: GraduationCap, required: true  },
+  { id: "experience",      label: "Work Experience", icon: Briefcase,     required: true  },
+  { id: "accomplishments", label: "Accomplishments", icon: Trophy,        required: false },
+  { id: "references",      label: "References",      icon: User,          required: false },
+],
   recruiter: [
     { id: "basicDetails",   label: "Company Basics",  icon: Building2,     required: true },
     { id: "companyDetails", label: "Company Details", icon: ClipboardList, required: true },
@@ -40,14 +41,15 @@ const sectionDefs = {
 
 const requiredFieldsBySection = {
   jobseeker: {
-    basicDetails:    ["firstName", "lastName", "mobile", "city", "pincode"],
-    resume:          ["resume"],
-    about:           ["about"],
-    skills:          ["skills"],
-    education:       ["education"],
-    experience:      ["experience"],
-    accomplishments: [],
-  },
+  basicDetails: ["firstName", "lastName", "mobile", "city", "pincode"],
+  resume: ["resume"],
+  about: ["about"],
+  skills: ["skills"],
+  education: ["education"],
+  experience: ["experience"],
+  accomplishments: [],
+  references: [], 
+},
   recruiter: {
     basicDetails:   ["companyName", "companyWebsite", "contactNumber"],
     companyDetails: ["companyDescription", "companyLocation", "industryType"],
@@ -139,6 +141,8 @@ const CompleteProfile = () => {
     description:    seedProfile.description    || "",
     images:         seedProfile.images         || [],
     profilePicture: user?.profilePicture       || "",
+    readyToRelocate: seedProfile.readyToRelocate || false,
+references: seedProfile.references || [{ name: "", phone: "" }],
   }));
 
   const [uploading,      setUploading]      = useState(false);
@@ -299,6 +303,8 @@ const handleBizCropDone = async (blob) => {
           experience: form.experience?.toString().trim() || "0",
           accomplishments: form.accomplishments?.trim() || "",
           linkedin: form.linkedin?.trim() || "", resume: form.resume, skills: selectedSkills,
+          readyToRelocate: form.readyToRelocate,
+  references: form.references.filter(r => r.name && r.phone),
         };
       } else if (user.role === "recruiter") {
         payload = {
@@ -349,6 +355,57 @@ const handleBizCropDone = async (blob) => {
               <Field label="City" required><input name="city" value={form.city || ""} onChange={handleChange} placeholder="e.g. Mumbai" style={inputStyle} className="cp-input" /></Field>
               <Field label="Pincode" required><input name="pincode" value={form.pincode || ""} onChange={handleChange} placeholder="e.g. 400001" maxLength={10} style={inputStyle} className="cp-input" /></Field>
               <Field label="LinkedIn Profile"><input name="linkedin" value={form.linkedin || ""} onChange={handleChange} placeholder="https://linkedin.com/in/yourname" style={inputStyle} className="cp-input" /></Field>
+              <Field label="Ready to Relocate">
+  <select
+    value={form.readyToRelocate ? "yes" : "no"}
+    onChange={(e) =>
+      setForm((p) => ({
+        ...p,
+        readyToRelocate: e.target.value === "yes",
+      }))
+    }
+    style={inputStyle}
+    className="cp-input"
+  >
+    <option value="no">No</option>
+    <option value="yes">Yes</option>
+  </select>
+</Field>
+
+<Field label="Profile Picture">
+  <input
+    type="file"
+    accept="image/*"
+    className="cp-file-input"
+    id="avatar-upload-jobseeker"
+    disabled={uploading}
+    onChange={(e) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      setAvatarRawSrc(URL.createObjectURL(file));
+      setAvatarCropOpen(true);
+      e.target.value = "";
+    }}
+  />
+  <label htmlFor="avatar-upload-jobseeker" className="cp-upload-label">
+    <Camera size={16} /> {uploading ? "Uploading…" : "Choose Profile Picture"}
+  </label>
+</Field>
+
+{form.profilePicture && (
+  <img
+    src={form.profilePicture}
+    alt="Profile"
+    style={{
+      width: 80,
+      height: 80,
+      borderRadius: "50%",
+      objectFit: "cover",
+      marginTop: 10,
+      border: "2px solid #10b981",
+    }}
+  />
+)}
             </div>
           </div>
         );
@@ -436,6 +493,57 @@ const handleBizCropDone = async (blob) => {
           </div>
         );
         default: return null;
+        case "references":
+  return (
+    <div>
+      <SectionHeader
+        title="References"
+        subtitle="Add industry references (optional)"
+      />
+
+      {form.references.map((ref, index) => (
+        <div key={index} style={{ marginBottom: 16 }}>
+          <Field label="Reference Name">
+            <input
+              value={ref.name}
+              onChange={(e) => {
+                const updated = [...form.references];
+                updated[index].name = e.target.value;
+                setForm((p) => ({ ...p, references: updated }));
+              }}
+              placeholder="Enter name"
+              style={inputStyle}
+            />
+          </Field>
+
+          <Field label="Phone Number">
+            <input
+              value={ref.phone}
+              onChange={(e) => {
+                const updated = [...form.references];
+                updated[index].phone = e.target.value;
+                setForm((p) => ({ ...p, references: updated }));
+              }}
+              placeholder="Enter phone"
+              style={inputStyle}
+            />
+          </Field>
+        </div>
+      ))}
+
+      <button
+        onClick={() =>
+          setForm((p) => ({
+            ...p,
+            references: [...p.references, { name: "", phone: "" }],
+          }))
+        }
+        className="cp-suggestion-tag"
+      >
+        + Add Another Reference
+      </button>
+    </div>
+  );
       }
     }
 

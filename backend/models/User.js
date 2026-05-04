@@ -55,29 +55,44 @@ const userSchema = new mongoose.Schema(
 
     // ================= JOB SEEKER =================
     jobSeekerProfile: {
-      firstName: { type: String, trim: true, maxlength: 50 },
-      lastName: { type: String, trim: true, maxlength: 50 },
-      fullName: { type: String, trim: true, maxlength: 100 },
-      mobile: { type: String, default: "" },
-      city: { type: String, trim: true, maxlength: 50 },
-      pincode: { type: String, trim: true, maxlength: 10 },
-      about: { type: String, trim: true, maxlength: 2000 },
-      education: { type: String, trim: true, maxlength: 200 },
-      experience: { type: String, trim: true, maxlength: 100 },
-      accomplishments: { type: String, trim: true, maxlength: 2000 },
-      skills: {
-        type: [String],
-        default: [],
-        validate: {
-          validator: (v) => v.length <= 20,
-          message: "Maximum 20 skills allowed",
-        },
-      },
-      resume: { type: String },
-      linkedin: { type: String },
-      portfolio: { type: String },
-      expectedSalary: String,
-      preferredRole: { type: String, trim: true, maxlength: 100 },
+  firstName: { type: String, trim: true, maxlength: 50 },
+  lastName: { type: String, trim: true, maxlength: 50 },
+  fullName: { type: String, trim: true, maxlength: 100 },
+  mobile: { type: String, default: "" },
+  city: { type: String, trim: true, maxlength: 50 },
+  pincode: { type: String, trim: true, maxlength: 10 },
+  about: { type: String, trim: true, maxlength: 2000 },
+  education: { type: String, trim: true, maxlength: 200 },
+  experience: { type: String, trim: true, maxlength: 100 },
+  accomplishments: { type: String, trim: true, maxlength: 2000 },
+
+  skills: {
+    type: [String],
+    default: [],
+    validate: {
+      validator: (v) => v.length <= 20,
+      message: "Maximum 20 skills allowed",
+    },
+  },
+
+  resume: { type: String },
+  linkedin: { type: String },
+
+  readyToRelocate: {
+    type: Boolean,
+    default: false
+  },
+
+  references: [
+    {
+      name: { type: String, trim: true },
+      phone: { type: String, trim: true }
+    }
+  ]
+
+  portfolio: { type: String },
+  expectedSalary: String,
+  preferredRole: { type: String, trim: true, maxlength: 100 },
     },
 
     // ================= RECRUITER =================
