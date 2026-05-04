@@ -3,11 +3,10 @@ import axios from "axios";
 import {
   Plus, Edit2, Trash2, Eye, EyeOff, Loader2,
   Image, ExternalLink, X, Check, AlertCircle, Megaphone, ToggleLeft, ToggleRight,
-  ChevronUp, ChevronDown, AlertTriangle, Info, Scissors,
+  ChevronUp, ChevronDown, AlertTriangle, Info,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import API_BASE_URL from "../config/api";
-import ImageCropperModal from "../components/common/ImageCropperModal";
 
 const ACCENT_PRESETS = [
   "#10b981","#3b82f6","#f59e0b","#ef4444","#8b5cf6",
@@ -19,25 +18,70 @@ const BANNER_TYPES = [
   { value: "full_banner", label: "Full Banner",    desc: "Large hero-style banner displayed prominently" },
 ];
 
-// Recommended dimensions per ad type
-const RECOMMENDED = {
-  spotlight:   { w: 800,  h: 450,  ratio: 800/450,  label: "800×450px (16:9)" },
-  full_banner: { w: 1440, h: 480,  ratio: 1440/480, label: "1440×480px (3:1)"  },
-};
-
-// Aspect ratios for the cropper
-const CROP_ASPECT = {
-  spotlight:   16 / 9,
-  full_banner: 3  / 1,
+/* ─── Image size options per ad type ───────────────────────*/
+const SIZE_OPTIONS = {
+  spotlight: [
+    {
+      value: "small",
+      label: "Small",
+      desc: "Compact · fits within card cleanly",
+      objectFit: "contain",
+      objectPosition: "center",
+      previewHeight: 120,
+    },
+    {
+      value: "medium",
+      label: "Medium",
+      desc: "Balanced · recommended default",
+      objectFit: "cover",
+      objectPosition: "center top",
+      previewHeight: 180,
+    },
+    {
+      value: "large",
+      label: "Large",
+      desc: "Full bleed · edge-to-edge fill",
+      objectFit: "cover",
+      objectPosition: "center",
+      previewHeight: 240,
+    },
+  ],
+  full_banner: [
+    {
+      value: "small",
+      label: "Small",
+      desc: "Letterboxed · padding on all sides",
+      objectFit: "contain",
+      objectPosition: "center",
+      previewHeight: 120,
+    },
+    {
+      value: "medium",
+      label: "Medium",
+      desc: "Balanced · recommended default",
+      objectFit: "cover",
+      objectPosition: "center",
+      previewHeight: 160,
+    },
+    {
+      value: "large",
+      label: "Large",
+      desc: "Full hero fill · edge-to-edge",
+      objectFit: "cover",
+      objectPosition: "top center",
+      previewHeight: 220,
+    },
+  ],
 };
 
 const DEFAULT_FORM = {
   title: "", subtitle: "", tag: "", ctaText: "Learn More", ctaUrl: "/jobs",
   imageUrl: "", accentColor: "#10b981", bannerType: "spotlight",
   bannerHeadline: "", bannerDescription: "", order: 0, isActive: true,
+  imageSize: "medium",
 };
 
-/* ─── Hex → RGB helper ─────────────────────────── */
+/* ─── Hex → RGB helper ─────────────────────────────────────*/
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1,3),16);
   const g = parseInt(hex.slice(3,5),16);
@@ -45,75 +89,7 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
-/* ─── Validate image dimensions against ad type ── */
-function checkImageFit(naturalW, naturalH, bannerType) {
-  const rec = RECOMMENDED[bannerType] || RECOMMENDED.spotlight;
-  const imgRatio  = naturalW / naturalH;
-  const recRatio  = rec.ratio;
-  const ratioDiff = Math.abs(imgRatio - recRatio) / recRatio;
-  const tooLarge  = naturalW > rec.w * 1.5 && naturalH > rec.h * 1.5;
-  const mismatched = ratioDiff > 0.20;
-  return { tooLarge, mismatched, ratioDiff, rec, naturalW, naturalH };
-}
-
-/* ─── Smart fitted image ─────────────────────────*/
-const FittedImage = ({ src, accentColor, bannerType, height = "100%", width = "100%", onSizeWarning, style = {} }) => {
-  const { r, g, b } = hexToRgb(accentColor || "#10b981");
-  const bg = `rgba(${r},${g},${b},0.08)`;
-  const [warn, setWarn] = useState(null);
-
-  const handleLoad = (e) => {
-    const img = e.target;
-    const result = checkImageFit(img.naturalWidth, img.naturalHeight, bannerType);
-    if (result.tooLarge)   { setWarn("tooLarge");   onSizeWarning?.("tooLarge",   result); }
-    else if (result.mismatched) { setWarn("mismatched"); onSizeWarning?.("mismatched", result); }
-    else                   { setWarn(null);          onSizeWarning?.(null,         result); }
-  };
-
-  return (
-    <div style={{
-      position: "relative", width, height,
-      background: bg,
-      border: `1px solid rgba(${r},${g},${b},0.18)`,
-      borderRadius: 8, overflow: "hidden",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      ...style,
-    }}>
-      <img
-        src={src} alt="preview" onLoad={handleLoad}
-        onError={e => { e.target.style.display = "none"; }}
-        style={{ maxWidth: "100%", maxHeight: "100%", objectFit: "contain", display: "block" }}
-      />
-      {!warn && (
-        <div style={{
-          position: "absolute", inset: 0, pointerEvents: "none",
-          background: `linear-gradient(to right, rgba(${r},${g},${b},0.25), transparent 60%)`,
-        }} />
-      )}
-    </div>
-  );
-};
-
-/* ─── Size warning banner ────────────────────────*/
-const SizeWarningBanner = ({ warn, result, bannerType }) => {
-  if (!warn || !result) return null;
-  const rec = RECOMMENDED[bannerType] || RECOMMENDED.spotlight;
-  if (warn === "tooLarge") return (
-    <div style={{ display:"flex", gap:10, alignItems:"flex-start", background:"#fef2f2", border:"1px solid #fca5a5", borderRadius:8, padding:"10px 14px", marginTop:8, fontSize:12, color:"#991b1b" }}>
-      <AlertTriangle size={14} style={{ flexShrink:0, marginTop:1 }} />
-      <div><strong>Image too large</strong> — your image is {result.naturalW}×{result.naturalH}px. Recommended: <strong>{rec.label}</strong>. Large images may affect load speed.</div>
-    </div>
-  );
-  if (warn === "mismatched") return (
-    <div style={{ display:"flex", gap:10, alignItems:"flex-start", background:"#fffbeb", border:"1px solid #fcd34d", borderRadius:8, padding:"10px 14px", marginTop:8, fontSize:12, color:"#92400e" }}>
-      <Info size={14} style={{ flexShrink:0, marginTop:1 }} />
-      <div><strong>Aspect ratio mismatch</strong> — your image ({result.naturalW}×{result.naturalH}px) has a different proportion than the recommended <strong>{rec.label}</strong>. It's been letterboxed to fit without cropping.</div>
-    </div>
-  );
-  return null;
-};
-
-/* ─── Field wrapper ──────────────────────────────*/
+/* ─── Field wrapper ────────────────────────────────────────*/
 const Field = ({ label, children, hint }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>
@@ -130,440 +106,417 @@ const inp = {
   outline: "none", boxSizing: "border-box", transition: "border 0.2s",
 };
 
-/* ─── Ad Form Modal ──────────────────────────────*/
+/* ─── Size Selector ────────────────────────────────────────*/
+const ImageSizeSelector = ({ bannerType, value, onChange }) => {
+  const options = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
+  return (
+    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:8 }}>
+      {options.map(opt => (
+        <div
+          key={opt.value}
+          onClick={() => onChange(opt.value)}
+          style={{
+            padding:"10px 12px", borderRadius:10, cursor:"pointer",
+            border:`2px solid ${value === opt.value ? "#10b981" : "#e2e8f0"}`,
+            background: value === opt.value ? "#f0fdf4" : "white",
+            transition:"all 0.15s", textAlign:"center",
+          }}
+        >
+          <div style={{
+            fontSize:18, fontWeight:800, marginBottom:3,
+            color: value === opt.value ? "#065f46" : "#0f172a",
+          }}>
+            {opt.label[0]}
+            <span style={{ fontSize:11, fontWeight:500, marginLeft:1 }}>
+              {opt.label.slice(1).toLowerCase()}
+            </span>
+          </div>
+          <div style={{ fontSize:10, color:"#94a3b8", lineHeight:1.4 }}>{opt.desc}</div>
+          {value === opt.value && (
+            <div style={{ marginTop:5 }}>
+              <Check size={11} color="#10b981" />
+            </div>
+          )}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+/* ─── Image Preview ────────────────────────────────────────*/
+const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) => {
+  const sizeOpts = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
+  const sizeConf = sizeOpts.find(o => o.value === imageSize) || sizeOpts[1];
+  const { r, g, b } = hexToRgb(accentColor || "#10b981");
+  const isFullBanner = bannerType === "full_banner";
+
+  return (
+    <div style={{
+      borderRadius:10, overflow:"hidden", position:"relative",
+      height: sizeConf.previewHeight,
+      background: src ? "transparent" : `rgba(${r},${g},${b},0.08)`,
+      border: `1px solid rgba(${r},${g},${b},0.18)`,
+      display:"flex", alignItems:"center", justifyContent:"center",
+    }}>
+      {src ? (
+        <>
+          <img
+            src={src} alt="preview"
+            onError={e => { e.target.style.display="none"; }}
+            style={{
+              width:"100%", height:"100%",
+              objectFit: sizeConf.objectFit,
+              objectPosition: sizeConf.objectPosition,
+              display:"block",
+            }}
+          />
+          {/* Gradient overlay for full_banner style */}
+          {isFullBanner && (
+            <div style={{
+              position:"absolute", inset:0,
+              background:"linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)",
+              pointerEvents:"none",
+            }} />
+          )}
+          {/* Tag + title overlay */}
+          <div style={{ position:"absolute", bottom:10, left:14, pointerEvents:"none" }}>
+            {tag && (
+              <span style={{ background:accentColor, color:"white", padding:"2px 10px", borderRadius:100, fontSize:10, fontWeight:700 }}>
+                {tag}
+              </span>
+            )}
+            <div style={{ fontSize:15, fontWeight:700, color:"white", marginTop:4, textShadow:"0 1px 4px rgba(0,0,0,0.5)" }}>
+              {title || "Ad Title"}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, color:`rgba(${r},${g},${b},0.5)` }}>
+          <Image size={28} />
+          <span style={{ fontSize:11, fontWeight:600 }}>No image yet</span>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ─── Ad Form Modal ────────────────────────────────────────*/
 const AdFormModal = ({ ad, onClose, onSave, saving }) => {
   const [form, setForm]           = useState(ad ? { ...DEFAULT_FORM, ...ad } : { ...DEFAULT_FORM });
   const [imageFile, setImageFile] = useState(null);
   const [previewUrl, setPreviewUrl] = useState(ad?.imageUrl || "");
-  const [sizeWarn, setSizeWarn]   = useState(null);
-  const [sizeResult, setSizeResult] = useState(null);
-
-  /* ── Cropper state ── */
-  const [adCropOpen,  setAdCropOpen]  = useState(false);
-  const [adRawSrc,    setAdRawSrc]    = useState("");
-
   const fileInputRef = useRef(null);
 
   const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
 
-  // Reset warning when bannerType changes
-  useEffect(() => { setSizeWarn(null); setSizeResult(null); }, [form.bannerType]);
+  // Reset imageSize when bannerType changes so defaults apply correctly
+  useEffect(() => {
+    if (!ad) set("imageSize", "medium");
+  }, [form.bannerType]);
 
-  /* ── Open cropper when file is selected ── */
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setSizeWarn(null);
-    setSizeResult(null);
-    setAdRawSrc(URL.createObjectURL(file));
-    setAdCropOpen(true);
-    e.target.value = ""; // reset so same file can be re-selected
-  };
-
-  /* ── Receive cropped blob from modal ── */
-  const handleAdCropDone = (blob, dataUrl) => {
-    setAdCropOpen(false);
-    setPreviewUrl(dataUrl);
-    setImageFile(new File([blob], "ad-image.jpg", { type: blob.type }));
-    setSizeWarn(null);
-    setSizeResult(null);
+    setImageFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
+    e.target.value = "";
   };
 
   const handleRemoveImage = () => {
     setImageFile(null);
     setPreviewUrl("");
-    setSizeWarn(null);
-    setSizeResult(null);
     set("imageUrl", "");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const handleSizeWarning = (type, result) => {
-    setSizeWarn(type);
-    setSizeResult(result);
-  };
-
-  const rec = RECOMMENDED[form.bannerType] || RECOMMENDED.spotlight;
-
-  // Dynamic aspect ratio label for the hint
-  const cropHint = form.bannerType === "full_banner"
-    ? "Recommended: 1440×480px (3:1 ratio)"
-    : "Recommended: 800×450px (16:9 ratio)";
-
   return (
-    <>
-      <div
-        style={{
-          position: "fixed", inset: 0, background: "rgba(15,23,42,0.6)",
-          backdropFilter: "blur(4px)", zIndex: 9999,
-          display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
-        }}
-        onClick={e => e.target === e.currentTarget && onClose()}
-      >
+    <div
+      style={{
+        position:"fixed", inset:0, background:"rgba(15,23,42,0.6)",
+        backdropFilter:"blur(4px)", zIndex:9999,
+        display:"flex", alignItems:"center", justifyContent:"center", padding:16,
+      }}
+      onClick={e => e.target === e.currentTarget && onClose()}
+    >
+      <div style={{
+        background:"white", borderRadius:16, width:"100%", maxWidth:640,
+        maxHeight:"90vh", overflowY:"auto", boxShadow:"0 24px 80px rgba(0,0,0,0.2)",
+      }}>
+        {/* Header */}
         <div style={{
-          background: "white", borderRadius: 16, width: "100%", maxWidth: 640,
-          maxHeight: "90vh", overflowY: "auto", boxShadow: "0 24px 80px rgba(0,0,0,0.2)",
+          display:"flex", alignItems:"center", justifyContent:"space-between",
+          padding:"20px 24px", borderBottom:"1px solid #f1f5f9",
+          position:"sticky", top:0, background:"white", zIndex:1,
         }}>
-          {/* Header */}
-          <div style={{
-            display: "flex", alignItems: "center", justifyContent: "space-between",
-            padding: "20px 24px", borderBottom: "1px solid #f1f5f9",
-            position: "sticky", top: 0, background: "white", zIndex: 1,
-          }}>
-            <div>
-              <h2 style={{ fontSize:18, fontWeight:700, color:"#0f172a", margin:0 }}>
-                {ad ? "Edit Ad" : "Create New Ad"}
-              </h2>
-              <p style={{ fontSize:12, color:"#64748b", margin:"4px 0 0" }}>
-                {ad ? "Update the ad details below" : "Fill in the details for the new advertisement"}
-              </p>
+          <div>
+            <h2 style={{ fontSize:18, fontWeight:700, color:"#0f172a", margin:0 }}>
+              {ad ? "Edit Ad" : "Create New Ad"}
+            </h2>
+            <p style={{ fontSize:12, color:"#64748b", margin:"4px 0 0" }}>
+              {ad ? "Update the ad details below" : "Fill in the details for the new advertisement"}
+            </p>
+          </div>
+          <button onClick={onClose} disabled={saving} style={{ background:"none", border:"none", cursor:"pointer", padding:6, borderRadius:6, color:"#94a3b8" }}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ padding:"20px 24px" }}>
+
+          {/* Banner Type */}
+          <Field label="Ad Type">
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+              {BANNER_TYPES.map(t => (
+                <div
+                  key={t.value}
+                  onClick={() => set("bannerType", t.value)}
+                  style={{
+                    padding:"12px 14px", borderRadius:10, cursor:"pointer",
+                    border:`2px solid ${form.bannerType === t.value ? "#10b981" : "#e2e8f0"}`,
+                    background: form.bannerType === t.value ? "#f0fdf4" : "white",
+                    transition:"all 0.15s",
+                  }}
+                >
+                  <div style={{ fontSize:13, fontWeight:700, color:form.bannerType === t.value ? "#065f46" : "#0f172a" }}>{t.label}</div>
+                  <div style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{t.desc}</div>
+                </div>
+              ))}
             </div>
-            <button onClick={onClose} disabled={saving} style={{ background:"none", border:"none", cursor:"pointer", padding:6, borderRadius:6, color:"#94a3b8" }}>
-              <X size={20} />
+          </Field>
+
+          {/* Title */}
+          <Field label="Title *">
+            <input style={inp} value={form.title} placeholder="e.g. Solar Careers Drive 2026"
+              onChange={e => set("title", e.target.value)}
+              onFocus={e => e.target.style.borderColor="#10b981"}
+              onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+          </Field>
+
+          {/* Subtitle */}
+          <Field label="Subtitle">
+            <input style={inp} value={form.subtitle} placeholder="Short description shown on the card"
+              onChange={e => set("subtitle", e.target.value)}
+              onFocus={e => e.target.style.borderColor="#10b981"}
+              onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+          </Field>
+
+          {/* Full banner extras */}
+          {form.bannerType === "full_banner" && (
+            <>
+              <Field label="Banner Headline" hint="Large headline displayed prominently in the banner">
+                <input style={inp} value={form.bannerHeadline} placeholder="e.g. India's Largest Green Jobs Fair"
+                  onChange={e => set("bannerHeadline", e.target.value)}
+                  onFocus={e => e.target.style.borderColor="#10b981"}
+                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+              </Field>
+              <Field label="Banner Description" hint="Detailed text shown in the full banner">
+                <textarea style={{ ...inp, minHeight:80, resize:"vertical" }} value={form.bannerDescription}
+                  placeholder="Describe the opportunity, event or promotion…"
+                  onChange={e => set("bannerDescription", e.target.value)}
+                  onFocus={e => e.target.style.borderColor="#10b981"}
+                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+              </Field>
+            </>
+          )}
+
+          {/* Tag + CTA row */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <Field label="Tag Label">
+              <input style={inp} value={form.tag} placeholder="e.g. Solar Energy"
+                onChange={e => set("tag", e.target.value)}
+                onFocus={e => e.target.style.borderColor="#10b981"}
+                onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+            </Field>
+            <Field label="CTA Button Text">
+              <input style={inp} value={form.ctaText} placeholder="e.g. Explore Roles"
+                onChange={e => set("ctaText", e.target.value)}
+                onFocus={e => e.target.style.borderColor="#10b981"}
+                onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+            </Field>
+          </div>
+
+          {/* CTA URL */}
+          <Field label="CTA Link URL">
+            <input style={inp} value={form.ctaUrl} placeholder="/jobs or https://example.com"
+              onChange={e => set("ctaUrl", e.target.value)}
+              onFocus={e => e.target.style.borderColor="#10b981"}
+              onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+          </Field>
+
+          {/* ── Image Upload ── */}
+          <Field label="Ad Image">
+            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                style={{
+                  display:"flex", alignItems:"center", gap:8,
+                  padding:"9px 16px", border:"1.5px solid #e2e8f0",
+                  borderRadius:9, background:"#f8fafc",
+                  color:"#374151", fontSize:13, fontWeight:700,
+                  cursor:"pointer", fontFamily:"Inter, sans-serif", transition:"all 0.15s",
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor="#10b981"; e.currentTarget.style.background="#f0fdf4"; e.currentTarget.style.color="#065f46"; }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor="#e2e8f0"; e.currentTarget.style.background="#f8fafc"; e.currentTarget.style.color="#374151"; }}
+              >
+                <Image size={14} />
+                {imageFile ? "Replace Image" : (previewUrl ? "Change Image" : "Choose Image")}
+              </button>
+
+              {imageFile && (
+                <span style={{
+                  display:"inline-flex", alignItems:"center", gap:5,
+                  padding:"4px 10px", borderRadius:6,
+                  background:"#f0fdf4", border:"1px solid #bbf7d0",
+                  fontSize:11, fontWeight:600, color:"#065f46",
+                }}>
+                  <Check size={11} />
+                  {imageFile.name.length > 24 ? imageFile.name.slice(0, 24) + "…" : imageFile.name}
+                </span>
+              )}
+
+              {(imageFile || previewUrl) && (
+                <button type="button" onClick={handleRemoveImage} title="Remove image"
+                  style={{ background:"none", border:"none", cursor:"pointer", color:"#dc2626", padding:4, display:"flex", alignItems:"center" }}>
+                  <X size={14} />
+                </button>
+              )}
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                style={{ display:"none" }}
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {/* URL fallback */}
+            {!imageFile && (
+              <input
+                style={inp}
+                value={form.imageUrl}
+                placeholder="…or paste an image URL"
+                onChange={e => {
+                  set("imageUrl", e.target.value);
+                  setPreviewUrl(e.target.value);
+                }}
+                onFocus={e => e.target.style.borderColor="#10b981"}
+                onBlur={e => e.target.style.borderColor="#e2e8f0"}
+              />
+            )}
+          </Field>
+
+          {/* ── Image Size Selector ── */}
+          <Field
+            label="Image Display Size"
+            hint={
+              form.bannerType === "full_banner"
+                ? "Controls how the image fills the full banner area"
+                : "Controls how the image fills the spotlight card"
+            }
+          >
+            <ImageSizeSelector
+              bannerType={form.bannerType}
+              value={form.imageSize || "medium"}
+              onChange={v => set("imageSize", v)}
+            />
+          </Field>
+
+          {/* ── Live Preview ── */}
+          <Field label="Preview">
+            <ImagePreview
+              src={previewUrl}
+              accentColor={form.accentColor}
+              bannerType={form.bannerType}
+              imageSize={form.imageSize || "medium"}
+              tag={form.tag}
+              title={form.title}
+            />
+            <div style={{
+              display:"flex", alignItems:"center", gap:6,
+              marginTop:8, fontSize:11, color:"#64748b",
+            }}>
+              <Info size={11} />
+              This is an approximate preview. Actual rendering may vary slightly by screen size.
+            </div>
+          </Field>
+
+          {/* Accent colour */}
+          <Field label="Accent Color">
+            <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
+              {ACCENT_PRESETS.map(c => (
+                <div key={c} onClick={() => set("accentColor", c)} style={{
+                  width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer",
+                  border: form.accentColor === c ? "3px solid #0f172a" : "2px solid transparent",
+                  transition:"all 0.15s",
+                }} />
+              ))}
+              <input type="color" value={form.accentColor} onChange={e => set("accentColor", e.target.value)}
+                style={{ width:36, height:28, border:"1.5px solid #e2e8f0", borderRadius:6, cursor:"pointer", padding:2 }} />
+              <span style={{ fontSize:12, color:"#94a3b8" }}>{form.accentColor}</span>
+            </div>
+          </Field>
+
+          {/* Order + Active */}
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+            <Field label="Display Order" hint="Lower number = shown first">
+              <input style={inp} type="number" value={form.order} min={0}
+                onChange={e => set("order", parseInt(e.target.value) || 0)}
+                onFocus={e => e.target.style.borderColor="#10b981"}
+                onBlur={e => e.target.style.borderColor="#e2e8f0"} />
+            </Field>
+            <Field label="Status">
+              <div
+                onClick={() => set("isActive", !form.isActive)}
+                style={{
+                  display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
+                  border:"1.5px solid #e2e8f0", borderRadius:8, cursor:"pointer",
+                  background: form.isActive ? "#f0fdf4" : "#fef2f2",
+                }}
+              >
+                {form.isActive
+                  ? <><ToggleRight size={18} color="#10b981" /><span style={{ fontSize:13, fontWeight:600, color:"#065f46" }}>Active</span></>
+                  : <><ToggleLeft size={18} color="#dc2626" /><span style={{ fontSize:13, fontWeight:600, color:"#dc2626" }}>Inactive</span></>}
+              </div>
+            </Field>
+          </div>
+
+          {/* Actions */}
+          <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:8 }}>
+            <button onClick={onClose} disabled={saving} style={{
+              padding:"9px 18px", border:"1px solid #e2e8f0", borderRadius:8,
+              background:"white", color:"#475569", fontSize:13, fontWeight:600,
+              cursor:"pointer", fontFamily:"Inter, sans-serif",
+            }}>
+              Cancel
+            </button>
+            <button
+              onClick={() => onSave(form, imageFile)}
+              disabled={saving || !form.title.trim()}
+              style={{
+                padding:"9px 20px", border:"none", borderRadius:8,
+                background: saving || !form.title.trim() ? "#94a3b8" : "#10b981",
+                color:"white", fontSize:13, fontWeight:700,
+                cursor: saving || !form.title.trim() ? "not-allowed" : "pointer",
+                display:"flex", alignItems:"center", gap:6,
+                fontFamily:"Inter, sans-serif",
+              }}
+            >
+              {saving
+                ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} />
+                : <Check size={14} />}
+              {saving ? "Saving…" : ad ? "Save Changes" : "Create Ad"}
             </button>
           </div>
 
-          <div style={{ padding: "20px 24px" }}>
-
-            {/* Banner Type */}
-            <Field label="Ad Type">
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
-                {BANNER_TYPES.map(t => (
-                  <div
-                    key={t.value}
-                    onClick={() => set("bannerType", t.value)}
-                    style={{
-                      padding:"12px 14px", borderRadius:10, cursor:"pointer",
-                      border:`2px solid ${form.bannerType === t.value ? "#10b981" : "#e2e8f0"}`,
-                      background: form.bannerType === t.value ? "#f0fdf4" : "white",
-                      transition:"all 0.15s",
-                    }}
-                  >
-                    <div style={{ fontSize:13, fontWeight:700, color:form.bannerType === t.value ? "#065f46" : "#0f172a" }}>{t.label}</div>
-                    <div style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{t.desc}</div>
-                  </div>
-                ))}
-              </div>
-            </Field>
-
-            {/* Title */}
-            <Field label="Title *">
-              <input style={inp} value={form.title} placeholder="e.g. Solar Careers Drive 2026"
-                onChange={e => set("title", e.target.value)}
-                onFocus={e => e.target.style.borderColor="#10b981"}
-                onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-            </Field>
-
-            {/* Subtitle */}
-            <Field label="Subtitle">
-              <input style={inp} value={form.subtitle} placeholder="Short description shown on the card"
-                onChange={e => set("subtitle", e.target.value)}
-                onFocus={e => e.target.style.borderColor="#10b981"}
-                onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-            </Field>
-
-            {/* Full banner extras */}
-            {form.bannerType === "full_banner" && (
-              <>
-                <Field label="Banner Headline" hint="Large headline displayed prominently in the banner">
-                  <input style={inp} value={form.bannerHeadline} placeholder="e.g. India's Largest Green Jobs Fair"
-                    onChange={e => set("bannerHeadline", e.target.value)}
-                    onFocus={e => e.target.style.borderColor="#10b981"}
-                    onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-                </Field>
-                <Field label="Banner Description" hint="Detailed text shown in the full banner">
-                  <textarea style={{ ...inp, minHeight:80, resize:"vertical" }} value={form.bannerDescription}
-                    placeholder="Describe the opportunity, event or promotion…"
-                    onChange={e => set("bannerDescription", e.target.value)}
-                    onFocus={e => e.target.style.borderColor="#10b981"}
-                    onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-                </Field>
-              </>
-            )}
-
-            {/* Tag + CTA row */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <Field label="Tag Label">
-                <input style={inp} value={form.tag} placeholder="e.g. Solar Energy"
-                  onChange={e => set("tag", e.target.value)}
-                  onFocus={e => e.target.style.borderColor="#10b981"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-              </Field>
-              <Field label="CTA Button Text">
-                <input style={inp} value={form.ctaText} placeholder="e.g. Explore Roles"
-                  onChange={e => set("ctaText", e.target.value)}
-                  onFocus={e => e.target.style.borderColor="#10b981"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-              </Field>
-            </div>
-
-            {/* CTA URL */}
-            <Field label="CTA Link URL">
-              <input style={inp} value={form.ctaUrl} placeholder="/jobs or https://example.com"
-                onChange={e => set("ctaUrl", e.target.value)}
-                onFocus={e => e.target.style.borderColor="#10b981"}
-                onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-            </Field>
-
-            {/* ── Image Upload with Crop ── */}
-            <Field label="Ad Image">
-              {/* Recommended size chip */}
-              <div style={{
-                display:"inline-flex", alignItems:"center", gap:5,
-                background:"#f0fdf4", border:"1px solid #86efac",
-                borderRadius:20, padding:"3px 10px", marginBottom:10,
-                fontSize:11, fontWeight:600, color:"#15803d",
-              }}>
-                <Info size={11} />
-                Recommended: {rec.label} · JPG, PNG, WebP · max 5MB
-              </div>
-
-              {/* Upload trigger + crop badge */}
-              <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  style={{
-                    display:"flex", alignItems:"center", gap:8,
-                    padding:"9px 16px",
-                    border:"1.5px solid #e2e8f0",
-                    borderRadius:9, background:"#f8fafc",
-                    color:"#374151", fontSize:13, fontWeight:700,
-                    cursor:"pointer", fontFamily:"Inter, sans-serif",
-                    transition:"all 0.15s",
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor="#10b981"; e.currentTarget.style.background="#f0fdf4"; e.currentTarget.style.color="#065f46"; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor="#e2e8f0"; e.currentTarget.style.background="#f8fafc"; e.currentTarget.style.color="#374151"; }}
-                >
-                  <Scissors size={14} />
-                  {imageFile ? "Replace & Crop" : (previewUrl ? "Re-crop Image" : "Choose & Crop")}
-                </button>
-
-                {/* Shows current filename or "cropped" indicator */}
-                {imageFile && (
-                  <span style={{
-                    display:"inline-flex", alignItems:"center", gap:5,
-                    padding:"4px 10px", borderRadius:6,
-                    background:"#f0fdf4", border:"1px solid #bbf7d0",
-                    fontSize:11, fontWeight:600, color:"#065f46",
-                  }}>
-                    <Check size={11} />
-                    Cropped &amp; ready
-                  </span>
-                )}
-
-                {(imageFile || previewUrl) && (
-                  <button type="button" onClick={handleRemoveImage} title="Remove image"
-                    style={{ background:"none", border:"none", cursor:"pointer", color:"#dc2626", padding:4, display:"flex", alignItems:"center" }}>
-                    <X size={14} />
-                  </button>
-                )}
-
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/jpeg,image/png,image/webp"
-                  style={{ display:"none" }}
-                  onChange={handleFileChange}
-                />
-              </div>
-
-              {/* URL fallback — only when no file is chosen */}
-              {!imageFile && (
-                <input
-                  style={inp}
-                  value={form.imageUrl}
-                  placeholder="…or paste an image URL (Unsplash, CDN, etc.)"
-                  onChange={e => {
-                    set("imageUrl", e.target.value);
-                    setSizeWarn(null);
-                    setSizeResult(null);
-                    setPreviewUrl(e.target.value);
-                  }}
-                  onFocus={e => e.target.style.borderColor="#10b981"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"}
-                />
-              )}
-            </Field>
-
-            {/* ── Image preview ── */}
-            {previewUrl && (
-              <>
-                <div style={{
-                  marginBottom: 4, borderRadius: 10, overflow: "hidden", position: "relative",
-                  aspectRatio: form.bannerType === "full_banner" ? "3 / 1" : "16 / 9",
-                  maxHeight: form.bannerType === "full_banner" ? 160 : 180,
-                }}>
-                  <FittedImage
-                    src={previewUrl}
-                    accentColor={form.accentColor}
-                    bannerType={form.bannerType}
-                    height="100%"
-                    width="100%"
-                    onSizeWarning={handleSizeWarning}
-                    style={{ borderRadius:10, border:"none" }}
-                  />
-
-                  {/* Tag + title overlay */}
-                  <div style={{ position:"absolute", bottom:10, left:14, pointerEvents:"none" }}>
-                    {form.tag && (
-                      <span style={{ background:form.accentColor, color:"white", padding:"2px 10px", borderRadius:100, fontSize:10, fontWeight:700 }}>
-                        {form.tag}
-                      </span>
-                    )}
-                    <div style={{ fontSize:15, fontWeight:700, color:"white", marginTop:4, textShadow:"0 1px 4px rgba(0,0,0,0.5)" }}>
-                      {form.title || "Ad Title"}
-                    </div>
-                  </div>
-
-                  {/* Cropped badge overlay */}
-                  {imageFile && (
-                    <div style={{
-                      position:"absolute", top:8, left:8,
-                      background:"rgba(16,185,129,0.9)", color:"white",
-                      borderRadius:6, padding:"3px 8px",
-                      display:"flex", alignItems:"center", gap:4,
-                      fontSize:11, fontWeight:700,
-                    }}>
-                      <Scissors size={10} /> Cropped
-                    </div>
-                  )}
-
-                  {/* Ratio warning badge */}
-                  {sizeWarn && (
-                    <div style={{
-                      position:"absolute", top:8, right:8,
-                      background: sizeWarn === "tooLarge" ? "#fef2f2" : "#fffbeb",
-                      border:`1px solid ${sizeWarn === "tooLarge" ? "#fca5a5" : "#fcd34d"}`,
-                      borderRadius:6, padding:"3px 8px",
-                      display:"flex", alignItems:"center", gap:4,
-                      fontSize:11, fontWeight:700,
-                      color: sizeWarn === "tooLarge" ? "#991b1b" : "#92400e",
-                    }}>
-                      <AlertTriangle size={11} />
-                      {sizeWarn === "tooLarge" ? "Too large" : "Ratio mismatch"}
-                    </div>
-                  )}
-                </div>
-
-                {/* Re-crop shortcut below the preview */}
-                <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:8, flexWrap:"wrap" }}>
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    style={{
-                      display:"inline-flex", alignItems:"center", gap:6,
-                      padding:"5px 12px", borderRadius:7,
-                      border:"1.5px solid #e2e8f0", background:"white",
-                      color:"#64748b", fontSize:12, fontWeight:600,
-                      cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s",
-                    }}
-                    onMouseEnter={e => { e.currentTarget.style.borderColor="#10b981"; e.currentTarget.style.color="#065f46"; }}
-                    onMouseLeave={e => { e.currentTarget.style.borderColor="#e2e8f0"; e.currentTarget.style.color="#64748b"; }}
-                  >
-                    <Scissors size={12} /> Re-crop
-                  </button>
-
-                  {/* "Looks good" confirmation */}
-                  {!sizeWarn && (
-                    <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:"#15803d", fontWeight:600 }}>
-                      <Check size={12} /> Image fits the recommended dimensions
-                    </div>
-                  )}
-                </div>
-
-                <SizeWarningBanner warn={sizeWarn} result={sizeResult} bannerType={form.bannerType} />
-              </>
-            )}
-
-            {/* Accent colour */}
-            <Field label="Accent Color" hint="Also used as the background fill for letterboxed images" >
-              <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-                {ACCENT_PRESETS.map(c => (
-                  <div key={c} onClick={() => set("accentColor", c)} style={{
-                    width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer",
-                    border: form.accentColor === c ? "3px solid #0f172a" : "2px solid transparent",
-                    transition:"all 0.15s",
-                  }} />
-                ))}
-                <input type="color" value={form.accentColor} onChange={e => set("accentColor", e.target.value)}
-                  style={{ width:36, height:28, border:"1.5px solid #e2e8f0", borderRadius:6, cursor:"pointer", padding:2 }} />
-                <span style={{ fontSize:12, color:"#94a3b8" }}>{form.accentColor}</span>
-              </div>
-            </Field>
-
-            {/* Order + Active */}
-            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-              <Field label="Display Order" hint="Lower number = shown first">
-                <input style={inp} type="number" value={form.order} min={0}
-                  onChange={e => set("order", parseInt(e.target.value) || 0)}
-                  onFocus={e => e.target.style.borderColor="#10b981"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-              </Field>
-              <Field label="Status">
-                <div
-                  onClick={() => set("isActive", !form.isActive)}
-                  style={{
-                    display:"flex", alignItems:"center", gap:10, padding:"9px 12px",
-                    border:"1.5px solid #e2e8f0", borderRadius:8, cursor:"pointer",
-                    background: form.isActive ? "#f0fdf4" : "#fef2f2",
-                  }}
-                >
-                  {form.isActive
-                    ? <><ToggleRight size={18} color="#10b981" /><span style={{ fontSize:13, fontWeight:600, color:"#065f46" }}>Active</span></>
-                    : <><ToggleLeft size={18} color="#dc2626" /><span style={{ fontSize:13, fontWeight:600, color:"#dc2626" }}>Inactive</span></>}
-                </div>
-              </Field>
-            </div>
-
-            {/* Actions */}
-            <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:8 }}>
-              <button onClick={onClose} disabled={saving} style={{
-                padding:"9px 18px", border:"1px solid #e2e8f0", borderRadius:8,
-                background:"white", color:"#475569", fontSize:13, fontWeight:600,
-                cursor:"pointer", fontFamily:"Inter, sans-serif",
-              }}>
-                Cancel
-              </button>
-              <button
-                onClick={() => onSave(form, imageFile)}
-                disabled={saving || !form.title.trim()}
-                style={{
-                  padding:"9px 20px", border:"none", borderRadius:8,
-                  background: saving || !form.title.trim() ? "#94a3b8" : "#10b981",
-                  color:"white", fontSize:13, fontWeight:700,
-                  cursor: saving || !form.title.trim() ? "not-allowed" : "pointer",
-                  display:"flex", alignItems:"center", gap:6,
-                  fontFamily:"Inter, sans-serif",
-                }}
-              >
-                {saving
-                  ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} />
-                  : <Check size={14} />}
-                {saving ? "Saving…" : ad ? "Save Changes" : "Create Ad"}
-              </button>
-            </div>
-
-          </div>
         </div>
       </div>
-
-      {/* ── Ad image crop modal — aspect ratio locked to bannerType ── */}
-      <ImageCropperModal
-        isOpen={adCropOpen}
-        onClose={() => setAdCropOpen(false)}
-        onCrop={handleAdCropDone}
-        imageSrc={adRawSrc}
-        aspectRatio={CROP_ASPECT[form.bannerType]}
-        cropShape="rect"
-        title={form.bannerType === "full_banner" ? "Crop Full Banner" : "Crop Spotlight Card"}
-        hint={cropHint}
-      />
-    </>
+    </div>
   );
 };
 
-/* ─── Ad Card thumbnail ───────────────────────────*/
+/* ─── Ad Card thumbnail ─────────────────────────────────────*/
 const AdCardThumbnail = ({ ad }) => {
   const { r, g, b } = hexToRgb(ad.accentColor || "#10b981");
   const bg = `rgba(${r},${g},${b},0.10)`;
@@ -573,7 +526,7 @@ const AdCardThumbnail = ({ ad }) => {
       background:bg, display:"flex", alignItems:"center", justifyContent:"center",
     }}>
       {ad.imageUrl ? (
-        <img src={ad.imageUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"contain" }} onError={e => { e.target.style.display="none"; }} />
+        <img src={ad.imageUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => { e.target.style.display="none"; }} />
       ) : (
         <Image size={20} color={ad.accentColor} />
       )}
@@ -581,7 +534,25 @@ const AdCardThumbnail = ({ ad }) => {
   );
 };
 
-/* ─── Ad Card ─────────────────────────────────────*/
+/* ─── Size badge helper ─────────────────────────────────────*/
+const SizeBadge = ({ size }) => {
+  const colors = {
+    small:  { bg:"#f1f5f9", color:"#475569" },
+    medium: { bg:"#dbeafe", color:"#1e40af" },
+    large:  { bg:"#d1fae5", color:"#065f46" },
+  };
+  const s = colors[size] || colors.medium;
+  return (
+    <span style={{
+      padding:"1px 8px", borderRadius:100, fontSize:10, fontWeight:700,
+      background:s.bg, color:s.color,
+    }}>
+      {(size || "medium").charAt(0).toUpperCase() + (size || "medium").slice(1)}
+    </span>
+  );
+};
+
+/* ─── Ad Card ───────────────────────────────────────────────*/
 const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst, isLast, deleting, toggling }) => (
   <div style={{
     background:"white",
@@ -602,6 +573,7 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
           }}>
             {ad.bannerType === "full_banner" ? "Full Banner" : "Spotlight"}
           </span>
+          <SizeBadge size={ad.imageSize} />
           {!ad.isActive && (
             <span style={{ padding:"2px 8px", borderRadius:100, fontSize:10, fontWeight:700, background:"#fee2e2", color:"#991b1b" }}>Inactive</span>
           )}
@@ -633,7 +605,7 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
   </div>
 );
 
-/* ─── Main Component ──────────────────────────────*/
+/* ─── Main Component ────────────────────────────────────────*/
 export default function AdminAdsManager({ token }) {
   const [ads, setAds]             = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -667,14 +639,14 @@ export default function AdminAdsManager({ token }) {
       const textFields = [
         "title","subtitle","tag","ctaText","ctaUrl",
         "accentColor","bannerType","bannerHeadline",
-        "bannerDescription","order","isActive",
+        "bannerDescription","order","isActive","imageSize",
       ];
       textFields.forEach(f => {
         if (form[f] !== undefined && form[f] !== null) {
           fd.append(f, typeof form[f] === "boolean" ? String(form[f]) : form[f]);
         }
       });
-      if (imageFile)        fd.append("adImage",  imageFile);
+      if (imageFile)          fd.append("adImage",  imageFile);
       else if (form.imageUrl) fd.append("imageUrl", form.imageUrl);
 
       const config = { headers: { Authorization: `Bearer ${token}` } };
@@ -727,32 +699,30 @@ export default function AdminAdsManager({ token }) {
   };
 
   /* ── Reorder ── */
-// moveAd scoped to its own type
-const moveAd = async (filteredIdx, dir, bannerType) => {
-  const filtered = ads.filter(a => a.bannerType === bannerType);
-  const swapIdx = dir === "up" ? filteredIdx - 1 : filteredIdx + 1;
-  if (swapIdx < 0 || swapIdx >= filtered.length) return;
+  const moveAd = async (filteredIdx, dir, bannerType) => {
+    const filtered = ads.filter(a => a.bannerType === bannerType);
+    const swapIdx = dir === "up" ? filteredIdx - 1 : filteredIdx + 1;
+    if (swapIdx < 0 || swapIdx >= filtered.length) return;
 
-  const newFiltered = [...filtered];
-  [newFiltered[filteredIdx], newFiltered[swapIdx]] = [newFiltered[swapIdx], newFiltered[filteredIdx]];
+    const newFiltered = [...filtered];
+    [newFiltered[filteredIdx], newFiltered[swapIdx]] = [newFiltered[swapIdx], newFiltered[filteredIdx]];
 
-  // Rebuild full ads array: keep other type in place, replace this type's entries
-  const others = ads.filter(a => a.bannerType !== bannerType);
-  const merged = [...others, ...newFiltered].map((a, i) => ({ ...a, order: i }));
-  setAds(merged);
+    const others = ads.filter(a => a.bannerType !== bannerType);
+    const merged = [...others, ...newFiltered].map((a, i) => ({ ...a, order: i }));
+    setAds(merged);
 
-  try {
-    await axios.patch(
-      `${API_BASE_URL}/api/ads/admin/reorder`,
-      { orders: merged.map(a => ({ id: a._id, order: a.order })) },
-      { headers: authHeaders }
-    );
-    toast.success("Order saved");
-  } catch {
-    toast.error("Failed to save order");
-    fetchAds();
-  }
-};
+    try {
+      await axios.patch(
+        `${API_BASE_URL}/api/ads/admin/reorder`,
+        { orders: merged.map(a => ({ id: a._id, order: a.order })) },
+        { headers: authHeaders }
+      );
+      toast.success("Order saved");
+    } catch {
+      toast.error("Failed to save order");
+      fetchAds();
+    }
+  };
 
   const spotlightAds = ads.filter(a => a.bannerType === "spotlight");
   const bannerAds    = ads.filter(a => a.bannerType === "full_banner");
@@ -792,9 +762,8 @@ const moveAd = async (filteredIdx, dir, bannerType) => {
       }}>
         <AlertCircle size={14} style={{ flexShrink:0, marginTop:1 }} />
         <span>
-          <strong>Spotlight cards</strong> appear in the rotating featured section (recommended <strong>800×450px, 16:9</strong>).{" "}
-          <strong>Full banners</strong> display as large hero-style ads (recommended <strong>1440×480px, 3:1</strong>).
-          Images are cropped to the correct ratio when you upload them — no more letterboxing.
+          Use the <strong>Image Display Size</strong> option (Small / Medium / Large) when creating or editing an ad to control how the image fits within its slot —
+          no cropping required. <strong>Spotlight cards</strong> and <strong>Full banners</strong> each have their own size behaviour.
         </span>
       </div>
 
@@ -827,19 +796,16 @@ const moveAd = async (filteredIdx, dir, bannerType) => {
                 Full Banners ({bannerAds.length})
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                {bannerAds.map((ad, i) => {
-                  const fullIdx = ads.indexOf(ad);
-                  return (
-                    <AdCard key={ad._id} ad={ad}
-                      isFirst={i === 0} isLast={i === bannerAds.length - 1}
-                      onMoveUp={() => moveAd(i, "up", ad.bannerType)}
-                      onMoveDown={() => moveAd(i, "down", ad.bannerType)}
-                      onEdit={a => { setEditingAd(a); setShowForm(true); }}
-                      onDelete={handleDelete} onToggle={handleToggle}
-                      deleting={deleting} toggling={toggling}
-                    />
-                  );
-                })}
+                {bannerAds.map((ad, i) => (
+                  <AdCard key={ad._id} ad={ad}
+                    isFirst={i === 0} isLast={i === bannerAds.length - 1}
+                    onMoveUp={() => moveAd(i, "up", ad.bannerType)}
+                    onMoveDown={() => moveAd(i, "down", ad.bannerType)}
+                    onEdit={a => { setEditingAd(a); setShowForm(true); }}
+                    onDelete={handleDelete} onToggle={handleToggle}
+                    deleting={deleting} toggling={toggling}
+                  />
+                ))}
               </div>
             </div>
           )}
@@ -851,19 +817,16 @@ const moveAd = async (filteredIdx, dir, bannerType) => {
                 Spotlight Cards ({spotlightAds.length})
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
-                {spotlightAds.map((ad, i) => {
-                  const fullIdx = ads.indexOf(ad);
-                  return (
-                    <AdCard key={ad._id} ad={ad}
-                      isFirst={i === 0} isLast={i === spotlightAds.length - 1}
-                      onMoveUp={() => moveAd(i, "up", ad.bannerType)}
-                      onMoveDown={() => moveAd(i, "down", ad.bannerType)}
-                      onEdit={a => { setEditingAd(a); setShowForm(true); }}
-                      onDelete={handleDelete} onToggle={handleToggle}
-                      deleting={deleting} toggling={toggling}
-                    />
-                  );
-                })}
+                {spotlightAds.map((ad, i) => (
+                  <AdCard key={ad._id} ad={ad}
+                    isFirst={i === 0} isLast={i === spotlightAds.length - 1}
+                    onMoveUp={() => moveAd(i, "up", ad.bannerType)}
+                    onMoveDown={() => moveAd(i, "down", ad.bannerType)}
+                    onEdit={a => { setEditingAd(a); setShowForm(true); }}
+                    onDelete={handleDelete} onToggle={handleToggle}
+                    deleting={deleting} toggling={toggling}
+                  />
+                ))}
               </div>
             </div>
           )}

@@ -129,7 +129,7 @@ const divider = () => `<hr style="border:none;border-top:1px solid #e2e8f0;margi
 
 const signOff = () => `
   ${divider()}
-  <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br><strong style="color:#475569;">The ${APP_NAME} Team</strong></p>
+  <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br><strong style="color:#475569;">Solar is My Passion</strong><br><a href="https://www.linkedin.com/company/solarisourpassion/" style="color:#10b981;font-size:12px;text-decoration:none;">LinkedIn →</a></p>
 `;
 
 
@@ -1048,7 +1048,7 @@ const sendJobRevokedByAdminEmail = async (email, name, jobTitle, companyName, re
     ${ctaButton("Contact Support", "mailto:greenjobs111@gmail.com", "#dc2626")}
     ${divider()}
     <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
-    <strong style="color:#475569;">The Green Jobs Trust & Safety Team</strong></p>
+    <strong style="color:#475569;">Solar is My Passion</strong><br><a href="https://www.linkedin.com/company/solarisourpassion/" style="color:#10b981;font-size:12px;text-decoration:none;">LinkedIn →</a></p>
   `);
 
   await transporter.sendMail({
@@ -1076,7 +1076,7 @@ const sendJobRevokedBusinessNotification = async (businessEmail, businessName, j
     ${ctaButton("Review Your Recruiters", `${FRONTEND_URL}/dashboard`, "#f59e0b")}
     ${divider()}
     <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br>
-    <strong style="color:#475569;">The Green Jobs Trust & Safety Team</strong></p>
+    <strong style="color:#475569;">Solar is My Passion</strong><br><a href="https://www.linkedin.com/company/solarisourpassion/" style="color:#10b981;font-size:12px;text-decoration:none;">LinkedIn →</a></p>
   `);
 
   await transporter.sendMail({
@@ -1104,7 +1104,7 @@ const sendAdminJobRevokeAlert = async (adminEmail, jobTitle, recruiterName, recr
     ])}
     ${ctaButton("Review in Admin Dashboard", `${FRONTEND_URL}/admin/dashboard`)}
     ${divider()}
-    <p style="margin:0;color:#94a3b8;font-size:13px;">Green Jobs Trust & Safety</p>
+    <p style="margin:0;color:#94a3b8;font-size:13px;">Warm regards,<br><strong style="color:#475569;">Solar is My Passion</strong><br><a href="https://www.linkedin.com/company/solarisourpassion/" style="color:#10b981;font-size:12px;text-decoration:none;">LinkedIn →</a></p>
   `);
 
   await transporter.sendMail({
