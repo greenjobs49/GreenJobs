@@ -301,12 +301,15 @@ export default function JobSeekerDashboard() {
         /* ── Inline spotlight ad ── */
         .spot-ad {
           border-radius:16px; overflow:hidden; position:relative;
-          min-height:200px; cursor:pointer;
+          min-height:200px; height:200px; 
+          width: 100%; max-width: 100%;
+          cursor:pointer;
           transition:transform .25s, box-shadow .25s;
           background:#0f172a;
+          -webkit-mask-image: -webkit-radial-gradient(white, black);
         }
         .spot-ad:hover { transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.15); }
-        .spot-ad-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; }
+        .spot-ad-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;object-position: center center; z-index:0; }
         .spot-ad-overlay { position:absolute; inset:0; z-index:1; background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.45) 55%,rgba(0,0,0,.1) 100%); }
         .spot-ad-body { position:absolute; bottom:0; left:0; right:0; padding:20px 20px 24px; z-index:2; }
         .spot-ad-tag { display:inline-block; padding:3px 10px; border-radius:50px; font-size:9.5px; font-weight:800; letter-spacing:.9px; text-transform:uppercase; margin-bottom:8px; color:#fff; }
@@ -335,8 +338,11 @@ export default function JobSeekerDashboard() {
         /* ── Full-banner ad (between sections) ── */
         .fb-ad-strip {
           border-radius:18px; overflow:hidden; position:relative;
-          min-height:160px; cursor:pointer; margin:28px 0;
+          min-height:160px; height:160px; cursor:pointer; margin:28px 0;
           transition:transform .25s; background:#0f172a;
+          isolation: isolate;          /* new */
+          contain: paint;
+         -webkit-mask-image: -webkit-radial-gradient(white, black);
         }
         .fb-ad-strip:hover { transform:translateY(-2px); }
         .fb-ad-strip .fb-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; transition:transform 6s ease; }
@@ -366,20 +372,50 @@ export default function JobSeekerDashboard() {
         .section-label::after { content:''; flex:1; height:1.5px; background:var(--border); }
 
         /* ── Responsive ── */
-        @media (max-width:900px) {
-          .jsd-grid { grid-template-columns:1fr; }
-          .jsd-sidebar { order:-1; display:grid; grid-template-columns:1fr 1fr; }
+        @media (max-width: 900px) {
+        .jsd-grid { grid-template-columns: 1fr; }
+        .jsd-sidebar {
+          order: -1;
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          width: 100%;
+          min-width: 0;
+          overflow: hidden;
         }
-        @media (max-width:640px) {
-          .jsd-inner { padding:16px 14px 48px; }
-          .jsd-hero  { padding:28px 22px 26px; border-radius:16px; }
-          .jsd-greeting { font-size:22px; }
-          .jsd-stats { grid-template-columns:1fr 1fr; gap:10px; }
-          .action-row { grid-template-columns:1fr; }
-          .detail-fields { grid-template-columns:1fr; }
-          .jsd-sidebar { grid-template-columns:1fr; }
-          .fb-ad-strip .fb-inner { padding:20px 18px; }
-          .fb-ad-strip .fb-head  { font-size:17px; }
+        /* make each sidebar child respect its column width */
+        .jsd-sidebar > * {
+          min-width: 0;
+          max-width: 100%;
+        }
+      }
+        @media (max-width: 640px) {
+          .jsd-inner { padding: 16px 14px 48px; }
+          .jsd-hero  { padding: 28px 22px 26px; border-radius: 16px; }
+          .jsd-greeting { font-size: 22px; }
+          .jsd-stats { grid-template-columns: 1fr 1fr; gap: 10px; }
+          .action-row { grid-template-columns: 1fr; }
+          .detail-fields { grid-template-columns: 1fr; }
+
+          .jsd-sidebar {
+            grid-template-columns: 1fr;
+            overflow: hidden;
+            min-width: 0;
+          }
+          .jsd-sidebar > * {
+            min-width: 0; 
+            max-width: 100%;
+          }
+
+          .spot-ad {
+            border-radius: 12px;
+            width: 100%;
+            max-width: 100%;
+          }
+
+          .fb-ad-strip { border-radius: 12px; margin: 18px 0; }
+          .fb-ad-strip .fb-inner { padding: 20px 18px; }
+          .fb-ad-strip .fb-head  { font-size: 17px; }
+          .fb-ad-strip:hover .fb-img { transform: none; }
         }
       `}</style>
 
@@ -691,7 +727,7 @@ export default function JobSeekerDashboard() {
                 const idx = (activeSpot + 1) % spotAds.length;
                 const ad  = spotAds[idx];
                 return (
-                  <div className="spot-ad" style={{ minHeight:'160px' }} onClick={() => handleAdNav(ad.ctaUrl)}>
+                  <div className="spot-ad" style={{ minHeight:'160px', height:'160px' }} onClick={() => handleAdNav(ad.ctaUrl)}>
                     {ad.image
                       ? <img src={ad.image} alt={ad.title} className="spot-ad-img" onError={e => e.target.style.display='none'} />
                       : <div style={{ position:'absolute', inset:0, background:`linear-gradient(135deg,${ad.accent}88,#1e293b)`, zIndex:0 }} />
