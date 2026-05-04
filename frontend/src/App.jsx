@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
@@ -34,6 +34,19 @@ import BusinessDetail from "./pages/BusinessDetail";
 import ProtectedRoute from "./components/common/ProtectedRoute";
 
 function App() {
+
+  // ✅ Strip Google Analytics tracking params from URL silently
+  useEffect(() => {
+    const paramsToStrip = ["_gl", "_ga", "_gcl_au", "_gac"];
+    const url = new URL(window.location.href);
+    const hasTracking = paramsToStrip.some((p) => url.searchParams.has(p));
+
+    if (hasTracking) {
+      paramsToStrip.forEach((p) => url.searchParams.delete(p));
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
   return (
       <div className="App">
         <Toaster
