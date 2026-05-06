@@ -44,76 +44,6 @@ const getTypeArr = (type) => {
   return [];
 };
 
-const SkillDropdown = ({ allSkills, skillFilter, setSkillFilter, skillCounts }) => {
-  const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    const handler = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
-
-  const filtered = allSkills.filter((s) => s.toLowerCase().includes(search.toLowerCase()));
-  const hasValue = !!skillFilter;
-
-  return (
-    <div className="skill-dropdown-wrap" ref={wrapperRef}>
-      <button
-        className={`skill-dropdown-trigger${open ? " open" : ""}${hasValue ? " has-value" : ""}`}
-        onClick={() => setOpen((v) => !v)}
-        type="button"
-      >
-        <span style={{ display: "flex", alignItems: "center", gap: 7, minWidth: 0, overflow: "hidden" }}>
-          <Code2 size={13} style={{ flexShrink: 0 }} />
-          <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-            {hasValue ? skillFilter : "Filter by Skill"}
-          </span>
-        </span>
-        <ChevronDown size={13} style={{ transition: "transform 0.2s", transform: open ? "rotate(180deg)" : "none", flexShrink: 0 }} />
-      </button>
-
-      {open && (
-        <div className="skill-dropdown-panel">
-          <div className="skill-search-wrap">
-            <input autoFocus className="skill-search-input" placeholder="Search skills..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          </div>
-          <div className="skill-list">
-            {filtered.length === 0 ? (
-              <div style={{ padding: "16px", textAlign: "center", fontSize: 13, color: "#9ca3af" }}>No skills found</div>
-            ) : (
-              filtered.map((skill) => {
-                const active = skillFilter.toLowerCase() === skill.toLowerCase();
-                return (
-                  <div key={skill} className={`skill-option${active ? " active" : ""}`}
-                    onMouseDown={(e) => { e.preventDefault(); setSkillFilter(active ? "" : skill); setOpen(false); setSearch(""); }}>
-                    <span>{skill}</span>
-                    <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-                      {skillCounts[skill] && <span className="skill-option-count">{skillCounts[skill]}</span>}
-                      {active && <Check size={13} className="skill-option-check" />}
-                    </span>
-                  </div>
-                );
-              })
-            )}
-          </div>
-          <div className="skill-dropdown-footer">
-            <span className="skill-count-label">{filtered.length} of {allSkills.length} skills</span>
-            {hasValue && (
-              <button type="button" className="skill-clear-btn" onMouseDown={(e) => { e.preventDefault(); setSkillFilter(""); setOpen(false); }}>
-                Clear ×
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
-
 const TYPE_COLORS = {
   "Full Time":  { bg: "#dbeafe", color: "#1e40af" },
   "Part Time":  { bg: "#ede9fe", color: "#6d28d9" },
@@ -124,11 +54,126 @@ const TYPE_COLORS = {
 };
 const defaultTypeColor = { bg: "#f1f5f9", color: "#475569" };
 
+// ── Unified Filter Panel ──────────────────────────────────────────────────────
+const FilterPanel = ({
+  open,
+  onClose,
+  selectedPay, setSelectedPay,
+  skillFilter, setSkillFilter,
+  allSkills, skillCounts,
+  activeCount,
+}) => {
+  const [skillSearch, setSkillSearch] = useState("");
+  const panelRef = useRef(null);
+
+  // Close on outside click
+useEffect(() => {
+  if (!open) return;
+  const handler = (e) => {
+    if (panelRef.current && !panelRef.current.contains(e.target)) {
+      if (filterBtnRef?.current && filterBtnRef.current.contains(e.target)) return; // ← add this
+      onClose();
+    }
+  };
+  document.addEventListener("mousedown", handler);
+  return () => document.removeEventListener("mousedown", handler);
+}, [open, onClose]);
+
+  // Reset skill search when panel closes
+  useEffect(() => {
+    if (!open) setSkillSearch("");
+  }, [open]);
+
+  const filteredSkills = allSkills.filter((s) =>
+    s.toLowerCase().includes(skillSearch.toLowerCase())
+  );
+
+  if (!open) return null;
+
+  return (
+    <div className="filter-panel" ref={panelRef}>
+      {/* Compensation */}
+      <div className="fp-section">
+        <div className="fp-section-label">Compensation</div>
+        <div className="fp-chips">
+          {["All", "Paid", "Unpaid"].map((p) => (
+            <button
+              key={p}
+              type="button"
+              className={`fp-chip${selectedPay === p ? " active" : ""}`}
+              onClick={() => setSelectedPay(p)}
+            >
+              {selectedPay === p && <Check size={11} />}
+              {p}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="fp-divider" />
+
+      {/* Skills */}
+      <div className="fp-section">
+        <div className="fp-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span>Filter by Skill</span>
+          {skillFilter && (
+            <button
+              type="button"
+              className="fp-clear-skill"
+              onClick={() => setSkillFilter("")}
+            >
+              Clear ×
+            </button>
+          )}
+        </div>
+        <div className="fp-skill-search-wrap">
+          <Search size={13} color="#9ca3af" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+          <input
+            className="fp-skill-search"
+            placeholder="Search skills..."
+            value={skillSearch}
+            onChange={(e) => setSkillSearch(e.target.value)}
+          />
+        </div>
+        <div className="fp-skill-list">
+          {filteredSkills.length === 0 ? (
+            <div className="fp-skill-empty">No skills found</div>
+          ) : (
+            filteredSkills.map((skill) => {
+              const active = skillFilter.toLowerCase() === skill.toLowerCase();
+              return (
+                <div
+                  key={skill}
+                  className={`fp-skill-option${active ? " active" : ""}`}
+                  onClick={() => {
+                    setSkillFilter(active ? "" : skill);
+                  }}
+                >
+                  <span>{skill}</span>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+                    {skillCounts[skill] && (
+                      <span className="fp-skill-count">{skillCounts[skill]}</span>
+                    )}
+                    {active && <Check size={12} className="fp-skill-check" />}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+        <div className="fp-skill-footer">
+          {filteredSkills.length} of {allSkills.length} skills
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const Jobs = () => {
   const { user, token } = useAuth();
   const isJobSeeker = user?.role === "jobseeker";
 
-  // ── Core state (simple, like Businesses.jsx) ──────────────────────────────
+  // ── Core state ────────────────────────────────────────────────────────────
   const [jobs, setJobs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
@@ -139,7 +184,7 @@ const Jobs = () => {
   const [loadingMore, setLoadingMore] = useState(false);
 
   // ── Filters ───────────────────────────────────────────────────────────────
-  const [searchTerm, setSearchTerm]           = useState("");
+  const [searchTerm, setSearchTerm]             = useState("");
   const [selectedLocation, setSelectedLocation] = useState("All");
   const [selectedType, setSelectedType]         = useState("All");
   const [selectedPay, setSelectedPay]           = useState("All");
@@ -155,10 +200,11 @@ const Jobs = () => {
   const [expandedRounds, setExpandedRounds] = useState({});
 
   // ── Refs ──────────────────────────────────────────────────────────────────
-  const observerRef = useRef(null);
+  const observerRef   = useRef(null);
+  const filterBtnRef  = useRef(null);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Fetch applied jobs (only for jobseekers)
+  // Fetch applied jobs
   // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     if (!token || !isJobSeeker) return;
@@ -184,8 +230,7 @@ const Jobs = () => {
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────────────────────────────────
-  // fetchJobs — simple and stateless like Businesses.jsx
-  // No loadingRef lock, no cache ref, no mutation during render.
+  // fetchJobs
   // ─────────────────────────────────────────────────────────────────────────
   const fetchJobs = useCallback(async (pageNum = 1, append = false) => {
     try {
@@ -220,7 +265,6 @@ const Jobs = () => {
       console.error("Fetch error:", err);
       setHasMore(false);
       if (!append) {
-        // Try fallback endpoint
         try {
           const fallback = await axios.get(`${API_BASE_URL}/api/jobs`, { timeout: 5000 });
           const fallbackJobs = fallback.data.jobs || fallback.data || [];
@@ -234,17 +278,14 @@ const Jobs = () => {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, []); // no dependencies — stable reference, like Businesses.jsx
+  }, []);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Initial fetch — runs ONCE on mount, never re-runs on parent re-renders
-  // ─────────────────────────────────────────────────────────────────────────
   useEffect(() => {
     fetchJobs(1, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Infinite scroll — IntersectionObserver on last card sentinel
+  // Infinite scroll
   // ─────────────────────────────────────────────────────────────────────────
   const sentinelRef = useCallback((node) => {
     if (observerRef.current) {
@@ -269,7 +310,7 @@ const Jobs = () => {
   }, [hasMore, loadingMore, fetchJobs]);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // Client-side filtering (same logic as before)
+  // Client-side filtering
   // ─────────────────────────────────────────────────────────────────────────
   const filteredJobs = useMemo(() => {
     let filtered = jobs;
@@ -326,9 +367,9 @@ const Jobs = () => {
   const toggleRounds = (jobId) =>
     setExpandedRounds((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
 
-  const locations  = Array.from(new Set(jobs.map((job) => job.location))).sort().filter(Boolean);
-  const types      = Array.from(new Set(jobs.flatMap((job) => getTypeArr(job.type)))).sort().filter(Boolean);
-  const allSkills  = Array.from(new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))).sort();
+  const locations = Array.from(new Set(jobs.map((job) => job.location))).sort().filter(Boolean);
+  const types     = Array.from(new Set(jobs.flatMap((job) => getTypeArr(job.type)))).sort().filter(Boolean);
+  const allSkills = Array.from(new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))).sort();
 
   const skillCounts = allSkills.reduce((acc, skill) => {
     acc[skill] = jobs.filter((j) =>
@@ -336,6 +377,10 @@ const Jobs = () => {
     ).length;
     return acc;
   }, {});
+
+  // Count active advanced filters (pay + skill)
+  const advancedActiveCount =
+    (selectedPay !== "All" ? 1 : 0) + (skillFilter ? 1 : 0);
 
   const hasActiveFilters =
     searchTerm || selectedLocation !== "All" || selectedType !== "All" ||
@@ -368,13 +413,13 @@ const Jobs = () => {
         @keyframes pulse  { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes skillDropIn { from { opacity: 0; transform: translateY(-6px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes panelIn { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 
         .jobs-wrapper { background: #f8fafc; min-height: 100vh; width: 100%; overflow-x: hidden; }
 
         .hero-section {
           background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
-          padding: 64px 24px 88px; position: relative; overflow: hidden; width: 100%;
+          padding: 64px 24px 88px; position: relative; overflow: visible; width: 100%;
         }
         .hero-section::before {
           content: ''; position: absolute; width: 500px; height: 500px;
@@ -397,6 +442,7 @@ const Jobs = () => {
         .hero-title { font-size: 40px; font-weight: 700; color: white; margin-bottom: 16px; line-height: 1.2; }
         .hero-subtitle { font-size: 17px; color: #94a3b8; max-width: 600px; margin: 0 auto 40px; }
 
+        /* ── Search Box ── */
         .search-container { max-width: 900px; margin: 0 auto; position: relative; z-index: 10; width: 100%; }
         .search-box {
           background: white; border-radius: 12px; padding: 8px;
@@ -420,22 +466,110 @@ const Jobs = () => {
           font-weight: 500; font-family: 'Inter', sans-serif; min-width: 0; max-width: 100%;
         }
         .search-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+
+        /* ── Filter Toggle Button (unified) ── */
+        .filter-toggle-wrap { position: relative; flex: 0 0 auto; }
         .filter-toggle-btn {
-          flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+          display: flex; align-items: center; gap: 6px;
           padding: 13px 16px; font-size: 14px; font-weight: 600;
           color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
           cursor: pointer; font-family: 'Inter', sans-serif;
           transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap;
+          position: relative;
         }
-        .filter-toggle-btn:hover, .filter-toggle-btn.active { border-color: #10b981; color: #10b981; background: #f0fdf4; }
-        .clear-btn {
-          flex: 0 0 auto; padding: 13px 18px; font-size: 14px; font-weight: 600;
-          color: #64748b; background: white; border: 1px solid #e2e8f0; border-radius: 8px;
-          cursor: pointer; display: flex; align-items: center; gap: 6px;
-          transition: background 0.2s, color 0.2s; font-family: 'Inter', sans-serif; white-space: nowrap;
+        .filter-toggle-btn:hover { border-color: #10b981; color: #10b981; background: #f0fdf4; }
+        .filter-toggle-btn.active { border-color: #10b981; color: #10b981; background: #f0fdf4; }
+        .filter-badge {
+          min-width: 18px; height: 18px; padding: 0 5px;
+          background: #10b981; color: white;
+          font-size: 11px; font-weight: 700; border-radius: 100px;
+          display: inline-flex; align-items: center; justify-content: center;
+          line-height: 1;
         }
-        .clear-btn:hover { background: #f8fafc; color: #475569; }
 
+        /* ── Unified Filter Panel ── */
+        .filter-panel {
+          position: absolute; top: calc(100% + 8px); right: 0; z-index: 99999;
+          background: white; border: 1.5px solid #e2e8f0; border-radius: 14px;
+          box-shadow: 0 16px 48px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06);
+          width: 280px; overflow: hidden;
+          animation: panelIn 0.18s cubic-bezier(0.16,1,0.3,1);
+        }
+        .fp-section { padding: 16px; }
+        .fp-section-label {
+          font-size: 11px; font-weight: 700; color: #64748b;
+          text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 10px;
+          display: flex; align-items: center; justify-content: space-between;
+        }
+        .fp-chips { display: flex; gap: 6px; flex-wrap: wrap; }
+        .fp-chip {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+          cursor: pointer; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;
+          font-family: 'Inter', sans-serif; transition: all 0.18s;
+        }
+        .fp-chip:hover { border-color: #6ee7b7; color: #065f46; background: #f0fdf4; }
+        .fp-chip.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+        .fp-divider { height: 1px; background: #f1f5f9; margin: 0; }
+        .fp-clear-skill {
+          font-size: 11px; font-weight: 600; color: #9ca3af;
+          background: none; border: none; cursor: pointer;
+          font-family: 'Inter', sans-serif; padding: 2px 4px;
+          transition: color 0.15s; border-radius: 4px;
+        }
+        .fp-clear-skill:hover { color: #dc2626; background: #fef2f2; }
+        .fp-skill-search-wrap { position: relative; margin-bottom: 8px; }
+        .fp-skill-search {
+          width: 100%; padding: 8px 10px 8px 32px; font-size: 13px;
+          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
+          outline: none; font-family: 'Inter', sans-serif; color: #0f172a;
+          transition: border-color 0.15s;
+        }
+        .fp-skill-search:focus { border-color: #10b981; }
+        .fp-skill-search::placeholder { color: #9ca3af; }
+        .fp-skill-list {
+          max-height: 200px; overflow-y: auto;
+          scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent;
+        }
+        .fp-skill-list::-webkit-scrollbar { width: 4px; }
+        .fp-skill-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
+        .fp-skill-option {
+          display: flex; align-items: center; justify-content: space-between;
+          padding: 8px 10px; border-radius: 8px; cursor: pointer;
+          font-size: 13px; font-weight: 500; color: #374151;
+          transition: background 0.12s; user-select: none;
+        }
+        .fp-skill-option:hover { background: #f8fafc; }
+        .fp-skill-option.active { background: #d1fae5; color: #065f46; font-weight: 700; }
+        .fp-skill-check { color: #10b981; flex-shrink: 0; }
+        .fp-skill-count {
+          font-size: 11px; color: #9ca3af; font-weight: 500;
+          background: #f1f5f9; padding: 1px 6px; border-radius: 10px;
+        }
+        .fp-skill-option.active .fp-skill-count { background: rgba(16,185,129,0.15); color: #065f46; }
+        .fp-skill-empty { padding: 16px; text-align: center; font-size: 13px; color: #9ca3af; }
+        .fp-skill-footer {
+          padding: 8px 0 0; font-size: 11px; color: #9ca3af; font-weight: 500; text-align: right;
+        }
+
+        /* ── Active filter tags (shown in search bar area) ── */
+        .active-filter-tags {
+          max-width: 900px; margin: 8px auto 0;
+          display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%;
+        }
+        .active-tag {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px 4px 12px; border-radius: 50px;
+          background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.2);
+          color: white; font-size: 12px; font-weight: 600;
+        }
+        .active-tag button {
+          background: none; border: none; cursor: pointer; display: flex; align-items: center;
+          color: rgba(255,255,255,0.7); padding: 0; margin-left: 2px; transition: color 0.15s;
+        }
+        .active-tag button:hover { color: white; }
+
+        /* ── Applied filter button ── */
         .applied-filter-btn {
           flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
           padding: 13px 16px; font-size: 14px; font-weight: 600;
@@ -452,22 +586,15 @@ const Jobs = () => {
         }
         .applied-filter-btn.active .applied-count { background: #065f46; }
 
-        .adv-filters {
-          max-width: 900px; margin: 10px auto 0; background: white;
-          border: 1px solid #e2e8f0; border-radius: 12px; padding: 18px 20px;
-          display: flex; gap: 20px; flex-wrap: wrap; align-items: flex-start;
-          animation: fadeUp 0.2s ease; width: 100%;
+        .clear-btn {
+          flex: 0 0 auto; padding: 13px 18px; font-size: 14px; font-weight: 600;
+          color: #64748b; background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+          cursor: pointer; display: flex; align-items: center; gap: 6px;
+          transition: background 0.2s, color 0.2s; font-family: 'Inter', sans-serif; white-space: nowrap;
         }
-        .adv-filter-group { display: flex; flex-direction: column; gap: 8px; }
-        .adv-filter-label { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; }
-        .pay-chips { display: flex; gap: 6px; flex-wrap: wrap; }
-        .pay-chip {
-          padding: 6px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
-          cursor: pointer; border: 1px solid #e2e8f0; background: #f8fafc; color: #64748b;
-          font-family: 'Inter', sans-serif; transition: all 0.2s;
-        }
-        .pay-chip.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+        .clear-btn:hover { background: #f8fafc; color: #475569; }
 
+        /* ── Stats bar ── */
         .stats-bar { max-width: 1200px; margin: -24px auto 36px; padding: 0 24px; position: relative; z-index: 5; }
         .stats-card {
           background: white; border: 1px solid #e2e8f0; border-radius: 10px;
@@ -482,56 +609,10 @@ const Jobs = () => {
           display: inline-flex; align-items: center; gap: 6px;
           background: #d1fae5; border: 1px solid #6ee7b7;
           padding: 3px 10px; border-radius: 100px;
-          color: #065f46; font-size: 12px; font-weight: 700;
+          color: #065f46; font-size: 12px; font-weight: 700; cursor: pointer;
         }
 
-        .skill-bar { max-width: 1200px; margin: 0 auto 20px; padding: 0 24px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; width: 100%; }
-        .skill-bar-label { font-size: 12px; color: #94a3b8; font-weight: 600; white-space: nowrap; display: flex; align-items: center; gap: 5px; }
-        .skill-dropdown-wrap { position: relative; }
-        .skill-dropdown-trigger {
-          display: flex; align-items: center; justify-content: space-between; gap: 8px;
-          padding: 8px 12px; min-width: 160px; max-width: 220px;
-          background: white; border: 1.5px solid #e2e8f0; border-radius: 10px;
-          font-size: 13px; font-weight: 600; color: #475569; cursor: pointer;
-          transition: border-color 0.18s, color 0.18s, background 0.18s;
-          font-family: 'Inter', sans-serif; white-space: nowrap; overflow: hidden;
-        }
-        .skill-dropdown-trigger:hover { border-color: #10b981; color: #10b981; background: #f0fdf4; }
-        .skill-dropdown-trigger.open { border-color: #10b981; color: #15803d; background: #f0fdf4; box-shadow: 0 0 0 3px rgba(16,185,129,0.08); }
-        .skill-dropdown-trigger.has-value { border-color: #6ee7b7; background: #d1fae5; color: #065f46; }
-        .skill-dropdown-panel {
-          position: absolute; top: calc(100% + 6px); left: 0; z-index: 999;
-          background: white; border: 1.5px solid #e2e8f0; border-radius: 12px;
-          box-shadow: 0 12px 40px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.05);
-          min-width: 220px; width: max-content; max-width: 280px; overflow: hidden;
-          animation: skillDropIn 0.16s cubic-bezier(0.16,1,0.3,1);
-        }
-        .skill-search-wrap { padding: 10px; border-bottom: 1px solid #f1f5f9; }
-        .skill-search-input {
-          width: 100%; padding: 8px 12px; font-size: 13px;
-          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
-          outline: none; font-family: 'Inter', sans-serif; color: #0f172a; transition: border-color 0.15s;
-        }
-        .skill-search-input:focus { border-color: #10b981; }
-        .skill-search-input::placeholder { color: #9ca3af; }
-        .skill-list { max-height: 210px; overflow-y: auto; padding: 6px; scrollbar-width: thin; scrollbar-color: #e2e8f0 transparent; }
-        .skill-list::-webkit-scrollbar { width: 4px; }
-        .skill-list::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 4px; }
-        .skill-option { display: flex; align-items: center; justify-content: space-between; padding: 8px 10px; border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 500; color: #374151; transition: background 0.12s; user-select: none; }
-        .skill-option:hover { background: #f8fafc; }
-        .skill-option.active { background: #d1fae5; color: #065f46; font-weight: 700; }
-        .skill-option-check { color: #10b981; flex-shrink: 0; }
-        .skill-option-count { font-size: 11px; color: #9ca3af; font-weight: 500; background: #f1f5f9; padding: 1px 6px; border-radius: 10px; }
-        .skill-option.active .skill-option-count { background: rgba(16,185,129,0.15); color: #065f46; }
-        .skill-dropdown-footer { padding: 8px 10px; border-top: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center; background: #fafafa; }
-        .skill-clear-btn { font-size: 12px; font-weight: 600; color: #9ca3af; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; padding: 3px 6px; transition: color 0.15s; border-radius: 4px; }
-        .skill-clear-btn:hover { color: #dc2626; background: #fef2f2; }
-        .skill-count-label { font-size: 11px; color: #9ca3af; font-weight: 500; }
-        .skill-active-tag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px 5px 12px; background: #d1fae5; border: 1px solid #6ee7b7; border-radius: 50px; font-size: 12px; font-weight: 700; color: #065f46; max-width: 180px; overflow: hidden; }
-        .skill-active-tag span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .skill-active-tag button { background: none; border: none; cursor: pointer; display: flex; align-items: center; color: #065f46; padding: 0; opacity: 0.7; transition: opacity 0.15s; flex-shrink: 0; }
-        .skill-active-tag button:hover { opacity: 1; }
-
+        /* ── Jobs grid ── */
         .jobs-container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; width: 100%; }
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
 
@@ -626,14 +707,12 @@ const Jobs = () => {
           .search-box { flex-direction: column; gap: 8px; border-radius: 10px; }
           .search-input-wrapper { flex: 1 1 auto; width: 100%; }
           .search-select, .filter-toggle-btn, .clear-btn, .applied-filter-btn { width: 100%; justify-content: center; }
-          .adv-filters { flex-direction: column; gap: 16px; padding: 16px; }
+          .filter-toggle-wrap { width: 100%; }
+          .filter-panel { right: 0; left: 0; width: auto; }
           .stats-bar { margin: -20px auto 28px; padding: 0 16px; }
           .stats-card { padding: 12px 16px; gap: 8px; font-size: 13px; flex-wrap: wrap; }
           .stat-divider { display: none; }
           .verified-badge { margin-left: 0; }
-          .skill-bar { padding: 0 16px; flex-wrap: wrap; }
-          .skill-dropdown-trigger { min-width: 0; max-width: none; flex: 1 1 auto; }
-          .skill-dropdown-panel { left: 0; right: 0; width: auto; max-width: 100%; }
           .jobs-container { padding: 0 16px 60px; }
           .jobs-grid { grid-template-columns: 1fr; gap: 14px; }
           .job-card { padding: 18px; }
@@ -646,7 +725,6 @@ const Jobs = () => {
           .hero-subtitle { font-size: 14px; }
           .stats-card { flex-direction: column; align-items: flex-start; gap: 6px; }
           .search-box { padding: 6px; }
-          .skill-bar-label { display: none; }
         }
       `}</style>
 
@@ -680,10 +758,12 @@ const Jobs = () => {
                   className="search-input"
                 />
               </div>
+
               <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="search-select" name="location-select">
                 <option value="All">All Locations</option>
                 {locations.map((loc) => <option key={loc}>{loc}</option>)}
               </select>
+
               <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="search-select" name="type-select">
                 <option value="All">All Types</option>
                 {types.map((type) => <option key={type}>{type}</option>)}
@@ -702,10 +782,33 @@ const Jobs = () => {
                 </button>
               )}
 
-              <button type="button" className={`filter-toggle-btn${showFilters ? " active" : ""}`} onClick={() => setShowFilters((p) => !p)}>
-                <Filter size={15} />
-                Filters
-              </button>
+              {/* ── Unified Filters button + panel ── */}
+              <div className="filter-toggle-wrap" ref={filterBtnRef}>
+                <button
+                  type="button"
+                  className={`filter-toggle-btn${showFilters ? " active" : ""}`}
+                  onClick={() => setShowFilters((p) => !p)}
+                >
+                  <Filter size={15} />
+                  Filters
+                  {advancedActiveCount > 0 && (
+                    <span className="filter-badge">{advancedActiveCount}</span>
+                  )}
+                </button>
+
+                <FilterPanel
+                  open={showFilters}
+                  onClose={() => setShowFilters(false)}
+                  selectedPay={selectedPay}
+                  setSelectedPay={setSelectedPay}
+                  skillFilter={skillFilter}
+                  setSkillFilter={setSkillFilter}
+                  allSkills={allSkills}
+                  skillCounts={skillCounts}
+                  activeCount={advancedActiveCount}
+                />
+              </div>
+
               {hasActiveFilters && (
                 <button type="button" onClick={resetFilters} className="clear-btn">
                   <X size={15} />
@@ -714,16 +817,22 @@ const Jobs = () => {
               )}
             </div>
 
-            {showFilters && (
-              <div className="adv-filters">
-                <div className="adv-filter-group">
-                  <span className="adv-filter-label">Compensation</span>
-                  <div className="pay-chips">
-                    {["All", "Paid", "Unpaid"].map((p) => (
-                      <button key={p} type="button" className={`pay-chip${selectedPay === p ? " active" : ""}`} onClick={() => setSelectedPay(p)}>{p}</button>
-                    ))}
-                  </div>
-                </div>
+            {/* Active filter tags shown below the search bar */}
+            {(selectedPay !== "All" || skillFilter) && (
+              <div className="active-filter-tags">
+                {selectedPay !== "All" && (
+                  <span className="active-tag">
+                    {selectedPay}
+                    <button type="button" onClick={() => setSelectedPay("All")}><X size={11} /></button>
+                  </span>
+                )}
+                {skillFilter && (
+                  <span className="active-tag">
+                    <Code2 size={11} />
+                    {skillFilter}
+                    <button type="button" onClick={() => setSkillFilter("")}><X size={11} /></button>
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -741,7 +850,7 @@ const Jobs = () => {
             {isJobSeeker && appliedCount > 0 && (
               <>
                 <span className="stat-divider">|</span>
-                <span className="applied-stat" style={{ cursor: "pointer" }} onClick={() => setShowAppliedOnly((p) => !p)}>
+                <span className="applied-stat" onClick={() => setShowAppliedOnly((p) => !p)}>
                   <BookmarkCheck size={12} />
                   {appliedCount} applied
                 </span>
@@ -754,28 +863,13 @@ const Jobs = () => {
           </div>
         </div>
 
-        {allSkills.length > 0 && (
-          <div className="skill-bar">
-            <span className="skill-bar-label"><Code2 size={12} />Skills:</span>
-            <SkillDropdown allSkills={allSkills} skillFilter={skillFilter} setSkillFilter={setSkillFilter} skillCounts={skillCounts} />
-            {skillFilter && (
-              <span className="skill-active-tag">
-                <span>{skillFilter}</span>
-                <button type="button" onClick={() => setSkillFilter("")}><X size={11} /></button>
-              </span>
-            )}
-          </div>
-        )}
-
         <div className="jobs-container">
-          {/* ── Initial loading ── */}
           {loading ? (
             <div className="loading-state">
               <div className="state-icon"><Loader2 size={32} color="#10b981" className="spinner" /></div>
               <p className="state-title">Finding opportunities...</p>
             </div>
 
-          /* ── Error (no jobs at all) ── */
           ) : error && jobs.length === 0 ? (
             <div className="error-state">
               <div className="state-icon"><Briefcase size={32} color="#cbd5e1" /></div>
@@ -787,7 +881,6 @@ const Jobs = () => {
               </div>
             </div>
 
-          /* ── Empty filtered results ── */
           ) : filteredJobs.length === 0 ? (
             <div className="empty-state">
               <div className="state-icon"><Search size={32} color="#cbd5e1" /></div>
@@ -802,7 +895,6 @@ const Jobs = () => {
               </button>
             </div>
 
-          /* ── Job cards ── */
           ) : (
             <div className="jobs-grid">
               {filteredJobs.map((job, index) => {
@@ -912,7 +1004,6 @@ const Jobs = () => {
             </div>
           )}
 
-          {/* ── Load more spinner (infinite scroll) ── */}
           {loadingMore && (
             <div className="load-more">
               <Loader2 size={24} color="#10b981" className="spinner" />
