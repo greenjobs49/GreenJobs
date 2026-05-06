@@ -233,7 +233,7 @@ const AdminDashboard = () => {
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success(
-        `✅ Reminders sent to ${res.data.sent} user(s)${res.data.failed > 0 ? ` · ${res.data.failed} failed` : ""}`
+        `Reminders sent to ${res.data.sent} user(s)${res.data.failed > 0 ? ` · ${res.data.failed} failed` : ""}`
       );
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to send reminders");
