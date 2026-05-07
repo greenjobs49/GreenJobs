@@ -33,7 +33,27 @@ const verifySmtpConnection = async () => {
     console.error(error.message);
   }
 };
-
+// Add this constant near the top of the file, before the reminder functions:
+const REMINDER_SUBJECTS = {
+  jobseeker: {
+    "1hr":   `🌟 Quick reminder — finish your profile & get hired faster`,
+    "1day":  `🌟 Your profile is incomplete — finish it & get hired faster`,
+    "2days": `⏰ Still incomplete — recruiters can't find you yet`,
+    "1week": `🔔 Last nudge — complete your profile today`,
+  },
+  recruiter: {
+    "1hr":   `⚡ Quick reminder — complete your recruiter profile`,
+    "1day":  `⚡ Complete your recruiter profile & start hiring now`,
+    "2days": `⏰ Your recruiter profile is still incomplete`,
+    "1week": `🔔 Final reminder — complete your recruiter profile today`,
+  },
+  business: {
+    "1hr":   `🏢 Quick reminder — finish your business profile`,
+    "1day":  `🏢 Your business listing is incomplete — get approved & go live`,
+    "2days": `⏰ Your business profile still needs attention`,
+    "1week": `🔔 Last reminder — complete your business profile today`,
+  },
+};
 // ─── Base Template ─────────────────────────────────────────────────────────
 const baseTemplate = (content) => `
 <!DOCTYPE html>
@@ -882,12 +902,9 @@ const sendApplicationWithdrawnNotice = async (email, recruiterName, jobTitle, ap
   });
 };
 
-
-// ════════════════════════════════════════════════════════════
 //   PROFILE COMPLETION REMINDER EMAILS
-// ════════════════════════════════════════════════════════════
 
-const sendJobseekerProfileReminderEmail = async (email, name) => {
+const sendJobseekerProfileReminderEmail = async (email, name, reminderKey = "1day") => {
   const html = baseTemplate(`
     ${greeting(name)}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
@@ -920,12 +937,12 @@ const sendJobseekerProfileReminderEmail = async (email, name) => {
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: `🌟 ${name.split(" ")[0]}, your profile is incomplete — finish it & get hired faster`,
+    subject: REMINDER_SUBJECTS.jobseeker[reminderKey] || REMINDER_SUBJECTS.jobseeker["1day"],
     html,
   });
 };
 
-const sendRecruiterProfileReminderEmail = async (email, name) => {
+const sendRecruiterProfileReminderEmail = async (email, name, reminderKey = "1day") => {
   const html = baseTemplate(`
     ${greeting(name)}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
@@ -958,12 +975,12 @@ const sendRecruiterProfileReminderEmail = async (email, name) => {
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: `⚡ ${name.split(" ")[0]}, complete your recruiter profile & start hiring now`,
+    subject: REMINDER_SUBJECTS.recruiter[reminderKey] || REMINDER_SUBJECTS.recruiter["1day"],
     html,
   });
 };
 
-const sendBusinessProfileReminderEmail = async (email, name) => {
+const sendBusinessProfileReminderEmail = async (email, name, reminderKey = "1day") => {
   const html = baseTemplate(`
     ${greeting(name)}
     <p style="margin:0 0 20px;color:#0f172a;font-size:22px;font-weight:700;">
@@ -996,7 +1013,7 @@ const sendBusinessProfileReminderEmail = async (email, name) => {
   await transporter.sendMail({
     from: `"${APP_NAME}" <${process.env.EMAIL_USER}>`,
     to: email,
-    subject: `🏢 ${name.split(" ")[0]}, your business listing is incomplete — get approved & go live`,
+    subject: REMINDER_SUBJECTS.business[reminderKey] || REMINDER_SUBJECTS.business["1day"],
     html,
   });
 };

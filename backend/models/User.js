@@ -182,6 +182,11 @@ const userSchema = new mongoose.Schema(
       verificationDocuments:  { type: [String], default: [] },
     },
 
+    // After businessProfile, before adminProfile:
+    remindersSent: {
+      type: [String], // "1hr" | "1day" | "2days" | "1week"
+      default: [],
+    },
     // ================= ADMIN =================
     adminProfile: {
       permissions: {
@@ -198,7 +203,7 @@ userSchema.index({ role: 1 });
 userSchema.index({ "businessProfile.status": 1 });
 userSchema.index({ "recruiterProfile.linkedBusiness": 1 });
 userSchema.index({ "recruiterProfile.verificationStatus": 1 });
-
+userSchema.index({ profileCompleted: 1, createdAt: 1, role: 1 });
 // ─── Profile progress ────────────────────────────────────────────────────────
 // education is now an array — counts as filled when at least 1 entry exists
 userSchema.methods.calculateProfileProgress = function () {

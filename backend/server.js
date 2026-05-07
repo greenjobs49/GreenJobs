@@ -52,7 +52,8 @@ app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
 // DB connection
 connectDB();
-
+const { startProfileReminderCron } = require("./controllers/profileReminderCron");
+startProfileReminderCron();
 // Routes
 app.use("/api/auth",         require("./routes/auth.routes"));
 app.use("/api/profile",      require("./routes/profile.routes"));
