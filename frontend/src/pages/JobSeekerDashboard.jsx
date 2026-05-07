@@ -110,7 +110,16 @@ export default function JobSeekerDashboard() {
     {
       heading: 'Professional', icon: Briefcase, color: '#f59e0b',
       fields: [
-        { label: 'Education',        value: profile.education,     icon: GraduationCap },
+        { label: 'Education',
+          value: Array.isArray(profile.education)
+            ? profile.education
+                .filter(e => e.institution)
+                .map(e => [e.institution, e.stream, e.year].filter(Boolean).join(' · '))
+                .join('\n')
+            : profile.education,
+          icon: GraduationCap,
+          multiline: true
+        },
         { label: 'Experience (yrs)', value: profile.experience,    icon: Clock         },
         { label: 'Preferred Role',   value: profile.preferredRole                      },
         { label: 'Expected Salary',  value: profile.expectedSalary                     },
@@ -251,7 +260,7 @@ const handleViewResume = async () => {
         .jsd-card + .jsd-card { margin-top:20px; }
         .jsd-card-title {
           font-family:'Inter',sans-serif; font-size:16px; font-weight:700;
-          color:var(--text); margin-bottom:18px;
+          color:var(--text); margin-bottom:0;
           display:flex; align-items:center; gap:8px;
         }
         .jsd-card-title-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
@@ -617,12 +626,12 @@ const handleViewResume = async () => {
 
               {/* ── Profile details card ── */}
               <div className="jsd-card">
-                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom: showDetails ? 20 : 0 }}>
-                  <div className="jsd-card-title" style={{ margin:0 }}>
+                <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, marginBottom: showDetails ? 20 : 0 }}>
+                  <div className="jsd-card-title" style={{ marginBottom:0, flex:1 }}>
                     <span className="jsd-card-title-dot" style={{ background:'#6366f1' }} />
                     My Profile
                   </div>
-                  <button className="toggle-btn" style={{ width:'auto', padding:'8px 14px' }}
+                  <button className="toggle-btn" style={{ width:'auto', padding:'8px 14px', flexShrink:0 }}
                     onClick={() => setShowDetails(v => !v)}>
                     {showDetails ? 'Hide Details' : 'View Details'}
                     <ChevronRight size={14} style={{ transform: showDetails ? 'rotate(90deg)':'rotate(0deg)', transition:'transform .2s' }} />

@@ -24,6 +24,17 @@ const HERO_PHRASES = [
   "It's Waiting.",
 ];
 
+/**
+ * Returns the best available logo/avatar URL for a job posting.
+ * Priority: business.profilePicture → business images[0] →
+ *           recruiter.profilePicture → recruiter companyLogo → null
+ */
+const getCompanyImage = (job) =>
+  job?.business?.profilePicture ||
+  job?.business?.businessProfile?.images?.[0] ||
+  job?.recruiter?.profilePicture ||
+  job?.recruiter?.recruiterProfile?.companyLogo ||
+  null;
 
 const normalizeDbAd = (ad) => ({
   ...ad,
@@ -177,14 +188,14 @@ export default function GreenJobsHomepage() {
       : (p + 1) % featuredAds.length);
 
   const jobCategories = [
-    { name: "Freshers",        count: 1240, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
-    { name: "IT",              count: 3890, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
-    { name: "Sales & Marketing", count: 2670, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> },
-    { name: "Operations",      count: 1340, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
-    { name: "Manufacturing",   count: 820,  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="1"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg> },
-    { name: "Engineering",     count: 1560, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M4.93 4.93A10 10 0 0 1 19.07 19.07"/></svg> },
-    { name: "Finance",         count: 940,  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
-    { name: "Solar & Renewable", count: 2100, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> },
+    { name: "Freshers",        count: 5, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg> },
+    { name: "IT",              count: 2, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> },
+    { name: "Sales & Marketing", count: 6, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg> },
+    { name: "Operations",      count: 3, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> },
+    { name: "Manufacturing",   count: 4,  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="1"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/><line x1="12" y1="12" x2="12" y2="16"/><line x1="10" y1="14" x2="14" y2="14"/></svg> },
+    { name: "Engineering",     count: 5, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M4.93 4.93A10 10 0 0 1 19.07 19.07"/></svg> },
+    { name: "Finance",         count: 2,  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
+    { name: "Solar & Renewable", count: 12, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> },
   ];
 
   const topCompanies = [
@@ -394,26 +405,12 @@ export default function GreenJobsHomepage() {
         .jobs-subtitle { font-size: 16px; color: #64748b; }
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
 
-        /* ── Job card: flex column so button always sticks to bottom ── */
         .job-card {
-          background: white;
-          border: 1px solid #e2e8f0;
-          border-radius: 16px;
-          padding: 24px;
-          transition: all 0.22s;
-          cursor: pointer;
-          animation: fadeUp 0.3s ease;
-          /* KEY: flex column + equal height via grid stretch */
-          display: flex;
-          flex-direction: column;
-          /* Minimum height so short cards don't look squished */
-          min-height: 340px;
+          background: white; border: 1px solid #e2e8f0; border-radius: 16px; padding: 24px;
+          transition: all 0.22s; cursor: pointer; animation: fadeUp 0.3s ease;
+          display: flex; flex-direction: column; min-height: 340px;
         }
-        .job-card:hover {
-          border-color: #10b981;
-          box-shadow: 0 8px 28px rgba(16,185,129,0.13);
-          transform: translateY(-3px);
-        }
+        .job-card:hover { border-color: #10b981; box-shadow: 0 8px 28px rgba(16,185,129,0.13); transform: translateY(-3px); }
 
         .job-tags { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
         .job-tag { padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
@@ -423,60 +420,41 @@ export default function GreenJobsHomepage() {
         .tag-unpaid { background: #f1f5f9; color: #64748b; border: 1px solid #e2e8f0; }
 
         .job-title-text {
-          font-size: 17px;
-          font-weight: 700;
-          color: #0f172a;
-          margin-bottom: 12px;
-          line-height: 1.4;
-          transition: color 0.2s;
-          /* clamp to 2 lines for consistent height */
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-          min-height: 2.8em;
+          font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 12px;
+          line-height: 1.4; transition: color 0.2s;
+          display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+          overflow: hidden; min-height: 2.8em;
         }
         .job-card:hover .job-title-text { color: #10b981; }
 
+        /* ── Company row: logo box handles both image and icon states ── */
         .job-company-row { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
-        .company-logo-box { width: 36px; height: 36px; background: linear-gradient(135deg, #1e293b, #0f172a); border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .company-logo-box {
+          width: 36px; height: 36px;
+          background: linear-gradient(135deg, #1e293b, #0f172a);
+          border-radius: 8px;
+          display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; overflow: hidden;
+        }
+        .company-logo-box img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
         .company-name { font-size: 14px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
         .job-meta { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 12px; font-size: 13.5px; color: #64748b; }
         .job-meta-item { display: flex; align-items: center; gap: 8px; }
-
-        /* Skills area: fixed min-height so absent skills don't cause jump */
         .job-skills { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; min-height: 28px; }
         .job-skill-pill { padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 500; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; }
-
         .job-salary { font-size: 17px; font-weight: 800; color: #10b981; margin-top: 4px; letter-spacing: -0.3px; }
         .job-salary-unpaid { font-size: 15px; font-weight: 600; color: #94a3b8; margin-top: 4px; }
         .job-posted { font-size: 12px; color: #94a3b8; display: flex; align-items: center; gap: 4px; margin-top: 8px; }
-
-        /* ── Spacer pushes button to the very bottom of the card ── */
         .job-card-spacer { flex: 1; }
-
-        /* ── View Details button: always at the bottom, full width, polished ── */
         .job-view-btn {
-          margin-top: 18px;
-          width: 100%;
-          padding: 12px;
-          background: #0f172a;
-          color: white;
-          border: none;
-          border-radius: 10px;
-          font-size: 14px;
-          font-weight: 700;
-          cursor: pointer;
+          margin-top: 18px; width: 100%; padding: 12px;
+          background: #0f172a; color: white; border: none; border-radius: 10px;
+          font-size: 14px; font-weight: 700; cursor: pointer;
           transition: background 0.2s, transform 0.15s;
-          font-family: 'Inter', sans-serif;
-          letter-spacing: 0.2px;
-          /* Never allow this to shrink */
-          flex-shrink: 0;
+          font-family: 'Inter', sans-serif; letter-spacing: 0.2px; flex-shrink: 0;
         }
-        .job-view-btn:hover {
-          background: #10b981;
-          transform: translateY(-1px);
-        }
+        .job-view-btn:hover { background: #10b981; transform: translateY(-1px); }
 
         .jobs-state { max-width: 1200px; margin: 0 auto; text-align: center; padding: 60px 24px; }
         .state-icon { width: 64px; height: 64px; margin: 0 auto 20px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
@@ -708,18 +686,20 @@ export default function GreenJobsHomepage() {
             <>
               <div className="jobs-grid">
                 {featuredJobs.map(job => {
-                  const salaryLabel = formatSalaryLabel(job);
-                  const posted = daysSincePosted(job.createdAt);
-                  const companyName = job.company
+                  const salaryLabel   = formatSalaryLabel(job);
+                  const posted        = daysSincePosted(job.createdAt);
+                  const companyName   = job.company
                     || job.business?.businessProfile?.businessName
                     || job.business?.businessProfile?.companyName
+                    || job.recruiter?.recruiterProfile?.companyName
                     || "Direct Hire";
-                  const skills = (job.skills || []).slice(0, 4);
+                  const skills        = (job.skills || []).slice(0, 4);
+                  // ── Unified image resolution ──
+                  const companyImage  = getCompanyImage(job);
 
                   return (
                     <div key={job._id} className="job-card" onClick={() => navigate(`/jobs/${job._id}`)}>
 
-                      {/* Tags row */}
                       {/* Tags row */}
                       <div className="job-tags">
                         {(Array.isArray(job.type)
@@ -747,12 +727,26 @@ export default function GreenJobsHomepage() {
                         </span>
                       </div>
 
-                      {/* Title — always 2 lines tall */}
+                      {/* Title */}
                       <h3 className="job-title-text">{job.title}</h3>
 
-                      {/* Company */}
+                      {/* Company row — real logo if available, icon fallback */}
                       <div className="job-company-row">
-                        <div className="company-logo-box"><Building2 size={18} color="white" /></div>
+                        <div className="company-logo-box">
+                          {companyImage ? (
+                            <img
+                              src={companyImage}
+                              alt={companyName}
+                              onError={e => {
+                                e.target.style.display = "none";
+                                e.target.parentElement.innerHTML =
+                                  `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>`;
+                              }}
+                            />
+                          ) : (
+                            <Building2 size={18} color="white" />
+                          )}
+                        </div>
                         <span className="company-name">{companyName}</span>
                       </div>
 
@@ -778,17 +772,14 @@ export default function GreenJobsHomepage() {
                       {/* Posted date */}
                       {posted && <div className="job-posted"><Clock size={12} />{posted}</div>}
 
-                      {/* ── Spacer: pushes button to the bottom regardless of content height ── */}
                       <div className="job-card-spacer" />
 
-                      {/* View Details — always pinned to bottom */}
                       <button
                         className="job-view-btn"
                         onClick={e => { e.stopPropagation(); navigate(`/jobs/${job._id}`); }}
                       >
                         View Details →
                       </button>
-
                     </div>
                   );
                 })}
@@ -845,6 +836,19 @@ export default function GreenJobsHomepage() {
             })()}
           </section>
         )}
+
+        {/* ══ COMPANIES ══ */}
+        <section className="companies-section">
+          <h2 className="companies-title">Top Companies Hiring Now</h2>
+          <div className="companies-grid">
+            {topCompanies.map((company, i) => (
+              <div key={i} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
+                <img src={company.logo} alt={company.name} className="company-logo"
+                  onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`; }} />
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* ══ SPOTLIGHT ADS ══ */}
         {!adsLoading && featuredAds.length > 0 && (
@@ -934,19 +938,6 @@ export default function GreenJobsHomepage() {
             </div>
           </section>
         )}
-
-        {/* ══ COMPANIES ══ */}
-        <section className="companies-section">
-          <h2 className="companies-title">Top Companies Hiring Now</h2>
-          <div className="companies-grid">
-            {topCompanies.map((company, i) => (
-              <div key={i} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
-                <img src={company.logo} alt={company.name} className="company-logo"
-                  onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`; }} />
-              </div>
-            ))}
-          </div>
-        </section>
 
         {/* ══ REVIEWS ══ */}
         <section className="reviews-section">

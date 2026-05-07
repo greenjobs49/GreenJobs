@@ -446,7 +446,7 @@ exports.rejectBusiness = async (req, res) => {
 exports.getApprovedBusinesses = async (req, res) => {
   try {
     const list = await User.find({ role: "business", "businessProfile.status": "approved" })
-      .select("businessProfile name");
+      .select("businessProfile name profilePicture");
     res.json(list);
   } catch (err) {
     res.status(500).json({ success: false, message: "Server error" });

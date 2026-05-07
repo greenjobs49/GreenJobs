@@ -310,9 +310,9 @@ const RecruiterLogin = () => {
               <div className="rec-feature"><div className="rec-feature-icon"><Target size={16} color="#6ee7b7" /></div><div><div className="rec-feature-title">Targeted Reach</div><div className="rec-feature-desc">Connect with candidates matched to your roles</div></div></div>
             </div>
             <div className="rec-stats">
-              <div><div className="rec-stat-num">2,400+</div><div className="rec-stat-label">Active Jobs</div></div>
-              <div><div className="rec-stat-num">340+</div><div className="rec-stat-label">Companies</div></div>
-              <div><div className="rec-stat-num">18k+</div><div className="rec-stat-label">Placements</div></div>
+              <div><div className="rec-stat-num">12+</div><div className="rec-stat-label">Active Jobs</div></div>
+              <div><div className="rec-stat-num">10+</div><div className="rec-stat-label">Companies</div></div>
+              <div><div className="rec-stat-num">50+</div><div className="rec-stat-label">Placements</div></div>
             </div>
           </div>
         </div>

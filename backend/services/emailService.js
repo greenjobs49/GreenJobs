@@ -52,7 +52,7 @@ const baseTemplate = (content) => `
           <tr>
             <td style="background:linear-gradient(135deg,#16a34a 0%,#15803d 100%);padding:36px 40px;text-align:center;">
               <h1 style="margin:0;color:#ffffff;font-size:26px;font-weight:700;letter-spacing:-0.5px;">${APP_NAME}</h1>
-              <p style="margin:6px 0 0;color:#bbf7d0;font-size:13px;">Connecting talent with opportunity</p>
+              <p style="margin:6px 0 0;color:#bbf7d0;font-size:13px;">Connecting talent with opportunities</p>
             </td>
           </tr>
 

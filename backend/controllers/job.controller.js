@@ -606,8 +606,8 @@ const getPublicJobs = async (req, res) => {
 
     const [jobs, total] = await Promise.all([
       Job.find(filter)
-        .populate({ path: "business",  select: "businessProfile.businessName businessProfile.images name" })
-        .populate({ path: "recruiter", select: "name recruiterProfile.companyName" })
+        .populate({ path: "business",  select: "businessProfile profilePicture name" })
+        .populate({ path: "recruiter", select: "name recruiterProfile" })
         .select("-__v")
         .sort({ createdAt: -1 })
         .skip(skip)
@@ -637,8 +637,8 @@ const getPublicJobById = async (req, res) => {
     }
 
     const job = await Job.findOne({ _id: jobId, status: "approved", isOpen: true })
-      .populate("business",  "businessProfile.businessName businessProfile.images name")
-      .populate("recruiter", "recruiterProfile.companyName name")
+      .populate("business",  "businessProfile profilePicture name")
+      .populate("recruiter", "name recruiterProfile")
       .select("-__v");
 
     if (!job) return res.status(404).json({ success: false, message: "Job not found or not live" });

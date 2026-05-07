@@ -940,14 +940,24 @@ const Jobs = () => {
                     <h2 className="job-title">{job.title}</h2>
 
                     <div className="job-company">
-                      <div className="company-logo"><Building2 size={18} color="white" /></div>
-                      <div className="company-info">
-                        <div className="company-name">
-                          {job.company || job.business?.businessProfile?.businessName || job.business?.businessProfile?.companyName || "Direct Hire"}
-                        </div>
-                        <div className="company-verified"><CheckCircle size={11} />Verified</div>
+                    <div className="company-logo" style={{ overflow: "hidden" }}>
+                    {job.business?.profilePicture ? (
+                      <img src={job.business.profilePicture} alt={job.company} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                    ) : job.business?.businessProfile?.images?.[0] ? (
+                      <img src={job.business.businessProfile.images[0]} alt={job.company} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                    ) : job.recruiter?.recruiterProfile?.companyLogo ? (
+                      <img src={job.recruiter.recruiterProfile.companyLogo} alt={job.company} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
+                    ) : (
+                      <Building2 size={18} color="white" />
+                    )}
+                  </div>
+                    <div className="company-info">
+                      <div className="company-name">
+                        {job.company || job.business?.businessProfile?.businessName || "Direct Hire"}
                       </div>
+                      <div className="company-verified"><CheckCircle size={11} />Verified</div>
                     </div>
+                  </div>
 
                     <div className="job-meta">
                       <div className="job-meta-item"><MapPin size={13} />{job.location}</div>

@@ -75,6 +75,18 @@ const TYPE_COLORS_LIGHT = {
 };
 const defaultTypeColorLight = { bg: "#f1f5f9", color: "#475569" };
 
+/**
+ * Returns the best available logo/avatar URL for a job posting.
+ * Priority: business.profilePicture → business images[0] →
+ *           recruiter.profilePicture → recruiter companyLogo → null
+ */
+const getCompanyImage = (job) =>
+  job?.business?.profilePicture ||
+  job?.business?.businessProfile?.images?.[0] ||
+  job?.recruiter?.profilePicture ||
+  job?.recruiter?.recruiterProfile?.companyLogo ||
+  null;
+
 const JobDetail = () => {
   const { jobId } = useParams();
   const navigate = useNavigate();
@@ -165,6 +177,7 @@ const JobDetail = () => {
   const rounds   = job.rounds  || [];
   const skills   = job.skills  || [];
   const typeArr  = getTypeArr(job.type);
+  const companyImage = getCompanyImage(job);
 
   return (
     <>
@@ -230,7 +243,9 @@ const JobDetail = () => {
           width: 48px; height: 48px; background: rgba(255,255,255,0.08);
           border: 1px solid rgba(255,255,255,0.12); border-radius: 10px;
           display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+          overflow: hidden;
         }
+        .jd-company-logo img { width: 100%; height: 100%; object-fit: cover; border-radius: 10px; }
         .jd-company-name { font-size: 18px; font-weight: 600; color: white; }
         .jd-company-verified { display: flex; align-items: center; gap: 5px; font-size: 12px; color: #10b981; margin-top: 3px; }
 
@@ -349,7 +364,12 @@ const JobDetail = () => {
         .jd-info-card-title { font-size: 12px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 16px; }
         .jd-info-item { display: flex; align-items: flex-start; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; }
         .jd-info-item:last-child { border-bottom: none; padding-bottom: 0; }
-        .jd-info-icon { width: 32px; height: 32px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .jd-info-icon {
+          width: 32px; height: 32px; background: #f8fafc; border: 1px solid #e2e8f0;
+          border-radius: 8px; display: flex; align-items: center; justify-content: center;
+          flex-shrink: 0; overflow: hidden;
+        }
+        .jd-info-icon img { width: 100%; height: 100%; object-fit: cover; border-radius: 8px; }
         .jd-info-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
         .jd-info-value { font-size: 14px; color: #0f172a; font-weight: 600; margin-top: 2px; }
 
@@ -436,13 +456,18 @@ const JobDetail = () => {
 
                 <h1 className="jd-title">{job.title}</h1>
 
+                {/* ── Company row — unified image helper ── */}
                 <div className="jd-company-row">
                   <div className="jd-company-logo">
-                    <Building2 size={22} color="rgba(255,255,255,0.7)" />
+                    {companyImage ? (
+                      <img src={companyImage} alt={job.company} />
+                    ) : (
+                      <Building2 size={22} color="rgba(255,255,255,0.7)" />
+                    )}
                   </div>
                   <div>
                     <div className="jd-company-name">
-                      {job.company || job.business?.businessProfile?.businessName || "Direct Hire"}
+                      {job.company || job.business?.businessProfile?.businessName || job.recruiter?.recruiterProfile?.companyName || "Direct Hire"}
                     </div>
                     <div className="jd-company-verified">
                       <BadgeCheck size={13} /> Verified Employer
@@ -459,7 +484,7 @@ const JobDetail = () => {
                     <div className="jd-meta-chip"><Briefcase size={14} color="#10b981" /> {typeArr[0]}</div>
                   ) : (
                     <div className="jd-meta-type-group">
-                      {typeArr.map((t, i) => {
+                      {typeArr.map((t) => {
                         const c = TYPE_COLORS[t] || defaultTypeColor;
                         return (
                           <span
@@ -620,9 +645,15 @@ const JobDetail = () => {
               <div className="jd-info-card">
                 <div className="jd-info-card-title">Job Overview</div>
 
-                {/* Role */}
+                {/* Role — shows company image */}
                 <div className="jd-info-item">
-                  <div className="jd-info-icon"><Briefcase size={15} color="#64748b" /></div>
+                  <div className="jd-info-icon">
+                    {companyImage ? (
+                      <img src={companyImage} alt="" />
+                    ) : (
+                      <Building2 size={15} color="#64748b" />
+                    )}
+                  </div>
                   <div>
                     <div className="jd-info-label">Role</div>
                     <div className="jd-info-value">{job.title}</div>
@@ -634,7 +665,9 @@ const JobDetail = () => {
                   <div className="jd-info-icon"><Building2 size={15} color="#64748b" /></div>
                   <div>
                     <div className="jd-info-label">Company</div>
-                    <div className="jd-info-value">{job.company || job.business?.businessProfile?.businessName || "Direct Hire"}</div>
+                    <div className="jd-info-value">
+                      {job.company || job.business?.businessProfile?.businessName || job.recruiter?.recruiterProfile?.companyName || "Direct Hire"}
+                    </div>
                   </div>
                 </div>
 
