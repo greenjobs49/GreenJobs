@@ -60,6 +60,8 @@ export default function GreenJobsHomepage() {
   const [spotlightAds, setSpotlightAds]   = useState([]);
   const [fullBannerAds, setFullBannerAds] = useState([]);
   const [adsLoading, setAdsLoading]       = useState(true);
+  const [topCompanies, setTopCompanies]         = useState([]);
+  const [companiesLoading, setCompaniesLoading] = useState(true);
   const [heroStats, setHeroStats] = useState({ liveJobs: null, companies: null });
 
   useEffect(() => {
@@ -73,7 +75,20 @@ export default function GreenJobsHomepage() {
     }, 2800);
     return () => clearInterval(interval);
   }, []);
-
+  useEffect(() => {
+  const fetchTopCompanies = async () => {
+    try {
+      setCompaniesLoading(true);
+      const res = await axios.get(`${API_BASE_URL}/api/admin/top-companies`);
+      setTopCompanies(res.data.companies || []);
+    } catch (err) {
+      console.error("Top companies fetch failed:", err);
+    } finally {
+      setCompaniesLoading(false);
+    }
+  };
+  fetchTopCompanies();
+}, []);
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -196,15 +211,6 @@ export default function GreenJobsHomepage() {
     { name: "Engineering",     count: 5, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 0 0 4.93 19.07M4.93 4.93A10 10 0 0 1 19.07 19.07"/></svg> },
     { name: "Finance",         count: 2,  icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg> },
     { name: "Solar & Renewable", count: 12, icon: <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg> },
-  ];
-
-  const topCompanies = [
-    { name: "Gronsol",    logo: "/companies/gronsol.jpeg" },
-    { name: "Kalpa Power",logo: "/companies/kalpa-power.jpeg" },
-    { name: "Selec",      logo: "/companies/selec.jpeg" },
-    { name: "Feston",     logo: "/companies/feston.jpeg" },
-    { name: "SuryaLogix", logo: "/companies/suryalogix.jpeg" },
-    { name: "Nova SYS",   logo: "/companies/novasys.jpeg" },
   ];
 
   const userReviews = [
@@ -840,14 +846,36 @@ export default function GreenJobsHomepage() {
         {/* ══ COMPANIES ══ */}
         <section className="companies-section">
           <h2 className="companies-title">Top Companies Hiring Now</h2>
-          <div className="companies-grid">
-            {topCompanies.map((company, i) => (
-              <div key={i} className="company-card" onClick={() => navigate(`/jobs?company=${company.name}`)}>
-                <img src={company.logo} alt={company.name} className="company-logo"
-                  onError={e => { e.target.style.display = "none"; e.target.parentElement.innerHTML = `<div style="font-size:18px;font-weight:600;color:#374151">${company.name}</div>`; }} />
-              </div>
-            ))}
-          </div>
+          {companiesLoading ? (
+            <div style={{ textAlign: "center", padding: "40px 0" }}>
+              <Loader2 size={28} color="#10b981" className="spinner" />
+            </div>
+          ) : topCompanies.length === 0 ? null : (
+            <div className="companies-grid">
+              {topCompanies.map((company) => (
+                <div
+                  key={company._id}
+                  className="company-card"
+                  onClick={() => navigate(`/jobs?company=${company.name}`)}
+                >
+                  {company.logoUrl ? (
+                    <img
+                      src={company.logoUrl}
+                      alt={company.name}
+                      className="company-logo"
+                      onError={e => {
+                        e.target.style.display = "none";
+                        e.target.parentElement.innerHTML =
+                          `<div style="font-size:16px;font-weight:600;color:#374151">${company.name}</div>`;
+                      }}
+                    />
+                  ) : (
+                    <div style={{ fontSize: 16, fontWeight: 600, color: "#374151" }}>{company.name}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         {/* ══ SPOTLIGHT ADS ══ */}

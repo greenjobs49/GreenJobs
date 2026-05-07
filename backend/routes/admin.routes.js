@@ -3,7 +3,7 @@ const router  = express.Router();
 
 const protect        = require("../middleware/auth");
 const authorizeRoles = require("../middleware/role");
-const uploadBanner   = require("../middleware/uploadBanner"); // ← must exist at this path
+const uploadBanner   = require("../middleware/uploadBanner");
 
 const { sendProfileReminders } = require("../controllers/reminderController");
 
@@ -29,6 +29,14 @@ const {
   uploadNavbarBannerImage,
   toggleBannerStatus,
 } = require("../controllers/admin.controller");
+
+// ── ADD THIS IMPORT ────────────────────────────────────────────────────────
+const {
+  getTopCompanies,
+  getAllTopCompanies,
+  updateTopCompany,
+  batchUpdateTopCompanies,
+} = require("../controllers/topCompany.controller");
 
 // ── Profile reminders ──────────────────────────────────────────────────────
 router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendProfileReminders);
@@ -62,13 +70,8 @@ router.patch("/recruiters/:id/verify",         protect, authorizeRoles("admin"),
 router.post("/create-admin", protect, authorizeRoles("admin"), createAdmin);
 
 // ── Navbar Banner ──────────────────────────────────────────────────────────
-// NOTE: specific sub-paths (/upload, /toggle) MUST be defined before any
-// parameterised routes to avoid shadowing.
-
-// Public — navbar reads this on every page load, no token required
 router.get("/navbar-banner", getNavbarBanner);
 
-// Upload image to S3, returns { imageUrl } — does NOT save to DB yet
 router.post(
   "/navbar-banner/upload",
   protect,
@@ -77,10 +80,23 @@ router.post(
   uploadNavbarBannerImage
 );
 
-// Save banner settings (imageUrl, altText, height, borderRadius) to DB
-router.put("/navbar-banner", protect, authorizeRoles("admin"), updateNavbarBanner);
+router.put("/navbar-banner",           protect, authorizeRoles("admin"), updateNavbarBanner);
+router.patch("/navbar-banner/toggle",  protect, authorizeRoles("admin"), toggleBannerStatus);
 
-// Toggle isActive on/off
-router.patch("/navbar-banner/toggle", protect, authorizeRoles("admin"), toggleBannerStatus);
+// ── Top Companies ──────────────────────────────────────────────────────────
+// NOTE: /top-companies/batch and /top-companies/all must come BEFORE
+// /top-companies/:id to avoid "batch" and "all" being swallowed as :id param.
+
+// Public — homepage fetches this (no token required)
+router.get("/top-companies",        getTopCompanies);
+
+// Admin — get all businesses with featured meta
+router.get("/top-companies/all",    protect, authorizeRoles("admin"), getAllTopCompanies);
+
+// Admin — batch save order + featured for all at once
+router.post("/top-companies/batch", protect, authorizeRoles("admin"), batchUpdateTopCompanies);
+
+// Admin — update a single company
+router.patch("/top-companies/:id",  protect, authorizeRoles("admin"), updateTopCompany);
 
 module.exports = router;

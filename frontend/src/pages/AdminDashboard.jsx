@@ -12,6 +12,7 @@ import { useAuth } from "../context/AuthContext";
 import toast from "react-hot-toast";
 import API_BASE_URL from "../config/api";
 import AdminAdsManager from "./AdminAdsManager";
+import AdminTopCompanies from "./AdminTopCompanies";
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
@@ -607,6 +608,7 @@ const AdminDashboard = () => {
               { key: "businesses", label: `Businesses`,                      badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
               { key: "recruiters", label: "Recruiter Verifications",         badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
               { key: "ads",        label: "Ad Manager",                   badge: null },
+              { key: "topcompanies", label: "Top Companies",                 badge: null },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -1138,6 +1140,9 @@ const AdminDashboard = () => {
           ══════════════════════════════════════════ */}
           {activeTab === "ads" && (
               <AdminAdsManager token={token} />
+          )}
+          {activeTab === "topcompanies" && (
+            <AdminTopCompanies token={token} />
           )}
 
         </div>

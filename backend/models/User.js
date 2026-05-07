@@ -179,6 +179,7 @@ const userSchema = new mongoose.Schema(
         default: "pending",
       },
       verified:               { type: Boolean, default: false },
+      isFeatured: { type: Boolean, default: false },
       verificationDocuments:  { type: [String], default: [] },
     },
 
