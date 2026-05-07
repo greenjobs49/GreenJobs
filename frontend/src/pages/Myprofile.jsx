@@ -418,14 +418,45 @@ export default function MyProfile() {
 
               <Section title="Professional Details" icon={Briefcase} accent="#0f172a">
                 <div className="mp-fields-grid">
-                  <Field label="Education"       value={profile.education}     icon={GraduationCap} />
-                  <Field label="Experience"      value={profile.experience ? `${profile.experience} years` : null} icon={Clock} />
-                  <Field label="Preferred Role"  value={profile.preferredRole} icon={Star} />
+                  <Field label="Experience" value={profile.experience ? `${profile.experience} years` : null} icon={Clock} />
+                  <Field label="Preferred Role" value={profile.preferredRole} icon={Star} />
                   <Field label="Expected Salary" value={profile.expectedSalary} icon={DollarSign} />
-                  <Field label="LinkedIn"        value={profile.linkedin}      icon={Linkedin} isLink />
-                  <Field label="Portfolio"       value={profile.portfolio}     icon={Globe}    isLink />
+                  <Field label="LinkedIn" value={profile.linkedin} icon={Linkedin} isLink />
+                  <Field label="Portfolio" value={profile.portfolio} icon={Globe} isLink />
                 </div>
               </Section>
+              {profile.education?.length > 0 && (
+              <Section title="Education" icon={GraduationCap} accent="#6366f1">
+                <div style={{ padding: "4px 0" }}>
+                  {profile.education.map((e, i) => {
+                    const typeLabels = {
+                      tenth: "10th (Secondary)", twelfth: "12th (Senior Secondary)",
+                      diploma: "Diploma", ug: "Graduation (UG)",
+                      pg: "Post Graduation (PG)", phd: "Doctorate / PhD", other: "Other",
+                    };
+                    return (
+                      <div key={i} style={{ padding: "14px 22px" }}>
+                        <div className="mp-field-label">
+                          <GraduationCap size={11} />
+                          {typeLabels[e.type] || e.type}
+                          {e.board && <span style={{ marginLeft: 6, color: "#cbd5e1" }}>· {e.board}</span>}
+                        </div>
+                        <div className="mp-field-value" style={{ fontWeight: 600 }}>
+                          {e.institution || <span className="mp-empty">Not provided</span>}
+                        </div>
+                        {(e.stream || e.year || e.grade) && (
+                          <div style={{ fontSize: 13, color: "#64748b", marginTop: 3, display: "flex", gap: 12, flexWrap: "wrap" }}>
+                            {e.stream && <span>{e.stream}</span>}
+                            {e.year && <span>· {e.year}</span>}
+                            {e.grade && <span>· {e.grade}</span>}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </Section>
+            )}
 
               {(profile.about || profile.accomplishments) && (
                 <Section title="About" icon={FileText} accent="#059669">

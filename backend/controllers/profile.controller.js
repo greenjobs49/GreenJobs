@@ -37,25 +37,44 @@ const calculateProgress = (requiredFields, data) => {
     let progress  = 0;
 
     if (user.role === "jobseeker") {
-      required = ["fullName", "mobile", "city", "education", "skills", "experience", "resume"];
-      progress  = calculateProgress(required, data);
-      if (progress < 100) return res.status(400).json({ success: false, message: "Fill all required fields" });
-      if (!data.fullName || data.fullName.trim() === "") {
-        data.fullName = `${data.firstName || ""} ${data.lastName || ""}`.trim();
-      }
-        const sanitizedReferences = Array.isArray(data.references)
-        ? data.references.filter(r => r.name?.trim() && r.phone?.trim())
-        : [];
-      await User.updateOne(
-        { _id: user._id },
-        { $set: { jobSeekerProfile: {
-          ...user.jobSeekerProfile,
-          ...data,
-          readyToRelocate: data.readyToRelocate ?? false,
-          references: sanitizedReferences, 
-        }, profileCompleted: true, profileProgress: progress } }
-      );
+  required = ["fullName", "mobile", "city", "education", "skills", "experience", "resume"];
+  progress = calculateProgress(required, data);
+  if (progress < 100) return res.status(400).json({ success: false, message: "Fill all required fields" });
+
+  if (!data.fullName || data.fullName.trim() === "") {
+    data.fullName = `${data.firstName || ""} ${data.lastName || ""}`.trim();
+  }
+
+  const sanitizedReferences = Array.isArray(data.references)
+    ? data.references.filter(r => r.name?.trim() && r.phone?.trim())
+    : [];
+
+  // ✅ Build the update object explicitly — don't spread Mongoose sub-docs
+  await User.updateOne(
+    { _id: user._id },
+    {
+      $set: {
+        "jobSeekerProfile.firstName":       data.firstName?.trim(),
+        "jobSeekerProfile.lastName":        data.lastName?.trim(),
+        "jobSeekerProfile.fullName":        data.fullName?.trim(),
+        "jobSeekerProfile.mobile":          data.mobile?.trim(),
+        "jobSeekerProfile.city":            data.city?.trim(),
+        "jobSeekerProfile.pincode":         data.pincode?.trim(),
+        "jobSeekerProfile.about":           data.about?.trim(),
+        "jobSeekerProfile.education":       data.education,   // plain array ✅
+        "jobSeekerProfile.experience":      data.experience?.toString().trim() || "0",
+        "jobSeekerProfile.accomplishments": data.accomplishments?.trim() || "",
+        "jobSeekerProfile.linkedin":        data.linkedin?.trim() || "",
+        "jobSeekerProfile.resume":          data.resume,
+        "jobSeekerProfile.skills":          data.skills,
+        "jobSeekerProfile.readyToRelocate": data.readyToRelocate ?? false,
+        "jobSeekerProfile.references":      sanitizedReferences,
+        profileCompleted: true,
+        profileProgress:  progress,
+      },
     }
+  );
+}
 
     if (user.role === "recruiter") {
       required = ["companyName", "companyWebsite", "companyDescription", "companyLocation", "contactNumber", "companyLogo", "industryType"];

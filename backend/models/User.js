@@ -1,5 +1,27 @@
 const mongoose = require("mongoose");
 
+// ─── Education entry sub-schema ───────────────────────────────────────────────
+// Covers: 10th, 12th, Diploma, UG, PG, PhD, Other
+const educationEntrySchema = new mongoose.Schema(
+  {
+    type: {
+      type: String,
+      enum: ["tenth", "twelfth", "diploma", "ug", "pg", "phd", "other"],
+      required: true,
+    },
+    institution: { type: String, trim: true, maxlength: 200 },
+    board: {
+      type: String,
+      enum: ["CBSE", "ICSE", "State Board", "Other", ""],
+      default: "",
+    },
+    stream: { type: String, trim: true, maxlength: 100 },   // branch / specialisation
+    year:   { type: String, trim: true, maxlength: 4  },    // year of passing
+    grade:  { type: String, trim: true, maxlength: 20 },    // % or CGPA
+  },
+  { _id: false }
+);
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -51,21 +73,33 @@ const userSchema = new mongoose.Schema(
     },
 
     profileCompleted: { type: Boolean, default: false },
-    profileProgress: { type: Number, default: 0, min: 0, max: 100 },
+    profileProgress:  { type: Number, default: 0, min: 0, max: 100 },
 
     // ================= JOB SEEKER =================
     jobSeekerProfile: {
-      firstName: { type: String, trim: true, maxlength: 50 },
-      lastName: { type: String, trim: true, maxlength: 50 },
-      fullName: { type: String, trim: true, maxlength: 100 },
-      mobile: { type: String, default: "" },
-      city: { type: String, trim: true, maxlength: 50 },
-      pincode: { type: String, trim: true, maxlength: 10 },
-      about: { type: String, trim: true, maxlength: 2000 },
-      education: { type: String, trim: true, maxlength: 200 },
-      experience: { type: String, trim: true, maxlength: 100 },
+      firstName: { type: String, trim: true, maxlength: 50  },
+      lastName:  { type: String, trim: true, maxlength: 50  },
+      fullName:  { type: String, trim: true, maxlength: 100 },
+      mobile:    { type: String, default: "" },
+      city:      { type: String, trim: true, maxlength: 50  },
+      pincode:   { type: String, trim: true, maxlength: 10  },
+      about:     { type: String, trim: true, maxlength: 2000 },
+
+      // ── Education: structured array (replaces the old plain String) ──────
+      education: {
+        type: [educationEntrySchema],
+        default: [],
+        validate: {
+          validator: (v) => v.length <= 10,
+          message: "Maximum 10 education entries allowed",
+        },
+      },
+
+      experience:      { type: String, trim: true, maxlength: 100  },
       accomplishments: { type: String, trim: true, maxlength: 2000 },
       readyToRelocate: { type: Boolean, default: false },
+
+      // ── References ────────────────────────────────────────────────────────
       references: {
         type: [
           {
@@ -79,6 +113,7 @@ const userSchema = new mongoose.Schema(
           message: "Maximum 5 references allowed",
         },
       },
+
       skills: {
         type: [String],
         default: [],
@@ -87,48 +122,49 @@ const userSchema = new mongoose.Schema(
           message: "Maximum 20 skills allowed",
         },
       },
-      resume: { type: String },
-      linkedin: { type: String },
-      portfolio: { type: String },
-      expectedSalary: String,
-      preferredRole: { type: String, trim: true, maxlength: 100 },
+
+      resume:         { type: String },
+      linkedin:       { type: String },
+      portfolio:      { type: String },
+      expectedSalary: { type: String },
+      preferredRole:  { type: String, trim: true, maxlength: 100 },
     },
 
     // ================= RECRUITER =================
     recruiterProfile: {
-      companyName: { type: String, trim: true, maxlength: 100 },
-      companyWebsite: { type: String },
+      companyName:        { type: String, trim: true, maxlength: 100 },
+      companyWebsite:     { type: String },
       companyDescription: { type: String, trim: true, maxlength: 500 },
-      companyLocation: { type: String, trim: true, maxlength: 100 },
-      contactNumber: { type: String },
-      companyLogo: { type: String },
-      industryType: { type: String, trim: true, maxlength: 50 },
+      companyLocation:    { type: String, trim: true, maxlength: 100 },
+      contactNumber:      { type: String },
+      companyLogo:        { type: String },
+      industryType:       { type: String, trim: true, maxlength: 50  },
       linkedBusiness: {
         type: mongoose.Schema.Types.ObjectId,
         ref: "User",
         default: null,
       },
       verificationStatus: {
-  type: String,
-  enum: ["pending", "approved", "rejected"],
-  default: undefined,
-},
-verificationRequestedAt: { type: Date },
-verificationReviewedAt:  { type: Date },
-rejectionReason:         { type: String, default: "" },
+        type: String,
+        enum: ["pending", "approved", "rejected"],
+        default: undefined,
+      },
+      verificationRequestedAt: { type: Date },
+      verificationReviewedAt:  { type: Date },
+      rejectionReason:         { type: String, default: "" },
     },
 
     // ================= BUSINESS =================
     businessProfile: {
-      businessName: { type: String, trim: true, maxlength: 100 },
-      category: { type: String, trim: true, maxlength: 50 },
-      street:  { type: String, trim: true, maxlength: 200 },
-      city:    { type: String, trim: true, maxlength: 50  },
-      state:   { type: String, trim: true, maxlength: 50  },
-      pincode: { type: String, trim: true, maxlength: 10  },
-      address: { type: String, trim: true, maxlength: 500 },
-      contactDetails: { type: String, trim: true, maxlength: 200 },
-      description: { type: String, trim: true, maxlength: 1000 },
+      businessName:   { type: String, trim: true, maxlength: 100  },
+      category:       { type: String, trim: true, maxlength: 50   },
+      street:         { type: String, trim: true, maxlength: 200  },
+      city:           { type: String, trim: true, maxlength: 50   },
+      state:          { type: String, trim: true, maxlength: 50   },
+      pincode:        { type: String, trim: true, maxlength: 10   },
+      address:        { type: String, trim: true, maxlength: 500  },
+      contactDetails: { type: String, trim: true, maxlength: 200  },
+      description:    { type: String, trim: true, maxlength: 1000 },
       images: {
         type: [String],
         default: [],
@@ -142,8 +178,8 @@ rejectionReason:         { type: String, default: "" },
         enum: ["pending", "approved", "rejected"],
         default: "pending",
       },
-      verified: { type: Boolean, default: false },
-      verificationDocuments: { type: [String], default: [] },
+      verified:               { type: Boolean, default: false },
+      verificationDocuments:  { type: [String], default: [] },
     },
 
     // ================= ADMIN =================
@@ -154,84 +190,57 @@ rejectionReason:         { type: String, default: "" },
       },
     },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
-//////////////////////////////////////////////////////
-// INDEXES
-//////////////////////////////////////////////////////
-
+// ─── Indexes ──────────────────────────────────────────────────────────────────
 userSchema.index({ role: 1 });
 userSchema.index({ "businessProfile.status": 1 });
 userSchema.index({ "recruiterProfile.linkedBusiness": 1 });
 userSchema.index({ "recruiterProfile.verificationStatus": 1 });
-//////////////////////////////////////////////////////
-// PROFILE PROGRESS CALCULATION
-//////////////////////////////////////////////////////
 
+// ─── Profile progress ────────────────────────────────────────────────────────
+// education is now an array — counts as filled when at least 1 entry exists
 userSchema.methods.calculateProfileProgress = function () {
   const profileMap = {
     jobseeker: this.jobSeekerProfile,
     recruiter: this.recruiterProfile,
-    business: this.businessProfile,
+    business:  this.businessProfile,
   };
 
   const requiredFieldsMap = {
     jobseeker: [
-      "firstName",
-      "lastName",
-      "mobile",
-      "city",
-      "pincode",
-      "about",
-      "education",
-      "resume",
+      "firstName", "lastName", "mobile", "city", "pincode",
+      "about", "education", "resume",
     ],
     recruiter: [
-      "companyName",
-      "companyWebsite",
-      "contactNumber",
-      "companyDescription",
-      "companyLocation",
-      "industryType",
-      "companyLogo",
+      "companyName", "companyWebsite", "contactNumber",
+      "companyDescription", "companyLocation", "industryType", "companyLogo",
     ],
     business: [
-      "businessName",
-      "category",
-      "contactDetails",
-      "address",
-      "description",
+      "businessName", "category", "contactDetails",
+      "address", "description",
     ],
   };
 
-  const profile = profileMap[this.role] || {};
+  const profile       = profileMap[this.role] || {};
   const requiredFields = requiredFieldsMap[this.role] || [];
 
   if (!requiredFields.length) {
-    this.profileProgress = 0;
+    this.profileProgress  = 0;
     this.profileCompleted = false;
     return;
   }
 
   const completedFields = requiredFields.filter((field) => {
     const value = profile?.[field];
-    if (Array.isArray(value)) return value.length > 0;
+    if (Array.isArray(value)) return value.length > 0; 
     return value && value.toString().trim() !== "";
   }).length;
 
-  this.profileProgress = Math.round(
-    (completedFields / requiredFields.length) * 100
-  );
-
+  this.profileProgress  = Math.round((completedFields / requiredFields.length) * 100);
   this.profileCompleted = this.profileProgress >= 80;
 };
-
-//////////////////////////////////////////////////////
-// SAFE PRE-SAVE MIDDLEWARE (NO next)
-//////////////////////////////////////////////////////
 
 userSchema.pre("save", async function () {
   if (
@@ -253,9 +262,7 @@ userSchema.statics.getApprovedBusinesses = function () {
     "businessProfile.status": "approved",
   }).select("name businessProfile profilePicture");
 };
-
 userSchema.statics.getBusinessById = function (businessId) {
   return this.findById(businessId).select("businessProfile name profilePicture");
 };
-
 module.exports = mongoose.model("User", userSchema);
