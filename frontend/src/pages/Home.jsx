@@ -92,23 +92,19 @@ export default function GreenJobsHomepage() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const statsRes = await axios.get(`${API_BASE_URL}/api/admin/stats`, { timeout: 8000 }).catch(() => null);
-        if (statsRes?.data) {
-          const s = statsRes.data;
-          setHeroStats({ liveJobs: s.liveJobs ?? s.totalJobs ?? null, companies: s.approvedBusinesses ?? s.businesses ?? null });
-          return;
-        }
-        const [liveJobsRes, approvedBizRes] = await Promise.all([
-          axios.get(`${API_BASE_URL}/api/jobs/public`, { timeout: 6000 }).catch(() => null),
+        const [jobsRes, bizRes] = await Promise.all([
+          axios.get(`${API_BASE_URL}/api/jobs/public?page=1&limit=1`, { timeout: 8000 }).catch(() => null),
           axios.get(`${API_BASE_URL}/api/profile/business/approved`, { timeout: 6000 }).catch(() => null),
         ]);
-        const jobsArray = liveJobsRes?.data?.jobs ?? (Array.isArray(liveJobsRes?.data) ? liveJobsRes.data : []);
-        const approvedBizData = Array.isArray(approvedBizRes?.data) ? approvedBizRes.data : [];
-        setHeroStats({
-          liveJobs:  jobsArray.filter(j => j.status === "approved").length || null,
-          companies: approvedBizData.length || null,
-        });
-      } catch (err) { console.error(err); }
+
+        // The public endpoint already returns `total` — the real DB count
+        const liveJobs  = jobsRes?.data?.total ?? null;
+        const companies = Array.isArray(bizRes?.data) ? bizRes.data.length : null;
+
+        setHeroStats({ liveJobs, companies });
+      } catch (err) {
+        console.error("Stats fetch failed:", err);
+      }
     };
     fetchStats();
   }, []);

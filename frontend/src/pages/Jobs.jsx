@@ -198,6 +198,7 @@ const Jobs = () => {
 
   // ── UI ────────────────────────────────────────────────────────────────────
   const [expandedRounds, setExpandedRounds] = useState({});
+  const [totalJobCount, setTotalJobCount] = useState(null);
 
   // ── Refs ──────────────────────────────────────────────────────────────────
   const observerRef   = useRef(null);
@@ -247,6 +248,8 @@ const Jobs = () => {
       if (response.data.jobs && Array.isArray(response.data.jobs)) newJobs = response.data.jobs;
       else if (Array.isArray(response.data)) newJobs = response.data;
 
+      if (!append && response.data.total) setTotalJobCount(response.data.total);
+
       const validJobs = newJobs.filter(
         (job) => job && job._id && job.title && job.status === "approved"
       );
@@ -259,8 +262,7 @@ const Jobs = () => {
       } else {
         setJobs(validJobs);
       }
-
-      setHasMore(validJobs.length === 12);
+      setHasMore(response.data.hasMore ?? validJobs.length === 12);
     } catch (err) {
       console.error("Fetch error:", err);
       setHasMore(false);
@@ -735,9 +737,14 @@ const Jobs = () => {
           <div className="hero-glow" />
           <div className="hero-container">
             <div className="hero-badge">
-              <Sparkles size={14} />
-              {filteredJobs.length} open positions
-            </div>
+            <Sparkles size={14} />
+            {hasActiveFilters
+              ? `${filteredJobs.length} matching positions`
+              : totalJobCount !== null
+                ? `${totalJobCount} open positions`
+                : `${filteredJobs.length} open positions`
+            }
+          </div>
             <h1 className="hero-title">Find your next opportunity</h1>
             <p className="hero-subtitle">
               Discover verified roles — see the full hiring process before you apply
@@ -840,7 +847,12 @@ const Jobs = () => {
 
         <div className="stats-bar">
           <div className="stats-card">
-            <span className="stat-item"><span className="stat-value">{filteredJobs.length}</span> jobs</span>
+            <span className="stat-item"><span className="stat-value">{hasActiveFilters
+              ? filteredJobs.length
+              : totalJobCount !== null
+                ? totalJobCount
+                : filteredJobs.length
+            }</span> jobs</span>
             <span className="stat-divider">|</span>
             <span className="stat-item"><span className="stat-value">{locations.length}</span> locations</span>
             <span className="stat-divider">|</span>
