@@ -3,10 +3,8 @@ const Job = require("../models/Job");
 const User = require("../models/User");
 const email = require("../services/emailService");
 
-/* =========================================================
-   PUBLIC — GET ACTIVE ADS
-   GET /api/ads
-========================================================= */
+/*PUBLIC — GET ACTIVE ADS
+   GET /api/ads*/
 exports.getPublicAds = async (req, res) => {
   try {
     const { type } = req.query; // ?type=spotlight | full_banner | (all if omitted)
@@ -21,10 +19,8 @@ exports.getPublicAds = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — GET ALL ADS
-   GET /api/ads/admin
-========================================================= */
+/*ADMIN — GET ALL ADS
+   GET /api/ads/admin*/
 exports.getAllAds = async (req, res) => {
   try {
     const ads = await Ad.find({})
@@ -37,10 +33,8 @@ exports.getAllAds = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — CREATE AD
-   POST /api/ads/admin
-========================================================= */
+/*ADMIN — CREATE AD
+   POST /api/ads/admin */
 exports.createAd = async (req, res) => {
   try {
     const {
@@ -85,10 +79,8 @@ isActive: isActive === true || isActive === "true" || isActive === "1",
   }
 };
 
-/* =========================================================
-   ADMIN — UPDATE AD
-   PATCH /api/ads/admin/:id
-========================================================= */
+/*ADMIN — UPDATE AD
+   PATCH /api/ads/admin/:id */
 exports.updateAd = async (req, res) => {
   try {
     const ad = await Ad.findById(req.params.id);
@@ -145,10 +137,8 @@ exports.updateAd = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — DELETE AD
-   DELETE /api/ads/admin/:id
-========================================================= */
+/*ADMIN — DELETE AD
+   DELETE /api/ads/admin/:id*/
 exports.deleteAd = async (req, res) => {
   try {
     const ad = await Ad.findById(req.params.id);
@@ -179,10 +169,8 @@ exports.deleteAd = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — TOGGLE AD ACTIVE STATUS
-   PATCH /api/ads/admin/:id/toggle
-========================================================= */
+/*ADMIN — TOGGLE AD ACTIVE STATUS
+   PATCH /api/ads/admin/:id/toggle*/
 exports.toggleAd = async (req, res) => {
   try {
     const ad = await Ad.findById(req.params.id);
@@ -201,11 +189,9 @@ exports.toggleAd = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — REORDER ADS
+/*ADMIN — REORDER ADS
    PATCH /api/ads/admin/reorder
-   Body: { orders: [{ id, order }, ...] }
-========================================================= */
+   Body: { orders: [{ id, order }, ...] }*/
 exports.reorderAds = async (req, res) => {
   try {
     const { orders } = req.body;
@@ -222,10 +208,8 @@ exports.reorderAds = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — REVOKE A LIVE JOB (fraud / non-applicable)
-   PATCH /api/admin/jobs/:id/revoke
-========================================================= */
+/*ADMIN — REVOKE A LIVE JOB (fraud / non-applicable)
+   PATCH /api/admin/jobs/:id/revoke */
 exports.adminRevokeJob = async (req, res) => {
   try {
     const { id } = req.params;
@@ -248,7 +232,6 @@ exports.adminRevokeJob = async (req, res) => {
     job.revokedByAdmin  = true;
     await job.save();
 
-    // ── Notify recruiter ───────────────────────────────────
     if (job.recruiter?.email) {
       email.sendJobRevokedByAdminEmail(
         job.recruiter.email,
@@ -260,7 +243,6 @@ exports.adminRevokeJob = async (req, res) => {
       ).catch(console.error);
     }
 
-    // ── Notify business owner if linked ────────────────────
     if (job.business?.email) {
       email.sendJobRevokedBusinessNotification(
         job.business.email,
@@ -272,7 +254,6 @@ exports.adminRevokeJob = async (req, res) => {
       ).catch(console.error);
     }
 
-    // ── Notify all admins ──────────────────────────────────
     const adminUsers = await User.find({ role: "admin", _id: { $ne: req.user.id } }).select("email name");
     adminUsers.forEach(admin => {
       email.sendAdminJobRevokeAlert(
@@ -296,10 +277,8 @@ exports.adminRevokeJob = async (req, res) => {
   }
 };
 
-/* =========================================================
-   ADMIN — RESTORE A REVOKED JOB
-   PATCH /api/admin/jobs/:id/restore
-========================================================= */
+/*ADMIN — RESTORE A REVOKED JOB
+   PATCH /api/admin/jobs/:id/restore*/
 exports.adminRestoreJob = async (req, res) => {
   try {
     const { id } = req.params;

@@ -6,18 +6,16 @@ const connectDB = require("./config/db");
 
 const app = express();
 
-// Trust reverse proxy (Crucial if your EC2/Server uses Nginx or a Load Balancer for HTTPS)
 app.set("trust proxy", 1);
-
-// ✅ 1. FIXED SECURITY HEADERS
+//SECURITY HEADERS
 app.use(
   helmet({
     crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
-    crossOriginResourcePolicy: { policy: "cross-origin" }, // <-- CRITICAL: Allows Vercel to read your API responses
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
-// ✅ 2. BULLETPROOF CORS CONFIGURATION
+//CORS CONFIG
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
@@ -34,24 +32,24 @@ const corsOptions = {
     if (allowedOrigins.includes(normalizedOrigin)) {
       callback(null, true);
     } else {
-      console.warn(`[CORS Blocked] Origin: ${origin}`); // Will show in your server logs if a wrong URL tries to connect
+      console.warn(`[CORS Blocked] Origin: ${origin}`);
       callback(new Error("Not allowed by CORS"));
     }
   },
   credentials: true,
-  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"], // <-- Explicitly allow these methods
-  allowedHeaders: ["Content-Type", "Authorization"], // <-- Explicitly allow these headers
+  methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));
 app.options("/{*path}", cors(corsOptions));
 
-// Body parsers with payload limits (Prevents DoS)
+//Prevents DoS
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 
-// DB connection
 connectDB();
+
 const { startProfileReminderCron } = require("./controllers/profileReminderCron");
 startProfileReminderCron();
 // Routes
