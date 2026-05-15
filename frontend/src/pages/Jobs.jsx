@@ -737,7 +737,6 @@ const Jobs = () => {
           <div className="hero-glow" />
           <div className="hero-container">
             <div className="hero-badge">
-            <Sparkles size={14} />
             {hasActiveFilters
               ? `${filteredJobs.length} matching positions`
               : totalJobCount !== null
