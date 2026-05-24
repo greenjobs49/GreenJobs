@@ -278,8 +278,8 @@ const Navbar = ({ title }) => {
         .logo-green { color: #16a34a; }
         .logo-black { color: #111827; }
         .navbar-center {
-          position: absolute; left: 50%; transform: translateX(-50%);
-          display: flex; align-items: center; pointer-events: auto; z-index: 5;
+          position: absolute; left: 48%; transform: translateX(-50%);
+          display: flex; align-items: center; pointer-events: none; z-index: 5;
         }
         .worker-image { width: auto; object-fit: contain; cursor: pointer; transition: opacity 0.3s; }
         .navbar-right { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
