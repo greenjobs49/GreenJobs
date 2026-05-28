@@ -180,6 +180,7 @@ const userSchema = new mongoose.Schema(
       },
       verified:               { type: Boolean, default: false },
       featuredOrder:   { type: Number,  default: 0    },
+      isFeatured: { type: Boolean, default: false },
       featuredLogoUrl: { type: String,  default: ""   },
       verificationDocuments:  { type: [String], default: [] },
     },
