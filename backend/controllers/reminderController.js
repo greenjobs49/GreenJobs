@@ -1,11 +1,49 @@
 const User = require("../models/User");
 const email = require("../services/emailService");
 
+const BATCH_SIZE = 10; // send 10 emails at a time, not 1-by-1
+
+const sendEmailForUser = async (user) => {
+  if (user.role === "jobseeker") {
+    await email.sendJobseekerProfileReminderEmail(user.email, user.name);
+  } else if (user.role === "recruiter") {
+    await email.sendRecruiterProfileReminderEmail(user.email, user.name);
+  } else if (user.role === "business") {
+    await email.sendBusinessProfileReminderEmail(user.email, user.name);
+  }
+};
+
+const processBatches = async (users) => {
+  let sent = 0;
+  const errors = [];
+
+  // Process in batches of BATCH_SIZE (parallel within each batch)
+  for (let i = 0; i < users.length; i += BATCH_SIZE) {
+    const batch = users.slice(i, i + BATCH_SIZE);
+
+    const results = await Promise.allSettled(
+      batch.map((user) => sendEmailForUser(user))
+    );
+
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled") {
+        sent++;
+      } else {
+        errors.push({
+          user: batch[idx].email,
+          error: result.reason?.message || "Unknown error",
+        });
+      }
+    });
+  }
+
+  return { sent, errors };
+};
+
 /**
  * POST /api/admin/send-profile-reminders
- * Can be called manually by admin OR by a cron job.
- * Sends reminder only to users whose profile is still incomplete
- * and who registered more than 24 hours ago (avoids spamming new signups).
+ * Returns immediately with a count of users queued,
+ * then processes emails in the background.
  */
 exports.sendProfileReminders = async (req, res) => {
   try {
@@ -17,33 +55,40 @@ exports.sendProfileReminders = async (req, res) => {
       role: { $in: ["jobseeker", "recruiter", "business"] },
     }).select("name email role");
 
-    let sent = 0;
-    const errors = [];
-
-    for (const user of incompleteUsers) {
-      try {
-        if (user.role === "jobseeker") {
-          await email.sendJobseekerProfileReminderEmail(user.email, user.name);
-        } else if (user.role === "recruiter") {
-          await email.sendRecruiterProfileReminderEmail(user.email, user.name);
-        } else if (user.role === "business") {
-          await email.sendBusinessProfileReminderEmail(user.email, user.name);
-        }
-        sent++;
-      } catch (err) {
-        errors.push({ user: user.email, error: err.message });
-      }
+    if (incompleteUsers.length === 0) {
+      return res.json({
+        success: true,
+        message: "No incomplete users to remind.",
+        sent: 0,
+        failed: 0,
+      });
     }
 
+    //Respond immediately so the HTTP request doesn't time out
     res.json({
       success: true,
-      message: `Reminders sent to ${sent} user(s).`,
-      sent,
-      failed: errors.length,
-      errors,
+      message: `Sending reminders to ${incompleteUsers.length} user(s) in the background.`,
+      sent: incompleteUsers.length, // optimistic count
+      failed: 0,
     });
+
+    //Process emails AFTER responding (fire-and-forget, won't block the client)
+    processBatches(incompleteUsers)
+      .then(({ sent, errors }) => {
+        console.log(`[Reminders] Done: ${sent} sent, ${errors.length} failed`);
+        if (errors.length > 0) {
+          console.error("[Reminders] Failures:", errors);
+        }
+      })
+      .catch((err) => {
+        console.error("[Reminders] Fatal error in background processing:", err);
+      });
+
   } catch (err) {
     console.error("REMINDER SEND ERROR:", err);
-    res.status(500).json({ success: false, message: err.message });
+    // Only reachable if the User.find() itself fails (before res.json)
+    if (!res.headersSent) {
+      res.status(500).json({ success: false, message: err.message });
+    }
   }
 };

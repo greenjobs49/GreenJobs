@@ -42,6 +42,18 @@ exports.getStats = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to fetch stats" });
   }
 };
+exports.getPublicStats = async (req, res) => {
+  try {
+    const [liveJobs, companies, candidates] = await Promise.all([
+      Job.countDocuments({ status: "approved" }),
+      User.countDocuments({ role: "business", "businessProfile.status": "approved" }),
+      User.countDocuments({ role: "jobseeker" }),
+    ]);
+    res.json({ liveJobs, companies, candidates });
+  } catch (err) {
+    res.status(500).json({ message: "Failed to fetch public stats" });
+  }
+};
 
 /* =========================================================
    GET ALL USERS

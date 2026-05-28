@@ -9,6 +9,7 @@ const { sendProfileReminders } = require("../controllers/reminderController");
 
 const {
   getStats,
+  getPublicStats,
   getUsers,
   getUserById,
   deleteUser,
@@ -43,6 +44,7 @@ router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendPro
 
 // ── Stats ──────────────────────────────────────────────────────────────────
 router.get("/stats", protect, authorizeRoles("admin"), getStats);
+router.get("/stats/public", getPublicStats);
 
 // ── Users ──────────────────────────────────────────────────────────────────
 router.get("/users",        protect, authorizeRoles("admin"), getUsers);

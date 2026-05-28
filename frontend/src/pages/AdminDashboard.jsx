@@ -14,68 +14,142 @@ import API_BASE_URL from "../config/api";
 import AdminAdsManager from "./AdminAdsManager";
 import AdminTopCompanies from "./AdminTopCompanies";
 
+// ── Constants ────────────────────────────────────────────────────────────────
+const PAGE_SIZE = 50;
+
+const REVOKE_TYPE_OPTIONS = [
+  { value: "fraud",            label: "Fraudulent Listing" },
+  { value: "non_applicable",   label: "Non-Applicable / Irrelevant Content" },
+  { value: "policy_violation", label: "Policy Violation" },
+  { value: "other",            label: "Other / Admin Discretion" },
+];
+
+// ── AdminDashboard ───────────────────────────────────────────────────────────
 const AdminDashboard = () => {
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const { token } = useAuth();
 
+  // ── Core data state ─────────────────────────────────────────────────────
   const [stats, setStats] = useState({
     totalUsers: 0, jobseekers: 0, recruiters: 0, businesses: 0,
     liveJobs: 0, pendingJobs: 0, pendingBusinesses: 0, approvedBusinesses: 0,
     pendingRecruiters: 0, incompleteUsers: 0,
   });
-
-  const [users, setUsers] = useState([]);
-  const [liveJobs, setLiveJobs] = useState([]);
-  const [businesses, setBusinesses] = useState([]);
+  const [users,             setUsers]             = useState([]);
+  const [liveJobs,          setLiveJobs]          = useState([]);
+  const [businesses,        setBusinesses]        = useState([]);
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [pendingRecruiters, setPendingRecruiters] = useState([]);
+
+  // ── UI / loading state ───────────────────────────────────────────────────
+  const [loading,          setLoading]          = useState(true);
   const [sendingReminders, setSendingReminders] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("overview");
-  const [searchTerm, setSearchTerm] = useState("");
-  const [roleFilter, setRoleFilter] = useState("all");
-  const [jobStatusFilter, setJobStatusFilter] = useState("all");
-  const [revokingId, setRevokingId] = useState(null);
-  const [verifyingId, setVerifyingId] = useState(null);
-  const [revokingJobId, setRevokingJobId] = useState(null);
-  const [restoringJobId, setRestoringJobId] = useState(null);
+  const [activeTab,        setActiveTab]        = useState("overview");
+  const [searchTerm,       setSearchTerm]       = useState("");
+  const [roleFilter,       setRoleFilter]       = useState("all");
+  const [jobStatusFilter,  setJobStatusFilter]  = useState("all");
+  const [userPage,         setUserPage]         = useState(1);   // FIX: pagination
 
-  // ── Add Admin modal state ───────────────────────────────────────────────────
+  // ── Action loading flags ─────────────────────────────────────────────────
+  const [revokingId,      setRevokingId]      = useState(null);
+  const [verifyingId,     setVerifyingId]     = useState(null);
+  const [revokingJobId,   setRevokingJobId]   = useState(null);
+  const [restoringJobId,  setRestoringJobId]  = useState(null);
+
+  // ── Add Admin modal state ────────────────────────────────────────────────
   const [showAddAdmin, setShowAddAdmin] = useState(false);
-  const [newAdmin, setNewAdmin] = useState({ name: "", email: "", phone: "" });
-  const [addingAdmin, setAddingAdmin] = useState(false);
+  const [newAdmin,     setNewAdmin]     = useState({ name: "", email: "", phone: "" });
+  const [addingAdmin,  setAddingAdmin]  = useState(false);
 
-  const REVOKE_TYPE_OPTIONS = [
-    { value: "fraud",            label: "Fraudulent Listing" },
-    { value: "non_applicable",   label: "Non-Applicable / Irrelevant Content" },
-    { value: "policy_violation", label: "Policy Violation" },
-    { value: "other",            label: "Other / Admin Discretion" },
-  ];
+  // ── Fetch all data ───────────────────────────────────────────────────────
+  const fetchAllData = useCallback(async () => {
+    if (!token) return;
+    try {
+      setLoading(true);
+      const headers = { Authorization: `Bearer ${token}` };
 
-  // ── Job revoke/restore handlers ─────────────────────────────────────────────
+      const [statsRes, usersRes, liveJobsRes, approvedBizRes, pendingBizRes, pendingRecRes] =
+        await Promise.all([
+          axios.get(`${API_BASE_URL}/api/admin/stats`,                            { headers }).catch(() => ({ data: {} })),
+          axios.get(`${API_BASE_URL}/api/admin/users?limit=1000`,                 { headers }).catch(() => ({ data: { users: [] } })),
+          axios.get(`${API_BASE_URL}/api/admin/jobs?limit=1000`,                  { headers }).catch(() => ({ data: { jobs: [] } })),
+          axios.get(`${API_BASE_URL}/api/profile/business/approved`,              { headers }).catch(() => ({ data: [] })),
+          axios.get(`${API_BASE_URL}/api/profile/business/pending`,               { headers }).catch(() => ({ data: [] })),
+          axios.get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`,  { headers }).catch(() => ({ data: [] })),
+        ]);
+
+      const usersData       = usersRes.data?.users     || (Array.isArray(usersRes.data)       ? usersRes.data       : []);
+      const jobsData        = liveJobsRes.data?.jobs   || (Array.isArray(liveJobsRes.data)    ? liveJobsRes.data    : []);
+      const approvedBizData = Array.isArray(approvedBizRes.data) ? approvedBizRes.data : [];
+      const pendingBizData  = Array.isArray(pendingBizRes.data)  ? pendingBizRes.data  : [];
+      const pendingRecData  = Array.isArray(pendingRecRes.data)  ? pendingRecRes.data  : [];
+
+      setUsers(usersData);
+      setLiveJobs(jobsData);
+      setBusinesses(approvedBizData);
+      setPendingBusinesses(pendingBizData);
+      setPendingRecruiters(pendingRecData);
+
+      const s = statsRes.data || {};
+      setStats({
+        totalUsers:         s.totalUsers         ?? usersData.length,
+        jobseekers:         s.jobseekers         ?? usersData.filter(u => u.role === "jobseeker").length,
+        recruiters:         s.recruiters         ?? usersData.filter(u => u.role === "recruiter").length,
+        businesses:         s.businesses         ?? usersData.filter(u => u.role === "business").length,
+        liveJobs:           s.liveJobs           ?? jobsData.length,
+        pendingJobs:        s.pendingJobs        ?? 0,
+        pendingBusinesses:  s.pendingBusinesses  ?? pendingBizData.length,
+        approvedBusinesses: s.approvedBusinesses ?? approvedBizData.length,
+        pendingRecruiters:  s.pendingRecruiters  ?? pendingRecData.length,
+        incompleteUsers:    s.incompleteUsers    ?? usersData.filter(u => !u.profileCompleted && u.role !== "admin").length,
+      });
+    } catch (err) {
+      console.error("Fetch data error:", err);
+      toast.error("Failed to load dashboard data");
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => { fetchAllData(); }, [fetchAllData]);
+
+  // ── Tab change helper — resets all filters + pagination ──────────────────
+  const switchTab = (key) => {
+    setActiveTab(key);
+    setSearchTerm("");
+    setJobStatusFilter("all");
+    setRoleFilter("all");
+    setUserPage(1); // FIX: reset pagination on tab change
+  };
+
+  // ── Job revoke / restore ─────────────────────────────────────────────────
   const handleAdminRevokeJob = async (jobId, jobTitle) => {
-    const revokeType = window.prompt(
+    // FIX: default to "other" if window.prompt is blocked (mobile/WebView)
+    const raw = window.prompt(
       `Revoke "${jobTitle}"?\n\nSelect reason type (type the key):\n` +
       REVOKE_TYPE_OPTIONS.map(o => `  ${o.value} — ${o.label}`).join("\n") +
       `\n\nType one of: fraud | non_applicable | policy_violation | other`
     );
-    if (revokeType === null) return;
+    if (raw === null) return; // user cancelled
 
     const validTypes = REVOKE_TYPE_OPTIONS.map(o => o.value);
-    const type = validTypes.includes(revokeType.trim().toLowerCase())
-      ? revokeType.trim().toLowerCase()
+    const type = validTypes.includes(raw.trim().toLowerCase())
+      ? raw.trim().toLowerCase()
       : "other";
 
     const reason = window.prompt(
       `Add details / reason for revoking "${jobTitle}":\n(This will be sent to the recruiter)`
-    );
+    ) ?? ""; // FIX: default to empty string if prompt is blocked
     if (reason === null) return;
 
     try {
       setRevokingJobId(jobId);
       await axios.patch(
         `${API_BASE_URL}/api/admin/jobs/${jobId}/revoke`,
-        { revokeType: type, reason: reason.trim() || REVOKE_TYPE_OPTIONS.find(o => o.value === type)?.label },
+        {
+          revokeType: type,
+          reason: reason.trim() || REVOKE_TYPE_OPTIONS.find(o => o.value === type)?.label,
+        },
         { headers: { Authorization: `Bearer ${token}` } }
       );
       toast.success(`"${jobTitle}" revoked. Emails sent to recruiter & business.`);
@@ -105,64 +179,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // ── Fetch all data ──────────────────────────────────────────────────────────
-// ── Fetch all data ──────────────────────────────────────────────────────────
-  const fetchAllData = useCallback(async () => {
-    if (!token) return;
-    try {
-      setLoading(true);
-      const headers = { Authorization: `Bearer ${token}` };
-
-      // ✅ FIX 1: Appended ?limit=1000 to users and jobs endpoints to support client-side filtering
-      // ✅ FIX 2: Changed jobs endpoint from /api/jobs/public to /api/admin/jobs
-      const [statsRes, usersRes, liveJobsRes, approvedBizRes, pendingBizRes, pendingRecRes] =
-        await Promise.all([
-          axios.get(`${API_BASE_URL}/api/admin/stats`, { headers }).catch(() => ({ data: {} })),
-          axios.get(`${API_BASE_URL}/api/admin/users?limit=1000`, { headers }).catch(() => ({ data: { users: [] } })),
-          axios.get(`${API_BASE_URL}/api/admin/jobs?limit=1000`, { headers }).catch(() => ({ data: { jobs: [] } })),
-          axios.get(`${API_BASE_URL}/api/profile/business/approved`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_BASE_URL}/api/profile/business/pending`, { headers }).catch(() => ({ data: [] })),
-          axios.get(`${API_BASE_URL}/api/admin/recruiters/pending-verification`, { headers }).catch(() => ({ data: [] })),
-        ]);
-
-      // ✅ FIX 3: Safely extract 'users' and 'jobs' arrays from the new paginated backend response objects
-      const usersData       = usersRes.data?.users || (Array.isArray(usersRes.data) ? usersRes.data : []);
-      const jobsData        = liveJobsRes.data?.jobs || (Array.isArray(liveJobsRes.data) ? liveJobsRes.data : []);
-      
-      const approvedBizData = Array.isArray(approvedBizRes.data)  ? approvedBizRes.data  : [];
-      const pendingBizData  = Array.isArray(pendingBizRes.data)   ? pendingBizRes.data   : [];
-      const pendingRecData  = Array.isArray(pendingRecRes.data)   ? pendingRecRes.data   : [];
-
-      setUsers(usersData);
-      setLiveJobs(jobsData);
-      setBusinesses(approvedBizData);
-      setPendingBusinesses(pendingBizData);
-      setPendingRecruiters(pendingRecData);
-
-      const s = statsRes.data || {};
-      setStats({
-        totalUsers:         s.totalUsers         ?? usersData.length,
-        jobseekers:         s.jobseekers         ?? usersData.filter((u) => u.role === "jobseeker").length,
-        recruiters:         s.recruiters         ?? usersData.filter((u) => u.role === "recruiter").length,
-        businesses:         s.businesses         ?? usersData.filter((u) => u.role === "business").length,
-        liveJobs:           s.liveJobs           ?? jobsData.length,
-        pendingJobs:        s.pendingJobs        ?? 0,
-        pendingBusinesses:  s.pendingBusinesses  ?? pendingBizData.length,
-        approvedBusinesses: s.approvedBusinesses ?? approvedBizData.length,
-        pendingRecruiters:  s.pendingRecruiters  ?? pendingRecData.length,
-        incompleteUsers:    s.incompleteUsers    ?? usersData.filter(u => !u.profileCompleted && u.role !== "admin").length,
-      });
-    } catch (err) {
-      console.error("Fetch data error:", err);
-      toast.error("Failed to load dashboard data");
-    } finally {
-      setLoading(false);
-    }
-  }, [token]);
-
-  useEffect(() => { fetchAllData(); }, [fetchAllData]);
-
-  // ── Revoke business ─────────────────────────────────────────────────────────
+  // ── Revoke business ──────────────────────────────────────────────────────
   const handleRevokeBusiness = async (bizId, bizName) => {
     if (!window.confirm(
       `Revoke verification for "${bizName}"?\n\nThis will:\n• Reset their status back to pending\n• Disconnect all linked recruiters\n• Require them to re-apply for approval`
@@ -183,7 +200,7 @@ const AdminDashboard = () => {
     }
   };
 
-  // ── Verify / reject recruiter ───────────────────────────────────────────────
+  // ── Verify / reject recruiter ────────────────────────────────────────────
   const handleVerifyRecruiter = async (recruiterId, recruiterName) => {
     try {
       setVerifyingId(recruiterId);
@@ -202,7 +219,7 @@ const AdminDashboard = () => {
   };
 
   const handleRejectRecruiter = async (recruiterId, recruiterName) => {
-    const reason = window.prompt(`Reason for rejecting ${recruiterName}? (Optional)`);
+    const reason = window.prompt(`Reason for rejecting ${recruiterName}? (Optional)`) ?? "";
     if (reason === null) return;
     try {
       setVerifyingId(recruiterId);
@@ -220,7 +237,9 @@ const AdminDashboard = () => {
     }
   };
 
-  // ── Send profile reminders ──────────────────────────────────────────────────
+  // ── Send profile reminders ───────────────────────────────────────────────
+  // FIX: backend now responds immediately and processes in background,
+  // so toast message reflects background processing rather than exact count.
   const handleSendProfileReminders = async () => {
     if (!window.confirm(
       "Send profile completion reminder emails to all users who signed up 24+ hours ago and haven't completed their profile?\n\nThis will send role-specific emails to jobseekers, recruiters, and business owners."
@@ -233,9 +252,16 @@ const AdminDashboard = () => {
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      toast.success(
-        `Reminders sent to ${res.data.sent} user(s)${res.data.failed > 0 ? ` · ${res.data.failed} failed` : ""}`
-      );
+
+      // FIX: updated toast to reflect background-processing response shape
+      if (res.data.sent === 0) {
+        toast.success("No incomplete users to remind right now.");
+      } else {
+        toast.success(
+          `Sending reminders to ${res.data.sent} user(s) in the background.` +
+          (res.data.failed > 0 ? ` · ${res.data.failed} failed` : "")
+        );
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || "Failed to send reminders");
     } finally {
@@ -243,10 +269,10 @@ const AdminDashboard = () => {
     }
   };
 
-  // ── Add Admin ───────────────────────────────────────────────────────────────
+  // ── Add Admin ────────────────────────────────────────────────────────────
   const handleAddAdmin = async (e) => {
     e.preventDefault();
-    if (!newAdmin.name.trim()) { toast.error("Name is required"); return; }
+    if (!newAdmin.name.trim())  { toast.error("Name is required");  return; }
     if (!newAdmin.email.trim()) { toast.error("Email is required"); return; }
     try {
       setAddingAdmin(true);
@@ -272,8 +298,8 @@ const AdminDashboard = () => {
     setNewAdmin({ name: "", email: "", phone: "" });
   };
 
-  // ── Filtered lists ──────────────────────────────────────────────────────────
-  const filteredUsers = users.filter((u) => {
+  // ── Filtered + paginated lists ───────────────────────────────────────────
+  const filteredUsers = users.filter(u => {
     const matchesRole   = roleFilter === "all" || u.role === roleFilter;
     const matchesSearch =
       u.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -282,28 +308,30 @@ const AdminDashboard = () => {
     return matchesRole && matchesSearch;
   });
 
-  const filteredJobs = liveJobs.filter((j) => {
-  const matchesSearch =
-    j.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    j.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    j.location?.toLowerCase().includes(searchTerm.toLowerCase());
-  const matchesStatus = jobStatusFilter === "all" || j.status === jobStatusFilter;
-  return matchesSearch && matchesStatus;
-});
+  // FIX: load-more pagination instead of hard slice
+  const pagedUsers = filteredUsers.slice(0, userPage * PAGE_SIZE);
+  const hasMoreUsers = pagedUsers.length < filteredUsers.length;
 
-  const filteredBusinesses = [...businesses, ...pendingBusinesses].filter(
-    (b) =>
-      b.businessProfile?.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      b.name?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredJobs = liveJobs.filter(j => {
+    const matchesSearch =
+      j.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      j.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      j.location?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = jobStatusFilter === "all" || j.status === jobStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredBusinesses = [...businesses, ...pendingBusinesses].filter(b =>
+    b.businessProfile?.businessName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    b.name?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const filteredRecruiters = pendingRecruiters.filter(
-    (r) =>
-      r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      r.email?.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredRecruiters = pendingRecruiters.filter(r =>
+    r.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    r.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // ── Stat cards ──────────────────────────────────────────────────────────────
+  // ── Stat cards ───────────────────────────────────────────────────────────
   const statsCards = [
     {
       icon: Users, label: "Total Users", value: stats.totalUsers, color: "#3b82f6",
@@ -331,7 +359,7 @@ const AdminDashboard = () => {
     },
   ];
 
-  // ── Badge helpers ───────────────────────────────────────────────────────────
+  // ── Badge helpers ────────────────────────────────────────────────────────
   const getRoleBadge = (role) => {
     const map = {
       jobseeker: { bg: "#dbeafe", color: "#1e40af", label: "Job Seeker" },
@@ -362,7 +390,7 @@ const AdminDashboard = () => {
     );
   };
 
-  // ── Loading state ───────────────────────────────────────────────────────────
+  // ── Loading state ────────────────────────────────────────────────────────
   if (loading) {
     return (
       <div>
@@ -375,7 +403,7 @@ const AdminDashboard = () => {
     );
   }
 
-  // ── Render ──────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -424,7 +452,7 @@ const AdminDashboard = () => {
         .data-table tr:hover { background: #f8fafc; }
         .user-info { display: flex; align-items: center; gap: 12px; }
         .user-avatar { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 16px; flex-shrink: 0; }
-        .user-name { font-weight: 600; color: #0f172a; margin-bottom: 2px; }
+        .user-name  { font-weight: 600; color: #0f172a; margin-bottom: 2px; }
         .user-email { font-size: 13px; color: #64748b; }
         .rec-card { border: 1px solid #e2e8f0; border-radius: 10px; padding: 20px; margin-bottom: 14px; transition: all 0.2s; border-left: 4px solid #f59e0b; }
         .rec-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
@@ -432,7 +460,7 @@ const AdminDashboard = () => {
         .rec-name  { font-size: 17px; font-weight: 700; color: #0f172a; margin-bottom: 2px; }
         .rec-email { font-size: 13px; color: #64748b; }
         .rec-meta  { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin: 14px 0; }
-        .rec-meta-item { display: flex; flex-direction: column; gap: 2px; }
+        .rec-meta-item  { display: flex; flex-direction: column; gap: 2px; }
         .rec-meta-label { font-size: 11px; color: #94a3b8; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
         .rec-meta-value { font-size: 14px; color: #0f172a; font-weight: 500; }
         .rec-actions { display: flex; gap: 10px; padding-top: 14px; border-top: 1px solid #e2e8f0; justify-content: flex-end; }
@@ -445,18 +473,17 @@ const AdminDashboard = () => {
         .business-card.approved { border-left: 4px solid #10b981; }
         .business-card.pending  { border-left: 4px solid #f59e0b; }
         .business-card.rejected { border-left: 4px solid #ef4444; }
-        .business-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px; }
-        .business-name     { font-size: 18px; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
+        .business-header  { display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px; flex-wrap: wrap; gap: 12px; }
+        .business-name    { font-size: 18px; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
         .business-category { font-size: 13px; color: #64748b; }
-        .business-actions  { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .business-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         .empty-state { text-align: center; padding: 48px 24px; }
         .empty-icon  { width: 64px; height: 64px; margin: 0 auto 16px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .empty-title { font-size: 16px; font-weight: 600; color: #0f172a; margin-bottom: 4px; }
         .empty-desc  { font-size: 14px; color: #64748b; }
         .urgent-dot { width: 8px; height: 8px; background: #ef4444; border-radius: 50%; display: inline-block; margin-left: 6px; animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-        /* ── Add Admin Modal ── */
+        @keyframes spin   { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
         .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal-box { background: white; border-radius: 16px; padding: 32px; width: 100%; max-width: 460px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); position: relative; }
         .modal-close { position: absolute; top: 16px; right: 16px; background: none; border: none; cursor: pointer; color: #94a3b8; padding: 4px; border-radius: 6px; display: flex; align-items: center; justify-content: center; transition: all 0.15s; }
@@ -470,24 +497,25 @@ const AdminDashboard = () => {
         .modal-input:disabled { opacity: 0.5; background: #f8fafc; }
         .modal-actions { display: flex; gap: 12px; margin-top: 24px; }
         .modal-actions .btn { flex: 1; }
-        /* ── Urgent alert banners ── */
         .alert-banner { border-radius: 12px; padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
-        .alert-banner-red    { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1.5px solid #fca5a5; }
-        .alert-banner-amber  { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fcd34d; }
-        .alert-icon-wrap { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .alert-banner-red   { background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%); border: 1.5px solid #fca5a5; }
+        .alert-banner-amber { background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%); border: 1.5px solid #fcd34d; }
+        .alert-icon-wrap  { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .alert-icon-red   { background: #fee2e2; }
         .alert-icon-amber { background: #fde68a; }
-        .alert-title   { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
-        .alert-desc    { font-size: 13px; color: #64748b; }
-        .alert-count   { font-size: 36px; font-weight: 800; line-height: 1; margin-right: 4px; }
+        .alert-title  { font-size: 16px; font-weight: 700; color: #0f172a; margin-bottom: 3px; }
+        .alert-desc   { font-size: 13px; color: #64748b; }
+        .alert-count  { font-size: 36px; font-weight: 800; line-height: 1; margin-right: 4px; }
         .alert-count-red   { color: #dc2626; }
         .alert-count-amber { color: #d97706; }
-        .stat-card-urgent { box-shadow: 0 0 0 3px #fca5a5; border-color: #f87171 !important; animation: ring-pulse 2s ease-in-out infinite; }
+        .stat-card-urgent       { box-shadow: 0 0 0 3px #fca5a5; border-color: #f87171 !important; animation: ring-pulse 2s ease-in-out infinite; }
         .stat-card-urgent-amber { box-shadow: 0 0 0 3px #fcd34d; border-color: #fbbf24 !important; animation: ring-pulse-amber 2s ease-in-out infinite; }
         @keyframes ring-pulse       { 0%,100%{box-shadow:0 0 0 3px #fca5a5;}  50%{box-shadow:0 0 0 6px #fecaca;} }
         @keyframes ring-pulse-amber { 0%,100%{box-shadow:0 0 0 3px #fcd34d;}  50%{box-shadow:0 0 0 6px #fef08a;} }
         .tab-urgent-badge { display: inline-flex; align-items: center; justify-content: center; background: #ef4444; color: white; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; animation: pulse 1.5s infinite; }
         .tab-amber-badge  { display: inline-flex; align-items: center; justify-content: center; background: #f59e0b; color: white; border-radius: 100px; font-size: 11px; font-weight: 700; padding: 1px 7px; margin-left: 6px; }
+        .load-more-wrap { text-align: center; padding-top: 20px; border-top: 1px solid #f1f5f9; margin-top: 8px; }
+        .load-more-info { font-size: 13px; color: #94a3b8; margin-bottom: 10px; }
         @media (max-width: 768px) {
           .dashboard-container { padding: 16px; }
           .page-title { font-size: 24px; }
@@ -541,7 +569,7 @@ const AdminDashboard = () => {
                     stat.urgent === "red"   ? "stat-card-urgent"       : "",
                     stat.urgent === "amber" ? "stat-card-urgent-amber" : "",
                   ].join(" ").trim()}
-                  onClick={() => setActiveTab(stat.tab)}
+                  onClick={() => switchTab(stat.tab)}
                 >
                   <div className="stat-header">
                     <div className="stat-icon"><Icon size={24} color={stat.color} /></div>
@@ -574,14 +602,14 @@ const AdminDashboard = () => {
               <button className="btn btn-primary" onClick={() => navigate("/admin/pending-businesses")}>
                 <Building size={16} /> Approve Businesses ({stats.pendingBusinesses})
               </button>
-              <button className="btn btn-primary" onClick={() => setActiveTab("recruiters")}>
+              <button className="btn btn-primary" onClick={() => switchTab("recruiters")}>
                 <ShieldCheck size={16} /> Verify Recruiters ({stats.pendingRecruiters})
                 {stats.pendingRecruiters > 0 && <span className="urgent-dot" />}
               </button>
-              <button className="btn btn-secondary" onClick={() => setActiveTab("users")}>
+              <button className="btn btn-secondary" onClick={() => switchTab("users")}>
                 <Users size={16} /> View All Users ({stats.totalUsers})
               </button>
-              <button className="btn btn-secondary" onClick={() => setActiveTab("jobs")}>
+              <button className="btn btn-secondary" onClick={() => switchTab("jobs")}>
                 <Briefcase size={16} /> View All Jobs ({stats.liveJobs})
               </button>
               <button className="btn btn-success" onClick={() => setShowAddAdmin(true)}>
@@ -602,18 +630,18 @@ const AdminDashboard = () => {
           {/* ── Tabs ── */}
           <div className="tabs-container">
             {[
-              { key: "overview",   label: "Overview",                        badge: null },
-              { key: "users",      label: `Users (${stats.totalUsers})`,     badge: null },
-              { key: "jobs",       label: `Live Jobs (${stats.liveJobs})`,   badge: null },
-              { key: "businesses", label: `Businesses`,                      badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
-              { key: "recruiters", label: "Recruiter Verifications",         badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
-              { key: "ads",        label: "Ad Manager",                   badge: null },
+              { key: "overview",     label: "Overview",                      badge: null },
+              { key: "users",        label: `Users (${stats.totalUsers})`,   badge: null },
+              { key: "jobs",         label: `Live Jobs (${stats.liveJobs})`, badge: null },
+              { key: "businesses",   label: "Businesses",                    badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
+              { key: "recruiters",   label: "Recruiter Verifications",       badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
+              { key: "ads",          label: "Ad Manager",                    badge: null },
               { key: "topcompanies", label: "Top Companies",                 badge: null },
             ].map((tab) => (
               <button
                 key={tab.key}
                 className={`tab-button ${activeTab === tab.key ? "active" : ""}`}
-                onClick={() => { setActiveTab(tab.key); setSearchTerm(""); setJobStatusFilter("all"); }}
+                onClick={() => switchTab(tab.key)}
               >
                 {tab.label}
                 {tab.badge && (
@@ -644,7 +672,7 @@ const AdminDashboard = () => {
                       Once approved, they can post jobs instantly. Don't keep them waiting.
                     </div>
                   </div>
-                  <button className="btn btn-sm" style={{ background: "#dc2626", color: "white", border: "none", flexShrink: 0 }} onClick={() => setActiveTab("recruiters")}>
+                  <button className="btn btn-sm" style={{ background: "#dc2626", color: "white", border: "none", flexShrink: 0 }} onClick={() => switchTab("recruiters")}>
                     Review Now →
                   </button>
                 </div>
@@ -680,14 +708,14 @@ const AdminDashboard = () => {
               <div className="section-card">
                 <div className="section-header">
                   <h2 className="section-title"><Users size={20} /> User Breakdown</h2>
-                  <button className="btn btn-secondary" onClick={() => setActiveTab("users")}>View All</button>
+                  <button className="btn btn-secondary" onClick={() => switchTab("users")}>View All</button>
                 </div>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
-                    { label: "Job Seekers",     value: stats.jobseekers, bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a" },
-                    { label: "Recruiters",      value: stats.recruiters, bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f" },
-                    { label: "Business Owners", value: stats.businesses, bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b" },
-                    { label: "Total Platform",  value: stats.totalUsers, bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87" },
+                    { label: "Job Seekers",     value: stats.jobseekers,  bg: "#eff6ff", border: "#bfdbfe", text: "#1e40af", dark: "#1e3a8a" },
+                    { label: "Recruiters",      value: stats.recruiters,  bg: "#fef3c7", border: "#fde047", text: "#92400e", dark: "#78350f" },
+                    { label: "Business Owners", value: stats.businesses,  bg: "#d1fae5", border: "#6ee7b7", text: "#065f46", dark: "#064e3b" },
+                    { label: "Total Platform",  value: stats.totalUsers,  bg: "#f3e8ff", border: "#e9d5ff", text: "#6b21a8", dark: "#581c87" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "24px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
                       <div style={{ fontSize: "13px", color: item.text, marginBottom: "6px", fontWeight: "600" }}>{item.label}</div>
@@ -711,7 +739,7 @@ const AdminDashboard = () => {
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px" }}>
                   {[
                     { label: "Live Jobs",               value: stats.liveJobs,            bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
-                    { label: "Pending Recruiter Verif", value: stats.pendingRecruiters,   bg: stats.pendingRecruiters > 0 ? "#fef2f2" : "#f8fafc", border: stats.pendingRecruiters > 0 ? "#fca5a5" : "#e2e8f0", text: stats.pendingRecruiters > 0 ? "#dc2626" : "#64748b" },
+                    { label: "Pending Recruiter Verif.", value: stats.pendingRecruiters,   bg: stats.pendingRecruiters > 0 ? "#fef2f2" : "#f8fafc", border: stats.pendingRecruiters > 0 ? "#fca5a5" : "#e2e8f0", text: stats.pendingRecruiters > 0 ? "#dc2626" : "#64748b" },
                     { label: "Approved Businesses",     value: stats.approvedBusinesses,  bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
                     { label: "Pending Businesses",      value: stats.pendingBusinesses,   bg: stats.pendingBusinesses > 0 ? "#fffbeb" : "#f8fafc", border: stats.pendingBusinesses > 0 ? "#fcd34d" : "#e2e8f0", text: stats.pendingBusinesses > 0 ? "#d97706" : "#64748b" },
                     { label: "Incomplete Profiles",     value: stats.incompleteUsers ?? 0, bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
@@ -760,7 +788,7 @@ const AdminDashboard = () => {
                 </div>
               ) : (
                 filteredRecruiters.map((rec) => {
-                  const p = rec.recruiterProfile || {};
+                  const p       = rec.recruiterProfile || {};
                   const isActing = verifyingId === rec._id;
                   return (
                     <div key={rec._id} className="rec-card">
@@ -774,42 +802,15 @@ const AdminDashboard = () => {
                         </span>
                       </div>
                       <div className="rec-meta">
-                        {p.companyName && (
-                          <div className="rec-meta-item">
-                            <span className="rec-meta-label">Company</span>
-                            <span className="rec-meta-value">{p.companyName}</span>
-                          </div>
-                        )}
-                        {p.industryType && (
-                          <div className="rec-meta-item">
-                            <span className="rec-meta-label">Industry</span>
-                            <span className="rec-meta-value">{p.industryType}</span>
-                          </div>
-                        )}
-                        {p.companyLocation && (
-                          <div className="rec-meta-item">
-                            <span className="rec-meta-label">Location</span>
-                            <span className="rec-meta-value">{p.companyLocation}</span>
-                          </div>
-                        )}
-                        {p.contactNumber && (
-                          <div className="rec-meta-item">
-                            <span className="rec-meta-label">Contact</span>
-                            <span className="rec-meta-value">{p.contactNumber}</span>
-                          </div>
-                        )}
-                        {p.companyWebsite && (
-                          <div className="rec-meta-item">
-                            <span className="rec-meta-label">Website</span>
-                            <span className="rec-meta-value">{p.companyWebsite}</span>
-                          </div>
-                        )}
+                        {p.companyName    && <div className="rec-meta-item"><span className="rec-meta-label">Company</span><span className="rec-meta-value">{p.companyName}</span></div>}
+                        {p.industryType   && <div className="rec-meta-item"><span className="rec-meta-label">Industry</span><span className="rec-meta-value">{p.industryType}</span></div>}
+                        {p.companyLocation && <div className="rec-meta-item"><span className="rec-meta-label">Location</span><span className="rec-meta-value">{p.companyLocation}</span></div>}
+                        {p.contactNumber  && <div className="rec-meta-item"><span className="rec-meta-label">Contact</span><span className="rec-meta-value">{p.contactNumber}</span></div>}
+                        {p.companyWebsite && <div className="rec-meta-item"><span className="rec-meta-label">Website</span><span className="rec-meta-value">{p.companyWebsite}</span></div>}
                         <div className="rec-meta-item">
                           <span className="rec-meta-label">Requested</span>
                           <span className="rec-meta-value">
-                            {rec.verificationRequestedAt
-                              ? new Date(rec.verificationRequestedAt).toLocaleDateString()
-                              : "—"}
+                            {rec.verificationRequestedAt ? new Date(rec.verificationRequestedAt).toLocaleDateString() : "—"}
                           </span>
                         </div>
                       </div>
@@ -834,108 +835,157 @@ const AdminDashboard = () => {
               ── Users Tab ──
           ══════════════════════════════════════════ */}
           {activeTab === "users" && (
-  <div className="section-card">
-    <div className="section-header">
-      <h2 className="section-title"><Users size={20} /> All Users ({filteredUsers.length})</h2>
-      <div className="search-box">
-        <Search size={16} className="search-icon" />
-        <input type="text" placeholder="Search users..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
-      </div>
-    </div>
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title"><Users size={20} /> All Users ({filteredUsers.length})</h2>
+                <div className="search-box">
+                  <Search size={16} className="search-icon" />
+                  <input
+                    type="text"
+                    placeholder="Search users..."
+                    className="search-input"
+                    value={searchTerm}
+                    // FIX: reset pagination on search
+                    onChange={(e) => { setSearchTerm(e.target.value); setUserPage(1); }}
+                  />
+                </div>
+              </div>
 
-    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
-      {[
-        { key: "all",       label: `All (${stats.totalUsers})`,         bg: "#f1f5f9", active: "#0f172a" },
-        { key: "jobseeker", label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
-        { key: "recruiter", label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
-        { key: "business",  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
-      ].map((f) => (
-        <button key={f.key} onClick={() => setRoleFilter(f.key)} style={{ padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px", fontWeight: "600", cursor: "pointer", background: roleFilter === f.key ? f.bg : "#f8fafc", color: roleFilter === f.key ? f.active : "#64748b", outline: roleFilter === f.key ? `2px solid ${f.active}` : "none", transition: "all 0.15s" }}>
-          {f.label}
-        </button>
-      ))}
-    </div>
-
-    {filteredUsers.length === 0 ? (
-      <div className="empty-state">
-        <div className="empty-icon"><Users size={28} color="#cbd5e1" /></div>
-        <div className="empty-title">No users found</div>
-      </div>
-    ) : (
-      <div style={{ overflowX: "auto" }}>
-        <table className="data-table">
-          <thead>
-            <tr>
-              <th>User</th><th>Role</th><th>Profile</th><th>Verification</th><th>Joined</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.slice(0, 50).map((u) => (
-              <tr key={u._id}>
-                <td>
-                  <div className="user-info">
-                    <div className="user-avatar">{u.name?.charAt(0).toUpperCase()}</div>
-                    <div>
-                      <div className="user-name">{u.name}</div>
-                      <div className="user-email">{u.email}</div>
-                    </div>
-                  </div>
-                </td>
-                <td>{getRoleBadge(u.role)}</td>
-                <td>
-                  {u.profileCompleted
-                    ? <span style={{ color: "#10b981", display: "flex", alignItems: "center", gap: "4px" }}><CheckCircle size={14} /> Complete</span>
-                    : <span style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px" }}><Clock size={14} /> Incomplete</span>}
-                </td>
-                <td>
-                  {u.role === "recruiter" && (() => {
-                    const vs = u.recruiterProfile?.verificationStatus || "pending";
-                    const map = {
-                      approved: { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7", icon: <ShieldCheck size={13} />, label: "Verified" },
-                      pending:  { bg: "#fef3c7", color: "#92400e", border: "#fde047", icon: <Clock size={13} />,       label: "Pending" },
-                      rejected: { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5", icon: <XCircle size={13} />,     label: "Rejected" },
-                    };
-                    const s = map[vs] || map.pending;
-                    return (
-                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                        {s.icon} {s.label}
-                      </span>
-                    );
-                  })()}
-
-                  {u.role === "business" && (() => {
-                    const bs = u.businessProfile?.status || "pending";
-                    const map = {
-                      approved: { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd", icon: <CheckCircle size={13} />, label: "Approved" },
-                      pending:  { bg: "#fef3c7", color: "#92400e", border: "#fde047", icon: <Clock size={13} />,       label: "Pending" },
-                      rejected: { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5", icon: <XCircle size={13} />,     label: "Rejected" },
-                    };
-                    const s = map[bs] || map.pending;
-                    return (
-                      <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
-                        {s.icon} {s.label}
-                      </span>
-                    );
-                  })()}
-
-                  {u.role !== "recruiter" && u.role !== "business" && (
-                    <span style={{ color: "#94a3b8", fontSize: "13px" }}>N/A</span>
-                  )}
-                </td>
-                <td style={{ color: "#64748b", fontSize: "13px" }}>{new Date(u.createdAt).toLocaleDateString()}</td>
-                <td>
-                  <button className="btn btn-secondary btn-sm" onClick={() => toast("User details coming soon")}>
-                    <Eye size={14} /> View
+              {/* Role filter pills */}
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "20px" }}>
+                {[
+                  { key: "all",       label: `All (${stats.totalUsers})`,         bg: "#f1f5f9", active: "#0f172a" },
+                  { key: "jobseeker", label: `Job Seekers (${stats.jobseekers})`, bg: "#dbeafe", active: "#1e40af" },
+                  { key: "recruiter", label: `Recruiters (${stats.recruiters})`,  bg: "#fef3c7", active: "#92400e" },
+                  { key: "business",  label: `Businesses (${stats.businesses})`,  bg: "#d1fae5", active: "#065f46" },
+                ].map((f) => (
+                  <button
+                    key={f.key}
+                    // FIX: reset pagination on role filter change
+                    onClick={() => { setRoleFilter(f.key); setUserPage(1); }}
+                    style={{
+                      padding: "6px 14px", borderRadius: "20px", border: "none", fontSize: "13px",
+                      fontWeight: "600", cursor: "pointer",
+                      background: roleFilter === f.key ? f.bg      : "#f8fafc",
+                      color:      roleFilter === f.key ? f.active  : "#64748b",
+                      outline:    roleFilter === f.key ? `2px solid ${f.active}` : "none",
+                      transition: "all 0.15s",
+                    }}
+                  >
+                    {f.label}
                   </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    )}
-  </div>
-)}
+                ))}
+              </div>
+
+              {filteredUsers.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon"><Users size={28} color="#cbd5e1" /></div>
+                  <div className="empty-title">No users found</div>
+                  <div className="empty-desc">Try adjusting your search or filter</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>User</th><th>Role</th><th>Profile</th><th>Verification</th><th>Joined</th><th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* FIX: use pagedUsers instead of hard slice(0,50) */}
+                        {pagedUsers.map((u) => (
+                          <tr key={u._id}>
+                            <td>
+                              <div className="user-info">
+                                <div className="user-avatar">{u.name?.charAt(0).toUpperCase()}</div>
+                                <div>
+                                  <div className="user-name">{u.name}</div>
+                                  <div className="user-email">{u.email}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td>{getRoleBadge(u.role)}</td>
+                            <td>
+                              {u.profileCompleted
+                                ? <span style={{ color: "#10b981", display: "flex", alignItems: "center", gap: "4px" }}><CheckCircle size={14} /> Complete</span>
+                                : <span style={{ color: "#f59e0b", display: "flex", alignItems: "center", gap: "4px" }}><Clock size={14} /> Incomplete</span>}
+                            </td>
+                            <td>
+                              {u.role === "recruiter" && (() => {
+                                const vs  = u.recruiterProfile?.verificationStatus || "pending";
+                                const map = {
+                                  approved: { bg: "#d1fae5", color: "#065f46", border: "#6ee7b7", icon: <ShieldCheck size={13} />, label: "Verified" },
+                                  pending:  { bg: "#fef3c7", color: "#92400e", border: "#fde047", icon: <Clock size={13} />,       label: "Pending" },
+                                  rejected: { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5", icon: <XCircle size={13} />,     label: "Rejected" },
+                                };
+                                const s = map[vs] || map.pending;
+                                return (
+                                  <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    {s.icon} {s.label}
+                                  </span>
+                                );
+                              })()}
+                              {u.role === "business" && (() => {
+                                const bs  = u.businessProfile?.status || "pending";
+                                const map = {
+                                  approved: { bg: "#dbeafe", color: "#1e40af", border: "#93c5fd", icon: <CheckCircle size={13} />, label: "Approved" },
+                                  pending:  { bg: "#fef3c7", color: "#92400e", border: "#fde047", icon: <Clock size={13} />,       label: "Pending" },
+                                  rejected: { bg: "#fee2e2", color: "#991b1b", border: "#fca5a5", icon: <XCircle size={13} />,     label: "Rejected" },
+                                };
+                                const s = map[bs] || map.pending;
+                                return (
+                                  <span style={{ background: s.bg, color: s.color, border: `1px solid ${s.border}`, padding: "4px 12px", borderRadius: "12px", fontSize: "12px", fontWeight: "600", display: "inline-flex", alignItems: "center", gap: "4px" }}>
+                                    {s.icon} {s.label}
+                                  </span>
+                                );
+                              })()}
+                              {u.role !== "recruiter" && u.role !== "business" && (
+                                <span style={{ color: "#94a3b8", fontSize: "13px" }}>N/A</span>
+                              )}
+                            </td>
+                            <td style={{ color: "#64748b", fontSize: "13px" }}>
+                              {new Date(u.createdAt).toLocaleDateString()}
+                            </td>
+                            <td>
+                              {/* FIX: navigate to user detail page instead of dead toast */}
+                              <button
+                                className="btn btn-secondary btn-sm"
+                                onClick={() => navigate(`/admin/users/${u._id}`)}
+                              >
+                                <Eye size={14} /> View
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* FIX: load-more pagination — replaces silent 50-row cap */}
+                  {hasMoreUsers && (
+                    <div className="load-more-wrap">
+                      <div className="load-more-info">
+                        Showing {pagedUsers.length} of {filteredUsers.length} users
+                      </div>
+                      <button
+                        className="btn btn-secondary"
+                        onClick={() => setUserPage(p => p + 1)}
+                      >
+                        Load more ({filteredUsers.length - pagedUsers.length} remaining)
+                      </button>
+                    </div>
+                  )}
+
+                  {!hasMoreUsers && filteredUsers.length > PAGE_SIZE && (
+                    <div className="load-more-wrap">
+                      <div className="load-more-info">All {filteredUsers.length} users loaded</div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
 
           {/* ══════════════════════════════════════════
               ── Jobs Tab ──
@@ -951,12 +1001,12 @@ const AdminDashboard = () => {
                     placeholder="Search jobs…"
                     className="search-input"
                     value={searchTerm}
-                    onChange={e => setSearchTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
               </div>
 
-              {/* Status filter pills — currently visual only; wire up jobStatusFilter state if needed */}
+              {/* Status filter pills */}
               <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
                 {[
                   { key: "all",              label: "All" },
@@ -972,7 +1022,7 @@ const AdminDashboard = () => {
                       padding: "5px 14px", borderRadius: 100, border: "none",
                       fontSize: 12, fontWeight: 600, cursor: "pointer",
                       background: jobStatusFilter === f.key ? "#0f172a" : "#f1f5f9",
-                      color: jobStatusFilter === f.key ? "#ffffff" : "#64748b",
+                      color:      jobStatusFilter === f.key ? "#ffffff" : "#64748b",
                       transition: "all 0.15s",
                     }}
                   >
@@ -985,6 +1035,7 @@ const AdminDashboard = () => {
                 <div className="empty-state">
                   <div className="empty-icon"><Briefcase size={28} color="#cbd5e1" /></div>
                   <div className="empty-title">No jobs found</div>
+                  <div className="empty-desc">Try adjusting your search or status filter</div>
                 </div>
               ) : (
                 filteredJobs.map(job => {
@@ -1006,9 +1057,7 @@ const AdminDashboard = () => {
                     <div
                       key={job._id}
                       className="job-card"
-                      style={{
-                        borderLeft: isRevoked ? "3px solid #ef4444" : isTakenDown ? "3px solid #f59e0b" : undefined,
-                      }}
+                      style={{ borderLeft: isRevoked ? "3px solid #ef4444" : isTakenDown ? "3px solid #f59e0b" : undefined }}
                     >
                       <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
                         <div style={{ flex: 1 }}>
@@ -1039,7 +1088,6 @@ const AdminDashboard = () => {
                         </div>
 
                         <div style={{ display: "flex", gap: 8, flexShrink: 0, flexWrap: "wrap", alignItems: "center" }}>
-                          {/* Revoke — only for live / non-revoked jobs */}
                           {!isRevoked && job.status !== "taken_down" && (
                             <button
                               className="btn btn-danger btn-sm"
@@ -1054,8 +1102,6 @@ const AdminDashboard = () => {
                               {isRevoking ? "Revoking…" : "Revoke"}
                             </button>
                           )}
-
-                          {/* Restore — only for revoked jobs */}
                           {isRevoked && (
                             <button
                               className="btn btn-success btn-sm"
@@ -1088,18 +1134,25 @@ const AdminDashboard = () => {
                 <h2 className="section-title"><Building size={20} /> All Businesses ({filteredBusinesses.length})</h2>
                 <div className="search-box">
                   <Search size={16} className="search-icon" />
-                  <input type="text" placeholder="Search businesses..." className="search-input" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                  <input
+                    type="text"
+                    placeholder="Search businesses..."
+                    className="search-input"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
               {filteredBusinesses.length === 0 ? (
                 <div className="empty-state">
                   <div className="empty-icon"><Building size={28} color="#cbd5e1" /></div>
                   <div className="empty-title">No businesses found</div>
+                  <div className="empty-desc">Try adjusting your search</div>
                 </div>
               ) : (
                 filteredBusinesses.map((biz) => {
-                  const status  = biz.businessProfile?.status || "pending";
-                  const bizName = biz.businessProfile?.businessName || biz.name;
+                  const status     = biz.businessProfile?.status || "pending";
+                  const bizName    = biz.businessProfile?.businessName || biz.name;
                   const isRevoking = revokingId === biz._id;
                   return (
                     <div key={biz._id} className={`business-card ${status}`}>
@@ -1139,8 +1192,12 @@ const AdminDashboard = () => {
               ── Ad Manager Tab ──
           ══════════════════════════════════════════ */}
           {activeTab === "ads" && (
-              <AdminAdsManager token={token} />
+            <AdminAdsManager token={token} />
           )}
+
+          {/* ══════════════════════════════════════════
+              ── Top Companies Tab ──
+          ══════════════════════════════════════════ */}
           {activeTab === "topcompanies" && (
             <AdminTopCompanies token={token} />
           )}
@@ -1177,7 +1234,7 @@ const AdminDashboard = () => {
                   className="modal-input"
                   placeholder="Jane Smith"
                   value={newAdmin.name}
-                  onChange={(e) => setNewAdmin((p) => ({ ...p, name: e.target.value }))}
+                  onChange={(e) => setNewAdmin(p => ({ ...p, name: e.target.value }))}
                   disabled={addingAdmin}
                   autoFocus
                 />
@@ -1189,18 +1246,21 @@ const AdminDashboard = () => {
                   className="modal-input"
                   placeholder="jane@example.com"
                   value={newAdmin.email}
-                  onChange={(e) => setNewAdmin((p) => ({ ...p, email: e.target.value }))}
+                  onChange={(e) => setNewAdmin(p => ({ ...p, email: e.target.value }))}
                   disabled={addingAdmin}
                 />
               </div>
               <div className="modal-field">
-                <label className="modal-label">Phone Number <span style={{ color: "#94a3b8", fontWeight: 400, textTransform: "none" }}>(optional)</span></label>
+                <label className="modal-label">
+                  Phone Number{" "}
+                  <span style={{ color: "#94a3b8", fontWeight: 400, textTransform: "none" }}>(optional)</span>
+                </label>
                 <input
                   type="tel"
                   className="modal-input"
                   placeholder="+91 98765 43210"
                   value={newAdmin.phone}
-                  onChange={(e) => setNewAdmin((p) => ({ ...p, phone: e.target.value }))}
+                  onChange={(e) => setNewAdmin(p => ({ ...p, phone: e.target.value }))}
                   disabled={addingAdmin}
                 />
               </div>

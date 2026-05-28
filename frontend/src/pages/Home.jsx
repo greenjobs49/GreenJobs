@@ -62,7 +62,7 @@ export default function GreenJobsHomepage() {
   const [adsLoading, setAdsLoading]       = useState(true);
   const [topCompanies, setTopCompanies]         = useState([]);
   const [companiesLoading, setCompaniesLoading] = useState(true);
-  const [heroStats, setHeroStats] = useState({ liveJobs: null, companies: null });
+  const [heroStats, setHeroStats] = useState({ liveJobs: null, companies: null, candidates: null })
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -90,23 +90,20 @@ export default function GreenJobsHomepage() {
   fetchTopCompanies();
 }, []);
   useEffect(() => {
-  const fetchStats = async () => {
-    try {
-      const [jobsRes, bizRes] = await Promise.all([
-        axios.get(`${API_BASE_URL}/api/jobs/public?page=1&limit=1`, { timeout: 8000 }).catch(() => null),
-        axios.get(`${API_BASE_URL}/api/profile/business/approved`, { timeout: 6000 }).catch(() => null),
-      ]);
-
-      const liveJobs  = jobsRes?.data?.total ?? null;
-      const companies = Array.isArray(bizRes?.data) ? bizRes.data.length : null;
-
-      setHeroStats({ liveJobs, companies });
-    } catch (err) {
-      console.error("Stats fetch failed:", err);
-    }
-  };
-  fetchStats();
-}, []);
+    const fetchStats = async () => {
+      try {
+        const res = await axios.get(`${API_BASE_URL}/api/admin/stats/public`, { timeout: 8000 }).catch(() => null);
+        setHeroStats({
+          liveJobs:   res?.data?.liveJobs   ?? null,
+          companies:  res?.data?.companies  ?? null,
+          candidates: res?.data?.candidates ?? null,
+        });
+      } catch (err) {
+        console.error("Stats fetch failed:", err);
+      }
+    };
+    fetchStats();
+  }, []);
 
   useEffect(() => {
     const fetchJobs = async () => {
@@ -613,6 +610,7 @@ export default function GreenJobsHomepage() {
                 {[
                   { value: heroStats.liveJobs,  label: "Active Jobs" },
                   { value: heroStats.companies, label: "Green Companies" },
+                  { value: heroStats.candidates, label: "Candidates" },
                 ].map((stat, i) => (
                   <div className="hero-stat" key={i}>
                     {stat.value === null
