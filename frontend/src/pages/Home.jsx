@@ -43,6 +43,8 @@ const normalizeDbAd = (ad) => ({
   cta:         ad.ctaText  || "Learn More",
   image:       ad.imageUrl || "",
   ctaUrl:      ad.ctaUrl   || "/jobs",
+  objectFit:      ad.objectFit      || "cover",
+  objectPosition: ad.objectPosition || "center",
 });
 
 export default function GreenJobsHomepage() {
@@ -333,15 +335,15 @@ export default function GreenJobsHomepage() {
         .fb-banner { position: relative; min-height: 260px; display: flex; align-items: center; overflow: hidden; cursor: pointer; }
         .fb-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: transform 7s ease; transform: scale(1.05); }
         .fb-banner:hover .fb-bg-img { transform: scale(1); }
-        .fb-gradient { position: absolute; inset: 0; z-index: 1; background: linear-gradient(105deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.6) 55%, rgba(0,0,0,0.25) 100%); }
+        .fb-gradient { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.72) 100%); }
         .fb-accent-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-        .fb-inner { position: relative; z-index: 3; max-width: 1320px; margin: 0 auto; padding: 32px 72px; width: 100%; display: flex; align-items: center; gap: 32px; }
-        .fb-copy { flex: 1; }
+        .fb-inner { position: relative; z-index: 3; width: 100%; padding: 48px 72px; display: flex; align-items: flex-end; justify-content: center; min-height: 260px; }
+        .fb-copy { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
         .fb-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
-        .fb-headline { font-size: 30px; font-weight: 900; color: #ffffff; line-height: 1.1; letter-spacing: -1px; margin: 0 0 8px; }
-        .fb-sub { font-size: 14px; color: rgba(255,255,255,0.72); line-height: 1.55; max-width: 480px; margin: 0 0 20px; font-weight: 400; }
+        .fb-headline { font-size: 28px; font-weight: 500; color: #ffffff; line-height: 1.2; letter-spacing: 0px; margin: 0 0 8px; text-shadow: 0 1px 8px rgba(0,0,0,0.5); }
+        .fb-sub { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.55; max-width: 520px; margin: 0 0 18px; font-weight: 400; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
         .fb-btns { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .fb-btn-main { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 10px; font-size: 13px; font-weight: 800; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; letter-spacing: 0.2px; color: white; }
+        .fb-btn-main { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; letter-spacing: 0.1px; color: white; }
         .fb-btn-main:hover { transform: translateY(-2px); filter: brightness(1.1); }
         .fb-btn-ghost { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.09); color: white; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px); font-family: 'Inter', sans-serif; transition: all 0.2s; }
         .fb-btn-ghost:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.55); }
@@ -376,13 +378,48 @@ export default function GreenJobsHomepage() {
         .ad-main-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.14); }
         .ad-main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; transition: transform 0.5s ease; }
         .ad-main-card:hover .ad-main-img { transform: scale(1.04); }
-        .ad-main-overlay { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.55) 45%, rgba(0,0,0,0.15) 100%); }
-        .ad-main-content { position: absolute; bottom: 0; left: 0; right: 0; padding: 28px 28px 32px; z-index: 2; }
+        .ad-main-overlay {
+          position: absolute; inset: 0; z-index: 1;
+          background: linear-gradient(
+            to top,
+            rgba(0,0,0,0.88) 0%,
+            rgba(0,0,0,0.55) 28%,
+            rgba(0,0,0,0.18) 55%,
+            rgba(0,0,0,0.00) 100%
+          );
+        }
+        .ad-main-content {
+          position: absolute; bottom: 0; left: 0; right: 0;
+          z-index: 2;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          padding: 24px 28px 32px;
+        }
         .ad-main-tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; color: white; backdrop-filter: blur(8px); }
-        .ad-main-title { font-size: 26px; font-weight: 800; color: white; margin-bottom: 8px; line-height: 1.2; letter-spacing: -0.5px; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
-        .ad-main-subtitle { font-size: 14px; color: rgba(255,255,255,0.82); margin-bottom: 20px; line-height: 1.5; text-shadow: 0 1px 3px rgba(0,0,0,0.3); }
-        .ad-main-cta { display: inline-flex; align-items: center; gap: 8px; padding: 11px 22px; border-radius: 10px; font-size: 13px; font-weight: 700; border: none; cursor: pointer; transition: all 0.2s; font-family: 'Inter', sans-serif; color: white; box-shadow: 0 4px 14px rgba(0,0,0,0.3); letter-spacing: 0.2px; }
-        .ad-main-cta:hover { transform: translateX(3px); filter: brightness(1.12); box-shadow: 0 6px 20px rgba(0,0,0,0.4); }
+        .ad-main-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 8px; line-height: 1.3; letter-spacing: 0px; text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+        .ad-main-subtitle {
+          font-size: 14px; color: rgba(255,255,255,0.88);
+          margin-bottom: 20px; line-height: 1.5;
+          text-shadow: 0 1px 6px rgba(0,0,0,0.5);
+          max-width: 360px;    /* keeps it readable at width */
+        }
+        .ad-main-cta {
+          display: inline-flex; align-items: center; gap: 7px;
+          padding: 9px 20px; border-radius: 8px;
+          font-size: 13px; font-weight: 500; border: none;
+          cursor: pointer; transition: all 0.2s;
+          font-family: 'Inter', sans-serif; color: white;
+          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+          letter-spacing: 0.1px;
+        }
+        .ad-main-cta:hover {
+          transform: translateY(-2px) scale(1.03);
+          filter: brightness(1.12);
+          box-shadow: 0 8px 28px rgba(0,0,0,0.5);
+        }
         .ads-side-stack { display: flex; flex-direction: column; gap: 14px; }
         .ad-side-card { border-radius: 14px; border: 1.5px solid #e2e8f0; background: white; display: flex; align-items: stretch; overflow: hidden; cursor: pointer; transition: all 0.22s; flex: 1; min-height: 110px; }
         .ad-side-card:hover { border-color: transparent; box-shadow: 0 8px 28px rgba(0,0,0,0.11); transform: translateX(4px); }
@@ -796,7 +833,7 @@ export default function GreenJobsHomepage() {
               return (
                 <div key={activeFB} className="fb-banner fb-anim" onClick={() => handleAdNav(ad.ctaUrl)}>
                   {ad.image && (
-                    <img src={ad.image} alt={ad.title} className="fb-bg-img"
+                    <img src={ad.image} alt={ad.title} className="fb-bg-img" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
                       onError={e => { e.target.style.background = "#1e293b"; }} />
                   )}
                   <div className="fb-gradient" />
@@ -896,7 +933,7 @@ export default function GreenJobsHomepage() {
               {featuredAds.length === 1 ? (
                 <div className="ad-main-card ads-spotlight-single" onClick={() => handleAdNav(featuredAds[0]?.ctaUrl)}>
                   {featuredAds[0].image ? (
-                    <img src={featuredAds[0].image} alt={featuredAds[0].title} className="ad-main-img" onError={e => { e.target.style.display = "none"; }} />
+                    <img src={featuredAds[0].image} alt={featuredAds[0].title} className="ad-main-img" style={{ objectFit: featuredAds[0].objectFit, objectPosition: featuredAds[0].objectPosition }} onError={e => { e.target.style.display = "none"; }} />
                   ) : (
                     <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[0].accent}99, #0f172a)`, zIndex: 0 }} />
                   )}
@@ -917,8 +954,8 @@ export default function GreenJobsHomepage() {
                 <div className="ads-spotlight">
                   <div className="ad-main-card" onClick={() => handleAdNav(featuredAds[activeAd]?.ctaUrl)} key={activeAd}>
                     {featuredAds[activeAd].image ? (
-                      <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" onError={e => { e.target.style.display = "none"; }} />
-                    ) : (
+                      <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" style={{ objectFit: featuredAds[activeAd].objectFit, objectPosition: featuredAds[activeAd].objectPosition }} onError={e => { e.target.style.display = "none"; }} />
+                    ):(
                       <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[activeAd].accent}99, #0f172a)`, zIndex: 0 }} />
                     )}
                     <div className="ad-main-overlay" />
@@ -940,7 +977,7 @@ export default function GreenJobsHomepage() {
                       <div key={i} className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
                         onClick={() => { setActiveAd(i); handleAdNav(ad.ctaUrl); }}>
                         {ad.image ? (
-                          <img src={ad.image} alt={ad.title} className="ad-side-thumb"
+                          <img src={ad.image} alt={ad.title} className="ad-side-thumb" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
                             onError={e => { e.target.style.display = "none"; const p = e.target.nextElementSibling; if (p) p.style.display = "block"; }} />
                         ) : null}
                         <div className="ad-side-thumb-placeholder"

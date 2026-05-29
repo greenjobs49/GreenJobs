@@ -61,8 +61,11 @@ exports.createAd = async (req, res) => {
       bannerType:        bannerType          || "spotlight",
       bannerHeadline:    bannerHeadline?.trim(),
       bannerDescription: bannerDescription?.trim(),
+      imageSize:      req.body.imageSize      || "medium",
+      objectFit:      req.body.objectFit      || "cover",
+      objectPosition: req.body.objectPosition || "center top",
       order:    parseInt(order) || 0,
-isActive: isActive === true || isActive === "true" || isActive === "1",
+      isActive: isActive === true || isActive === "true" || isActive === "1",
       createdBy:         req.user.id,
     });
 
@@ -111,7 +114,7 @@ exports.updateAd = async (req, res) => {
     const fields = [
       "title", "subtitle", "tag", "ctaText", "ctaUrl",
       "accentColor", "bannerType", "bannerHeadline", "bannerDescription",
-      "order", "isActive",
+      "order", "isActive", "imageSize", "objectFit", "objectPosition",
     ];
     // imageUrl handled above via file upload; still allow manual URL if no file
     if (!req.file && req.body.imageUrl !== undefined) {

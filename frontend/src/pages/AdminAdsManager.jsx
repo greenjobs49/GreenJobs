@@ -3,7 +3,7 @@ import axios from "axios";
 import {
   Plus, Edit2, Trash2, Eye, EyeOff, Loader2,
   Image, ExternalLink, X, Check, AlertCircle, Megaphone, ToggleLeft, ToggleRight,
-  ChevronUp, ChevronDown, AlertTriangle, Info,
+  ChevronUp, ChevronDown, Info, Upload, CheckCircle2,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import API_BASE_URL from "../config/api";
@@ -21,56 +21,14 @@ const BANNER_TYPES = [
 /* ─── Image size options per ad type ───────────────────────*/
 const SIZE_OPTIONS = {
   spotlight: [
-    {
-      value: "small",
-      label: "Small",
-      desc: "Compact · fits within card cleanly",
-      objectFit: "contain",
-      objectPosition: "center",
-      previewHeight: 120,
-    },
-    {
-      value: "medium",
-      label: "Medium",
-      desc: "Balanced · recommended default",
-      objectFit: "cover",
-      objectPosition: "center top",
-      previewHeight: 180,
-    },
-    {
-      value: "large",
-      label: "Large",
-      desc: "Full bleed · edge-to-edge fill",
-      objectFit: "cover",
-      objectPosition: "center",
-      previewHeight: 240,
-    },
+    { value: "small",  label: "Small",  desc: "Compact · fits within card cleanly",   objectFit: "contain", objectPosition: "center",     previewHeight: 120 },
+    { value: "medium", label: "Medium", desc: "Balanced · recommended default",        objectFit: "cover",   objectPosition: "center top", previewHeight: 180 },
+    { value: "large",  label: "Large",  desc: "Full bleed · edge-to-edge fill",        objectFit: "cover",   objectPosition: "center",     previewHeight: 240 },
   ],
   full_banner: [
-    {
-      value: "small",
-      label: "Small",
-      desc: "Letterboxed · padding on all sides",
-      objectFit: "contain",
-      objectPosition: "center",
-      previewHeight: 120,
-    },
-    {
-      value: "medium",
-      label: "Medium",
-      desc: "Balanced · recommended default",
-      objectFit: "cover",
-      objectPosition: "center",
-      previewHeight: 160,
-    },
-    {
-      value: "large",
-      label: "Large",
-      desc: "Full hero fill · edge-to-edge",
-      objectFit: "cover",
-      objectPosition: "top center",
-      previewHeight: 220,
-    },
+    { value: "small",  label: "Small",  desc: "Letterboxed · padding on all sides",   objectFit: "contain", objectPosition: "center",     previewHeight: 120 },
+    { value: "medium", label: "Medium", desc: "Balanced · recommended default",        objectFit: "cover",   objectPosition: "center",     previewHeight: 160 },
+    { value: "large",  label: "Large",  desc: "Full hero fill · edge-to-edge",         objectFit: "cover",   objectPosition: "top center", previewHeight: 220 },
   ],
 };
 
@@ -79,6 +37,7 @@ const DEFAULT_FORM = {
   imageUrl: "", accentColor: "#10b981", bannerType: "spotlight",
   bannerHeadline: "", bannerDescription: "", order: 0, isActive: true,
   imageSize: "medium",
+  objectFit: "cover", objectPosition: "center top",
 };
 
 /* ─── Hex → RGB helper ─────────────────────────────────────*/
@@ -87,6 +46,12 @@ function hexToRgb(hex) {
   const g = parseInt(hex.slice(3,5),16);
   const b = parseInt(hex.slice(5,7),16);
   return { r, g, b };
+}
+
+/* ─── Resolve sizeConf from bannerType + imageSize ─────────*/
+function getSizeConf(bannerType, imageSize) {
+  const opts = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
+  return opts.find(o => o.value === imageSize) || opts[1];
 }
 
 /* ─── Field wrapper ────────────────────────────────────────*/
@@ -145,8 +110,7 @@ const ImageSizeSelector = ({ bannerType, value, onChange }) => {
 
 /* ─── Image Preview ────────────────────────────────────────*/
 const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) => {
-  const sizeOpts = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
-  const sizeConf = sizeOpts.find(o => o.value === imageSize) || sizeOpts[1];
+  const sizeConf = getSizeConf(bannerType, imageSize);
   const { r, g, b } = hexToRgb(accentColor || "#10b981");
   const isFullBanner = bannerType === "full_banner";
 
@@ -170,7 +134,6 @@ const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) =
               display:"block",
             }}
           />
-          {/* Gradient overlay for full_banner style */}
           {isFullBanner && (
             <div style={{
               position:"absolute", inset:0,
@@ -178,7 +141,6 @@ const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) =
               pointerEvents:"none",
             }} />
           )}
-          {/* Tag + title overlay */}
           <div style={{ position:"absolute", bottom:10, left:14, pointerEvents:"none" }}>
             {tag && (
               <span style={{ background:accentColor, color:"white", padding:"2px 10px", borderRadius:100, fontSize:10, fontWeight:700 }}>
@@ -200,34 +162,136 @@ const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) =
   );
 };
 
+/* ─── Upload Progress Bar ──────────────────────────────────*/
+const UploadProgress = ({ progress, fileName }) => (
+  <div style={{ marginTop:12, padding:"12px 14px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10 }}>
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+      <span style={{ fontSize:12, fontWeight:600, color:"#065f46" }}>
+        {progress < 100 ? `Uploading ${fileName}…` : "Upload complete ✓"}
+      </span>
+      <span style={{ fontSize:12, fontWeight:700, color:"#10b981" }}>{progress}%</span>
+    </div>
+    <div style={{ height:5, background:"#d1fae5", borderRadius:99, overflow:"hidden" }}>
+      <div style={{
+        height:"100%",
+        width:`${progress}%`,
+        background:"linear-gradient(90deg, #10b981, #059669)",
+        borderRadius:99,
+        transition:"width 0.3s ease",
+      }} />
+    </div>
+  </div>
+);
+
 /* ─── Ad Form Modal ────────────────────────────────────────*/
 const AdFormModal = ({ ad, onClose, onSave, saving }) => {
-  const [form, setForm]           = useState(ad ? { ...DEFAULT_FORM, ...ad } : { ...DEFAULT_FORM });
-  const [imageFile, setImageFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(ad?.imageUrl || "");
+  const [form, setForm] = useState(() =>
+    ad ? { ...DEFAULT_FORM, ...ad } : { ...DEFAULT_FORM }
+  );
+
+  // ✅ FIX 1: Sync ref inline during render — never stale, no useEffect needed
+  const formRef = useRef(form);
+  formRef.current = form;
+
+  /* Upload state */
+  const [uploadedUrl,      setUploadedUrl]      = useState("");
+  const [hasExistingImage, setHasExistingImage] = useState(!!(ad?.imageUrl));
+  const [previewUrl,       setPreviewUrl]       = useState(ad?.imageUrl || "");
+  const [uploadProgress,   setUploadProgress]   = useState(0);
+  const [uploading,        setUploading]        = useState(false);
+  const [uploadedFile,     setUploadedFile]     = useState(null);
+  const [dragOver,         setDragOver]         = useState(false);
+  const [uploadError,      setUploadError]      = useState("");
+
   const fileInputRef = useRef(null);
 
-  const set = (k, v) => setForm(p => ({ ...p, [k]: v }));
+  // ✅ FIX 2: Every setter also syncs ref immediately so handleSaveClick never reads stale values
+  const set = (k, v) => {
+    setForm(prev => {
+      const next = { ...prev, [k]: v };
+      formRef.current = next;
+      return next;
+    });
+  };
 
-  // Reset imageSize when bannerType changes so defaults apply correctly
+  // ✅ FIX 3: applySize syncs ref inside the setForm callback — no race condition
+  const applySize = useCallback((bannerType, imageSize) => {
+    const conf = getSizeConf(bannerType, imageSize);
+    setForm(prev => {
+      const next = {
+        ...prev,
+        imageSize,
+        objectFit:      conf.objectFit,
+        objectPosition: conf.objectPosition,
+      };
+      formRef.current = next;
+      return next;
+    });
+  }, []);
+
+  /* Only reset imageSize to medium on actual bannerType change (not on mount) */
+  const isFirstRender  = useRef(true);
+  const prevBannerType = useRef(form.bannerType);
+
   useEffect(() => {
-    if (!ad) set("imageSize", "medium");
-  }, [form.bannerType]);
+    if (isFirstRender.current) { isFirstRender.current = false; return; }
+    if (prevBannerType.current !== form.bannerType) {
+      prevBannerType.current = form.bannerType;
+      applySize(form.bannerType, "medium");
+    }
+  }, [form.bannerType, applySize]);
+
+  /* ── Upload file handler ── */
+  const uploadFile = (file) => {
+    const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+    if (!allowed.includes(file.type)) {
+      setUploadError("Only JPEG, PNG, or WEBP images are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File size must be under 5MB.");
+      return;
+    }
+    setUploadError("");
+    setUploadedFile(file);
+    const localBlob = URL.createObjectURL(file);
+    setPreviewUrl(localBlob);
+    setUploadedUrl(localBlob);
+    set("imageUrl", localBlob);
+  };
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    setImageFile(file);
-    setPreviewUrl(URL.createObjectURL(file));
+    uploadFile(file);
     e.target.value = "";
   };
 
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+    uploadFile(file);
+  };
+
   const handleRemoveImage = () => {
-    setImageFile(null);
+    setUploadedUrl("");
     setPreviewUrl("");
+    setUploadedFile(null);
+    setUploadProgress(0);
+    setUploadError("");
+    setHasExistingImage(false);
     set("imageUrl", "");
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
+
+  // ✅ FIX 4: Reads from formRef.current which is always up-to-date
+  const handleSaveClick = () => {
+    onSave(formRef.current, uploadedFile);
+  };
+
+  const canSave = !saving && !uploading && form.title.trim();
 
   return (
     <div
@@ -256,7 +320,7 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
               {ad ? "Update the ad details below" : "Fill in the details for the new advertisement"}
             </p>
           </div>
-          <button onClick={onClose} disabled={saving} style={{ background:"none", border:"none", cursor:"pointer", padding:6, borderRadius:6, color:"#94a3b8" }}>
+          <button onClick={onClose} disabled={saving || uploading} style={{ background:"none", border:"none", cursor:"pointer", padding:6, borderRadius:6, color:"#94a3b8" }}>
             <X size={20} />
           </button>
         </div>
@@ -345,43 +409,39 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
 
           {/* ── Image Upload ── */}
           <Field label="Ad Image">
-            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:8, flexWrap:"wrap" }}>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                style={{
-                  display:"flex", alignItems:"center", gap:8,
-                  padding:"9px 16px", border:"1.5px solid #e2e8f0",
-                  borderRadius:9, background:"#f8fafc",
-                  color:"#374151", fontSize:13, fontWeight:700,
-                  cursor:"pointer", fontFamily:"Inter, sans-serif", transition:"all 0.15s",
-                }}
-                onMouseEnter={e => { e.currentTarget.style.borderColor="#10b981"; e.currentTarget.style.background="#f0fdf4"; e.currentTarget.style.color="#065f46"; }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor="#e2e8f0"; e.currentTarget.style.background="#f8fafc"; e.currentTarget.style.color="#374151"; }}
-              >
-                <Image size={14} />
-                {imageFile ? "Replace Image" : (previewUrl ? "Change Image" : "Choose Image")}
-              </button>
 
-              {imageFile && (
-                <span style={{
-                  display:"inline-flex", alignItems:"center", gap:5,
-                  padding:"4px 10px", borderRadius:6,
-                  background:"#f0fdf4", border:"1px solid #bbf7d0",
-                  fontSize:11, fontWeight:600, color:"#065f46",
-                }}>
-                  <Check size={11} />
-                  {imageFile.name.length > 24 ? imageFile.name.slice(0, 24) + "…" : imageFile.name}
-                </span>
-              )}
-
-              {(imageFile || previewUrl) && (
-                <button type="button" onClick={handleRemoveImage} title="Remove image"
-                  style={{ background:"none", border:"none", cursor:"pointer", color:"#dc2626", padding:4, display:"flex", alignItems:"center" }}>
-                  <X size={14} />
-                </button>
-              )}
-
+            {/* Dropzone */}
+            <div
+              onDragOver={e => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onDrop={handleDrop}
+              onClick={() => !uploading && fileInputRef.current?.click()}
+              style={{
+                border:`2px dashed ${dragOver ? "#10b981" : uploadError ? "#ef4444" : "#e2e8f0"}`,
+                borderRadius:12, padding:"24px 20px", textAlign:"center",
+                cursor: uploading ? "wait" : "pointer",
+                background: dragOver ? "#f0fdf4" : uploading ? "#f8fafc" : "white",
+                transition:"all 0.2s", userSelect:"none",
+              }}
+            >
+              <div style={{
+                width:44, height:44, borderRadius:12,
+                background: uploading ? "#f0fdf4" : "#f8fafc",
+                display:"flex", alignItems:"center", justifyContent:"center",
+                margin:"0 auto 10px",
+              }}>
+                {uploading
+                  ? <Loader2 size={20} color="#10b981" style={{ animation:"spin 1s linear infinite" }} />
+                  : previewUrl
+                    ? <CheckCircle2 size={20} color="#10b981" />
+                    : <Upload size={20} color="#94a3b8" />}
+              </div>
+              <div style={{ fontSize:14, fontWeight:700, color:"#0f172a", marginBottom:4 }}>
+                {uploading ? "Uploading…" : previewUrl ? "Image ready — click to replace" : "Drop image here or click to browse"}
+              </div>
+              <div style={{ fontSize:11, color:"#94a3b8" }}>
+                {uploading ? "Please wait" : "JPEG, PNG, WEBP · Max 5MB"}
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -391,19 +451,65 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
               />
             </div>
 
-            {/* URL fallback */}
-            {!imageFile && (
-              <input
-                style={inp}
-                value={form.imageUrl}
-                placeholder="…or paste an image URL"
-                onChange={e => {
-                  set("imageUrl", e.target.value);
-                  setPreviewUrl(e.target.value);
-                }}
-                onFocus={e => e.target.style.borderColor="#10b981"}
-                onBlur={e => e.target.style.borderColor="#e2e8f0"}
-              />
+            {/* Upload progress */}
+            {uploadProgress > 0 && uploadedFile && (
+              <UploadProgress progress={uploadProgress} fileName={uploadedFile.name} />
+            )}
+
+            {/* Upload error */}
+            {uploadError && (
+              <div style={{
+                marginTop:8, padding:"9px 12px", background:"#fef2f2",
+                border:"1px solid #fecaca", borderRadius:8,
+                fontSize:12, color:"#991b1b", display:"flex", alignItems:"center", gap:6,
+              }}>
+                <AlertCircle size={13} /> {uploadError}
+              </div>
+            )}
+
+            {/* Uploaded URL confirmation */}
+            {uploadedUrl && !uploading && (
+              <div style={{
+                marginTop:8, padding:"9px 12px", background:"#f0fdf4",
+                border:"1px solid #bbf7d0", borderRadius:8,
+                fontSize:11, color:"#065f46", display:"flex", alignItems:"flex-start", gap:6,
+              }}>
+                <Check size={13} style={{ flexShrink:0, marginTop:1 }} />
+                <div style={{ flex:1, overflow:"hidden" }}>
+                  <div style={{ fontWeight:700, marginBottom:2 }}>Image selected</div>
+                  <div style={{ wordBreak:"break-all", color:"#6b7280" }}>{uploadedFile?.name || uploadedUrl}</div>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); handleRemoveImage(); }}
+                  style={{ background:"none", border:"none", cursor:"pointer", color:"#dc2626", padding:2, flexShrink:0 }}
+                  title="Remove image"
+                >
+                  <X size={13} />
+                </button>
+              </div>
+            )}
+
+            {/* URL fallback — only shown when no file chosen yet */}
+            {!uploadedUrl && !uploading && (
+              <div style={{ marginTop: 10 }}>
+                <div style={{ fontSize:11, color:"#94a3b8", textAlign:"center", marginBottom:8 }}>
+                  {hasExistingImage ? "— or replace the URL —" : "— or paste a URL —"}
+                </div>
+                <input
+                  style={inp}
+                  value={form.imageUrl}
+                  placeholder="https://example.com/image.jpg"
+                  onClick={e => e.stopPropagation()}
+                  onChange={e => {
+                    const v = e.target.value;
+                    set("imageUrl", v);
+                    setPreviewUrl(v);
+                    setUploadError("");
+                  }}
+                  onFocus={e => e.target.style.borderColor="#10b981"}
+                  onBlur={e => e.target.style.borderColor="#e2e8f0"}
+                />
+              </div>
             )}
           </Field>
 
@@ -416,20 +522,33 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
                 : "Controls how the image fills the spotlight card"
             }
           >
+            {/* ✅ FIX 5: Pass form.imageSize directly — always reflects current state */}
             <ImageSizeSelector
               bannerType={form.bannerType}
-              value={form.imageSize || "medium"}
-              onChange={v => set("imageSize", v)}
+              value={form.imageSize}
+              onChange={v => applySize(form.bannerType, v)}
             />
+            <div style={{
+              marginTop:8, display:"flex", gap:8, fontSize:11, color:"#94a3b8",
+              alignItems:"center", flexWrap:"wrap",
+            }}>
+              <Info size={11} />
+              <span>
+                Saves as <code style={{ background:"#f1f5f9", padding:"1px 5px", borderRadius:4, color:"#475569" }}>object-fit: {form.objectFit}</code>
+                {" · "}
+                <code style={{ background:"#f1f5f9", padding:"1px 5px", borderRadius:4, color:"#475569" }}>object-position: {form.objectPosition}</code>
+              </span>
+            </div>
           </Field>
 
           {/* ── Live Preview ── */}
-          <Field label="Preview">
+          <Field label="Live Preview">
+            {/* ✅ FIX 6: Preview reads from form state directly — updates immediately on size change */}
             <ImagePreview
               src={previewUrl}
               accentColor={form.accentColor}
               bannerType={form.bannerType}
-              imageSize={form.imageSize || "medium"}
+              imageSize={form.imageSize}
               tag={form.tag}
               title={form.title}
             />
@@ -438,7 +557,7 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
               marginTop:8, fontSize:11, color:"#64748b",
             }}>
               <Info size={11} />
-              This is an approximate preview. Actual rendering may vary slightly by screen size.
+              Approximate preview. Actual rendering may vary slightly by screen size.
             </div>
           </Field>
 
@@ -484,7 +603,7 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
 
           {/* Actions */}
           <div style={{ display:"flex", gap:10, justifyContent:"flex-end", marginTop:8 }}>
-            <button onClick={onClose} disabled={saving} style={{
+            <button onClick={onClose} disabled={saving || uploading} style={{
               padding:"9px 18px", border:"1px solid #e2e8f0", borderRadius:8,
               background:"white", color:"#475569", fontSize:13, fontWeight:600,
               cursor:"pointer", fontFamily:"Inter, sans-serif",
@@ -492,21 +611,23 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
               Cancel
             </button>
             <button
-              onClick={() => onSave(form, imageFile)}
-              disabled={saving || !form.title.trim()}
+              onClick={handleSaveClick}
+              disabled={!canSave}
               style={{
                 padding:"9px 20px", border:"none", borderRadius:8,
-                background: saving || !form.title.trim() ? "#94a3b8" : "#10b981",
+                background: !canSave ? "#94a3b8" : "#10b981",
                 color:"white", fontSize:13, fontWeight:700,
-                cursor: saving || !form.title.trim() ? "not-allowed" : "pointer",
+                cursor: !canSave ? "not-allowed" : "pointer",
                 display:"flex", alignItems:"center", gap:6,
                 fontFamily:"Inter, sans-serif",
               }}
             >
               {saving
                 ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} />
-                : <Check size={14} />}
-              {saving ? "Saving…" : ad ? "Save Changes" : "Create Ad"}
+                : uploading
+                  ? <Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} />
+                  : <Check size={14} />}
+              {saving ? "Saving…" : uploading ? "Uploading…" : ad ? "Save Changes" : "Create Ad"}
             </button>
           </div>
 
@@ -526,7 +647,15 @@ const AdCardThumbnail = ({ ad }) => {
       background:bg, display:"flex", alignItems:"center", justifyContent:"center",
     }}>
       {ad.imageUrl ? (
-        <img src={ad.imageUrl} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} onError={e => { e.target.style.display="none"; }} />
+        <img
+          src={ad.imageUrl} alt=""
+          style={{
+            width:"100%", height:"100%",
+            objectFit: ad.objectFit || "cover",
+            objectPosition: ad.objectPosition || "center",
+          }}
+          onError={e => { e.target.style.display="none"; }}
+        />
       ) : (
         <Image size={20} color={ad.accentColor} />
       )}
@@ -578,12 +707,16 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
             <span style={{ padding:"2px 8px", borderRadius:100, fontSize:10, fontWeight:700, background:"#fee2e2", color:"#991b1b" }}>Inactive</span>
           )}
         </div>
-        {ad.tag     && <div style={{ fontSize:11, fontWeight:600, color:ad.accentColor, marginBottom:2 }}>{ad.tag}</div>}
+        {ad.tag      && <div style={{ fontSize:11, fontWeight:600, color:ad.accentColor, marginBottom:2 }}>{ad.tag}</div>}
         {ad.subtitle && <div style={{ fontSize:12, color:"#64748b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ad.subtitle}</div>}
-        <div style={{ display:"flex", gap:12, marginTop:6, fontSize:11, color:"#94a3b8" }}>
+        <div style={{ display:"flex", gap:12, marginTop:6, fontSize:11, color:"#94a3b8", flexWrap:"wrap" }}>
           <span>Order: {ad.order}</span>
           {ad.ctaUrl && <span style={{ display:"flex", alignItems:"center", gap:3 }}><ExternalLink size={10} />{ad.ctaUrl}</span>}
-          {ad.imageUrl && <span style={{ display:"flex", alignItems:"center", gap:3, color:"#10b981" }}><Image size={10} /> Image set</span>}
+          {ad.imageUrl && (
+            <span style={{ display:"flex", alignItems:"center", gap:3, color:"#10b981" }}>
+              <Image size={10} /> {ad.objectFit || "cover"} / {ad.objectPosition || "center"}
+            </span>
+          )}
         </div>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:6, flexShrink:0 }}>
@@ -635,21 +768,33 @@ export default function AdminAdsManager({ token }) {
   const handleSave = async (form, imageFile) => {
     try {
       setSaving(true);
-      const fd = new FormData();
-      const textFields = [
-        "title","subtitle","tag","ctaText","ctaUrl",
-        "accentColor","bannerType","bannerHeadline",
-        "bannerDescription","order","isActive","imageSize",
-      ];
-      textFields.forEach(f => {
-        if (form[f] !== undefined && form[f] !== null) {
-          fd.append(f, typeof form[f] === "boolean" ? String(form[f]) : form[f]);
-        }
-      });
-      if (imageFile)          fd.append("adImage",  imageFile);
-      else if (form.imageUrl) fd.append("imageUrl", form.imageUrl);
 
-      const config = { headers: { Authorization: `Bearer ${token}` } };
+      const fd = new FormData();
+      fd.append("title",             form.title);
+      fd.append("subtitle",          form.subtitle          || "");
+      fd.append("tag",               form.tag               || "");
+      fd.append("ctaText",           form.ctaText           || "Learn More");
+      fd.append("ctaUrl",            form.ctaUrl            || "/jobs");
+      fd.append("accentColor",       form.accentColor       || "#10b981");
+      fd.append("bannerType",        form.bannerType        || "spotlight");
+      fd.append("bannerHeadline",    form.bannerHeadline    || "");
+      fd.append("bannerDescription", form.bannerDescription || "");
+      fd.append("order",             Number(form.order)     || 0);
+      fd.append("isActive",          Boolean(form.isActive));
+      // ✅ FIX 7: These now always carry the correct selected size values
+      fd.append("imageSize",         form.imageSize         || "medium");
+      fd.append("objectFit",         form.objectFit         || "cover");
+      fd.append("objectPosition",    form.objectPosition    || "center top");
+
+      if (imageFile) {
+        fd.append("adImage", imageFile, imageFile.name);
+      } else if (form.imageUrl && !form.imageUrl.startsWith("blob:")) {
+        fd.append("imageUrl", form.imageUrl);
+      }
+
+      const config = {
+        headers: { Authorization: `Bearer ${token}` },
+      };
 
       if (editingAd) {
         await axios.patch(`${API_BASE_URL}/api/ads/admin/${editingAd._id}`, fd, config);
@@ -762,8 +907,11 @@ export default function AdminAdsManager({ token }) {
       }}>
         <AlertCircle size={14} style={{ flexShrink:0, marginTop:1 }} />
         <span>
-          Use the <strong>Image Display Size</strong> option (Small / Medium / Large) when creating or editing an ad to control how the image fits within its slot —
-          no cropping required. <strong>Spotlight cards</strong> and <strong>Full banners</strong> each have their own size behaviour.
+          Images are <strong>uploaded on save</strong> — no blob URLs are stored.
+          Use <strong>Image Display Size</strong> (Small / Medium / Large) to control how the image fills its slot;
+          the resolved <code style={{ background:"#dbeafe", padding:"1px 4px", borderRadius:3 }}>object-fit</code> and{" "}
+          <code style={{ background:"#dbeafe", padding:"1px 4px", borderRadius:3 }}>object-position</code> values are
+          persisted alongside the URL so the frontend renderer applies them exactly.
         </span>
       </div>
 

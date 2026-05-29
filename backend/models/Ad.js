@@ -57,6 +57,20 @@ const adSchema = new mongoose.Schema(
       trim: true,
       maxlength: 600,
     },
+    imageSize: {
+      type: String,
+      enum: ["small", "medium", "large"],
+      default: "medium",
+    },
+    objectFit: {
+      type: String,
+      enum: ["cover", "contain"],
+      default: "cover",
+    },
+    objectPosition: {
+      type: String,
+      default: "center top",
+    },
     // Display order (lower = shown first)
     order: {
       type: Number,
