@@ -489,6 +489,12 @@ const Jobs = () => {
 
   const appliedCount = jobs.filter((j) => appliedJobIds.has(j._id)).length;
 
+  // ── Derived: whether the bottom toolbar row has any buttons ─────────────────
+  const hasBottomRow =
+    (isJobSeeker && appliedCount > 0) ||
+    (isJobSeeker && userSkills.length > 0) ||
+    true; // Filters button is always present
+
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
@@ -533,14 +539,53 @@ const Jobs = () => {
         .hero-title { font-size: 40px; font-weight: 700; color: white; margin-bottom: 16px; line-height: 1.2; }
         .hero-subtitle { font-size: 17px; color: #94a3b8; max-width: 600px; margin: 0 auto 40px; }
 
-        /* ── Search Box ── */
+        /* ── Search Container & Box ── */
         .search-container { max-width: 900px; margin: 0 auto; position: relative; z-index: 10; width: 100%; }
+
+        /*
+         * TWO-ROW LAYOUT FIX
+         * ─────────────────────────────────────────────────────────────────────
+         * Row 1 (.search-row-top):  Search input | Location | Type
+         * Row 2 (.search-row-bottom): Applied | Recommended | Filters | Clear
+         *
+         * Both rows use flex with nowrap so items NEVER spill unpredictably.
+         * On narrow screens each row can wrap individually with full-width items.
+         */
         .search-box {
-          background: white; border-radius: 12px; padding: 8px;
+          background: white;
+          border-radius: 12px;
+          padding: 8px;
           box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-          display: flex; gap: 8px; flex-wrap: wrap; width: 100%;
+          display: flex;
+          flex-direction: column;
+          gap: 6px;
+          width: 100%;
         }
-        .search-input-wrapper { flex: 1 1 200px; position: relative; min-width: 0; }
+
+        /* ── Row 1: text / select inputs ── */
+        .search-row-top {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 8px;
+          align-items: center;
+          width: 100%;
+          min-width: 0;
+        }
+
+        /* ── Row 2: action buttons ── */
+        .search-row-bottom {
+          display: flex;
+          flex-wrap: nowrap;
+          gap: 6px;
+          align-items: center;
+          width: 100%;
+          min-width: 0;
+        }
+
+        /* Spacer that pushes Clear to the right end */
+        .search-row-spacer { flex: 1 1 auto; }
+
+        .search-input-wrapper { flex: 1 1 0; position: relative; min-width: 0; }
         .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); pointer-events: none; z-index: 1; }
         .search-input {
           width: 100%; padding: 13px 14px 13px 44px; font-size: 14px;
@@ -550,11 +595,22 @@ const Jobs = () => {
         }
         .search-input::placeholder { color: #94a3b8; }
         .search-input:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
+
         .search-select {
-          flex: 0 0 auto; padding: 13px 14px; font-size: 14px;
-          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
-          color: #475569; cursor: pointer; outline: none;
-          font-weight: 500; font-family: 'Inter', sans-serif; min-width: 0; max-width: 100%;
+          flex: 0 0 auto;
+          padding: 13px 14px;
+          font-size: 14px;
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          color: #475569;
+          cursor: pointer;
+          outline: none;
+          font-weight: 500;
+          font-family: 'Inter', sans-serif;
+          /* Fixed widths keep row 1 from reflowing when options change */
+          min-width: 130px;
+          max-width: 180px;
         }
         .search-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
 
@@ -562,10 +618,11 @@ const Jobs = () => {
         .filter-toggle-wrap { position: relative; flex: 0 0 auto; }
         .filter-toggle-btn {
           display: flex; align-items: center; gap: 6px;
-          padding: 13px 16px; font-size: 14px; font-weight: 600;
+          padding: 10px 14px; font-size: 13px; font-weight: 600;
           color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
           cursor: pointer; font-family: 'Inter', sans-serif;
           transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap;
+          height: 38px;
         }
         .filter-toggle-btn:hover { border-color: #10b981; color: #10b981; background: #f0fdf4; }
         .filter-toggle-btn.active { border-color: #10b981; color: #10b981; background: #f0fdf4; }
@@ -639,7 +696,7 @@ const Jobs = () => {
         .fp-skill-empty { padding: 16px; text-align: center; font-size: 13px; color: #9ca3af; }
         .fp-skill-footer { padding: 8px 0 0; font-size: 11px; color: #9ca3af; font-weight: 500; text-align: right; }
 
-        /* ── Active filter tags ── */
+        /* ── Active filter tags (below search box) ── */
         .active-filter-tags {
           max-width: 900px; margin: 8px auto 0;
           display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%;
@@ -656,47 +713,54 @@ const Jobs = () => {
         }
         .active-tag button:hover { color: white; }
 
-        /* ── Toolbar buttons (Applied / Recommended / Filters / Clear) ── */
-        .applied-filter-btn {
-          flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
-          padding: 13px 16px; font-size: 14px; font-weight: 600;
-          background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
-          cursor: pointer; font-family: 'Inter', sans-serif;
-          transition: all 0.2s; white-space: nowrap; color: #475569;
+        /* ── Bottom-row action buttons (uniform height 38px) ── */
+        .tb-btn {
+          flex: 0 0 auto;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          height: 38px;
+          padding: 0 14px;
+          font-size: 13px;
+          font-weight: 600;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          cursor: pointer;
+          font-family: 'Inter', sans-serif;
+          transition: all 0.18s;
+          white-space: nowrap;
+          background: #f8fafc;
+          color: #475569;
         }
-        .applied-filter-btn:hover { border-color: #6ee7b7; color: #065f46; background: #f0fdf4; }
-        .applied-filter-btn.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
-        .applied-filter-btn .applied-count {
+        .tb-btn:hover { border-color: #10b981; color: #065f46; background: #f0fdf4; }
+
+        /* Applied variant */
+        .tb-btn--applied { }
+        .tb-btn--applied.tb-btn--on { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+        .tb-btn--applied.tb-btn--on:hover { background: #a7f3d0; border-color: #10b981; }
+        .tb-pill {
+          display: inline-flex; align-items: center; justify-content: center;
+          height: 18px; min-width: 18px; padding: 0 5px;
+          border-radius: 100px; font-size: 11px; font-weight: 700; line-height: 1;
           background: #10b981; color: white;
-          font-size: 11px; font-weight: 700;
-          padding: 1px 7px; border-radius: 100px; line-height: 1.6;
         }
-        .applied-filter-btn.active .applied-count { background: #065f46; }
+        .tb-btn--applied.tb-btn--on .tb-pill { background: #065f46; }
 
-        /* Recommended button — amber accent when inactive */
-        .rec-filter-btn {
-          flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
-          padding: 13px 16px; font-size: 14px; font-weight: 600;
-          background: #fef9ec; border: 1px solid #f0b429; border-radius: 8px;
-          cursor: pointer; font-family: 'Inter', sans-serif;
-          transition: all 0.2s; white-space: nowrap; color: #92400e;
+        /* Recommended variant */
+        .tb-btn--rec {
+          background: #fffbeb;
+          border-color: #f59e0b;
+          color: #92400e;
         }
-        .rec-filter-btn:hover { background: #fef3c7; border-color: #d97706; }
-        .rec-filter-btn.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
-        .rec-filter-btn .rec-count {
-          background: #f0b429; color: white;
-          font-size: 11px; font-weight: 700;
-          padding: 1px 7px; border-radius: 100px; line-height: 1.6;
-        }
-        .rec-filter-btn.active .rec-count { background: #065f46; }
+        .tb-btn--rec:hover { background: #fef3c7; border-color: #d97706; color: #78350f; }
+        .tb-btn--rec.tb-btn--on { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+        .tb-btn--rec.tb-btn--on:hover { background: #a7f3d0; border-color: #10b981; }
+        .tb-btn--rec .tb-pill { background: #f59e0b; color: white; }
+        .tb-btn--rec.tb-btn--on .tb-pill { background: #065f46; }
 
-        .clear-btn {
-          flex: 0 0 auto; padding: 13px 18px; font-size: 14px; font-weight: 600;
-          color: #64748b; background: white; border: 1px solid #e2e8f0; border-radius: 8px;
-          cursor: pointer; display: flex; align-items: center; gap: 6px;
-          transition: background 0.2s, color 0.2s; font-family: 'Inter', sans-serif; white-space: nowrap;
-        }
-        .clear-btn:hover { background: #f8fafc; color: #475569; }
+        /* Clear variant */
+        .tb-btn--clear { background: white; color: #64748b; }
+        .tb-btn--clear:hover { background: #fef2f2; border-color: #fca5a5; color: #dc2626; }
 
         /* ── Stats bar ── */
         .stats-bar { max-width: 1200px; margin: -24px auto 36px; padding: 0 24px; position: relative; z-index: 5; }
@@ -716,7 +780,7 @@ const Jobs = () => {
           color: #065f46; font-size: 12px; font-weight: 700; cursor: pointer;
         }
 
-        /* ── Recommended banner (shown below stats when filter is active) ── */
+        /* ── Recommended banner ── */
         .rec-banner {
           max-width: 1200px; margin: -12px auto 28px; padding: 0 24px;
           animation: fadeUp 0.25s ease;
@@ -778,7 +842,6 @@ const Jobs = () => {
           letter-spacing: 0.3px; text-transform: uppercase;
         }
 
-        /* Match badge on cards */
         .match-badge {
           display: inline-flex; align-items: center; gap: 5px;
           padding: 4px 10px; border-radius: 100px;
@@ -864,12 +927,17 @@ const Jobs = () => {
           .hero-title { font-size: 26px; }
           .hero-subtitle { font-size: 15px; margin-bottom: 28px; }
           .search-container { padding: 0; }
-          .search-box { flex-direction: column; gap: 8px; border-radius: 10px; }
-          .search-input-wrapper { flex: 1 1 auto; width: 100%; }
-          .search-select, .filter-toggle-btn, .clear-btn,
-          .applied-filter-btn, .rec-filter-btn { width: 100%; justify-content: center; }
+          .search-box { gap: 8px; border-radius: 10px; }
+
+          /* On mobile both rows wrap and all children go full width */
+          .search-row-top  { flex-wrap: wrap; }
+          .search-row-bottom { flex-wrap: wrap; }
+          .search-row-top > *,
+          .search-row-bottom > * { flex: 1 1 100% !important; max-width: 100% !important; min-width: 0 !important; }
+          .search-row-spacer { display: none; }
           .filter-toggle-wrap { width: 100%; }
           .filter-panel { right: 0; left: 0; width: auto; }
+
           .stats-bar { margin: -20px auto 28px; padding: 0 16px; }
           .stats-card { padding: 12px 16px; gap: 8px; font-size: 13px; flex-wrap: wrap; }
           .stat-divider { display: none; }
@@ -912,112 +980,126 @@ const Jobs = () => {
             </p>
           </div>
 
+          {/* ─────────────────────────────────────────────────────────────────
+              SEARCH BOX  — two stable rows, no wrapping surprises
+              Row 1: text search | location select | type select
+              Row 2: Applied | Recommended | Filters | [spacer] | Clear
+          ───────────────────────────────────────────────────────────────── */}
           <div className="search-container">
             <div className="search-box">
-              {/* Search input */}
-              <div className="search-input-wrapper">
-                <Search className="search-icon" size={18} color="#94a3b8" />
-                <input
-                  type="text"
-                  name="job-search-input"
-                  autoComplete="off"
-                  placeholder="Job title, company, skill..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="search-input"
-                />
+
+              {/* ── Row 1: inputs ── */}
+              <div className="search-row-top">
+                <div className="search-input-wrapper">
+                  <Search className="search-icon" size={18} color="#94a3b8" />
+                  <input
+                    type="text"
+                    name="job-search-input"
+                    autoComplete="off"
+                    placeholder="Job title, company, skill..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="search-input"
+                  />
+                </div>
+
+                <select
+                  value={selectedLocation}
+                  onChange={(e) => setSelectedLocation(e.target.value)}
+                  className="search-select"
+                  name="location-select"
+                >
+                  <option value="All">All Locations</option>
+                  {locations.map((loc) => (
+                    <option key={loc}>{loc}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={selectedType}
+                  onChange={(e) => setSelectedType(e.target.value)}
+                  className="search-select"
+                  name="type-select"
+                >
+                  <option value="All">All Types</option>
+                  {types.map((type) => (
+                    <option key={type}>{type}</option>
+                  ))}
+                </select>
               </div>
 
-              {/* Location */}
-              <select
-                value={selectedLocation}
-                onChange={(e) => setSelectedLocation(e.target.value)}
-                className="search-select"
-                name="location-select"
-              >
-                <option value="All">All Locations</option>
-                {locations.map((loc) => (
-                  <option key={loc}>{loc}</option>
-                ))}
-              </select>
+              {/* ── Row 2: action buttons ── */}
+              <div className="search-row-bottom">
 
-              {/* Type */}
-              <select
-                value={selectedType}
-                onChange={(e) => setSelectedType(e.target.value)}
-                className="search-select"
-                name="type-select"
-              >
-                <option value="All">All Types</option>
-                {types.map((type) => (
-                  <option key={type}>{type}</option>
-                ))}
-              </select>
+                {/* Applied */}
+                {isJobSeeker && appliedCount > 0 && (
+                  <button
+                    type="button"
+                    className={`tb-btn tb-btn--applied${showAppliedOnly ? " tb-btn--on" : ""}`}
+                    onClick={() => setShowAppliedOnly((p) => !p)}
+                    title={showAppliedOnly ? "Show all jobs" : "Show only jobs you applied to"}
+                  >
+                    <BookmarkCheck size={14} />
+                    Applied
+                    <span className="tb-pill">{appliedCount}</span>
+                  </button>
+                )}
 
-              {/* Applied filter */}
-              {isJobSeeker && appliedCount > 0 && (
-                <button
-                  type="button"
-                  className={`applied-filter-btn${showAppliedOnly ? " active" : ""}`}
-                  onClick={() => setShowAppliedOnly((p) => !p)}
-                  title={showAppliedOnly ? "Show all jobs" : "Show only jobs you applied to"}
-                >
-                  <BookmarkCheck size={15} />
-                  Applied
-                  <span className="applied-count">{appliedCount}</span>
-                </button>
-              )}
+                {/* Recommended */}
+                {isJobSeeker && userSkills.length > 0 && (
+                  <button
+                    type="button"
+                    className={`tb-btn tb-btn--rec${showRecommended ? " tb-btn--on" : ""}`}
+                    onClick={() => setShowRecommended((p) => !p)}
+                    title={showRecommended ? "Show all jobs" : "Show jobs matched to your skills"}
+                  >
+                    <Sparkles size={14} />
+                    Recommended for you
+                    {recommendedJobs.length > 0 && (
+                      <span className="tb-pill">{recommendedJobs.length}</span>
+                    )}
+                  </button>
+                )}
 
-              {/* ── Recommended for You button ── */}
-              {isJobSeeker && userSkills.length > 0 && (
-                <button
-                  type="button"
-                  className={`rec-filter-btn${showRecommended ? " active" : ""}`}
-                  onClick={() => setShowRecommended((p) => !p)}
-                  title={showRecommended ? "Show all jobs" : "Show jobs matched to your skills"}
-                >
-                  Recommended for you
-                  {recommendedJobs.length > 0 && (
-                    <span className="rec-count">{recommendedJobs.length}</span>
-                  )}
-                </button>
-              )}
+                {/* Filters panel */}
+                <div className="filter-toggle-wrap" ref={filterBtnRef}>
+                  <button
+                    type="button"
+                    className={`filter-toggle-btn${showFilters ? " active" : ""}`}
+                    onClick={() => setShowFilters((p) => !p)}
+                  >
+                    <Filter size={14} />
+                    Filters
+                    {advancedActiveCount > 0 && (
+                      <span className="filter-badge">{advancedActiveCount}</span>
+                    )}
+                  </button>
 
-              {/* Filters panel */}
-              <div className="filter-toggle-wrap" ref={filterBtnRef}>
-                <button
-                  type="button"
-                  className={`filter-toggle-btn${showFilters ? " active" : ""}`}
-                  onClick={() => setShowFilters((p) => !p)}
-                >
-                  <Filter size={15} />
-                  Filters
-                  {advancedActiveCount > 0 && (
-                    <span className="filter-badge">{advancedActiveCount}</span>
-                  )}
-                </button>
+                  <FilterPanel
+                    open={showFilters}
+                    onClose={() => setShowFilters(false)}
+                    selectedPay={selectedPay}
+                    setSelectedPay={setSelectedPay}
+                    skillFilter={skillFilter}
+                    setSkillFilter={setSkillFilter}
+                    allSkills={allSkills}
+                    skillCounts={skillCounts}
+                    activeCount={advancedActiveCount}
+                    filterBtnRef={filterBtnRef}
+                  />
+                </div>
 
-                <FilterPanel
-                  open={showFilters}
-                  onClose={() => setShowFilters(false)}
-                  selectedPay={selectedPay}
-                  setSelectedPay={setSelectedPay}
-                  skillFilter={skillFilter}
-                  setSkillFilter={setSkillFilter}
-                  allSkills={allSkills}
-                  skillCounts={skillCounts}
-                  activeCount={advancedActiveCount}
-                  filterBtnRef={filterBtnRef}
-                />
+                {/* Spacer — pushes Clear to the far right */}
+                <div className="search-row-spacer" />
+
+                {/* Clear — only shown when filters are active */}
+                {hasActiveFilters && (
+                  <button type="button" onClick={resetFilters} className="tb-btn tb-btn--clear">
+                    <X size={14} />
+                    Clear all
+                  </button>
+                )}
               </div>
-
-              {/* Clear */}
-              {hasActiveFilters && (
-                <button type="button" onClick={resetFilters} className="clear-btn">
-                  <X size={15} />
-                  Clear
-                </button>
-              )}
             </div>
 
             {/* Active filter tags below search bar */}
@@ -1098,7 +1180,7 @@ const Jobs = () => {
           </div>
         </div>
 
-        {/* ── Recommended banner (shown when filter is active) ── */}
+        {/* ── Recommended banner ── */}
         {showRecommended && !loading && (
           <div className="rec-banner">
             <div className="rec-banner-inner">
@@ -1196,7 +1278,6 @@ const Jobs = () => {
                 const isApplied  = isJobSeeker && appliedJobIds.has(job._id);
                 const typeArr    = getTypeArr(job.type);
 
-                // Match info — only computed when recommended filter is active
                 const { score: matchScore, matchedSkills: cardMatchedSkills } =
                   showRecommended
                     ? computeMatchScore(job, userSkills)
@@ -1208,7 +1289,6 @@ const Jobs = () => {
                     ref={isLast ? sentinelRef : null}
                     className={`job-card${isApplied ? " applied" : ""}${showRecommended ? " recommended" : ""}`}
                   >
-                    {/* Applied ribbon */}
                     {isApplied && (
                       <div className="applied-ribbon">
                         <BookmarkCheck size={10} />
@@ -1216,7 +1296,6 @@ const Jobs = () => {
                       </div>
                     )}
 
-                    {/* Match badge */}
                     {showRecommended && matchScore > 0 && (
                       <div className="match-badge">
                         <Zap size={11} />
@@ -1224,7 +1303,6 @@ const Jobs = () => {
                       </div>
                     )}
 
-                    {/* Tags */}
                     <div className="job-tags" style={{ paddingRight: isApplied ? 72 : 0 }}>
                       {typeArr.map((t) => {
                         const c = TYPE_COLORS[t] || defaultTypeColor;
@@ -1256,7 +1334,6 @@ const Jobs = () => {
 
                     <h2 className="job-title">{job.title}</h2>
 
-                    {/* Company */}
                     <div className="job-company">
                       <div className="company-logo" style={{ overflow: "hidden" }}>
                         {job.business?.profilePicture ? (
@@ -1294,7 +1371,6 @@ const Jobs = () => {
                       </div>
                     </div>
 
-                    {/* Meta */}
                     <div className="job-meta">
                       <div className="job-meta-item">
                         <MapPin size={13} />
@@ -1314,7 +1390,6 @@ const Jobs = () => {
                       )}
                     </div>
 
-                    {/* Skills */}
                     {skills.length > 0 && (
                       <div className="job-skills">
                         {skills.slice(0, SKILL_LIMIT).map((s) => {
@@ -1349,7 +1424,6 @@ const Jobs = () => {
                       </div>
                     )}
 
-                    {/* Matched skills summary */}
                     {showRecommended && cardMatchedSkills.length > 0 && (
                       <div className="matched-summary">
                         <Zap size={11} />
@@ -1364,7 +1438,6 @@ const Jobs = () => {
                       </div>
                     )}
 
-                    {/* Rounds */}
                     {rounds.length > 0 && (
                       <>
                         <div className="job-divider" />
