@@ -732,7 +732,18 @@ const MyApplications = () => {
                             ["Email",      app.applicantSnapshot.email],
                             ["Mobile",     app.applicantSnapshot.mobile],
                             ["City",       app.applicantSnapshot.city],
-                            ["Education",  app.applicantSnapshot.education],
+                            ["Education", Array.isArray(app.applicantSnapshot.education)
+                              ? app.applicantSnapshot.education
+                                  .map(e => [
+                                    e.type?.toUpperCase(),
+                                    e.institution || e.board,
+                                    e.stream,
+                                    e.year,
+                                    e.grade
+                                  ].filter(Boolean).join(", "))
+                                  .join(" | ")
+                              : app.applicantSnapshot.education
+                            ],
                             ["Experience", app.applicantSnapshot.experience],
                           ]
                             .filter(([,v]) => v)

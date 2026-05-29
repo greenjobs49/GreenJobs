@@ -104,7 +104,15 @@ const handleSubmit = async () => {
     { icon: Mail, label: "Email", value: user?.email },
     { icon: Phone, label: "Mobile", value: profile.mobile },
     { icon: MapPin, label: "City", value: profile.city },
-    { icon: GraduationCap, label: "Education", value: profile.education },
+    {
+      icon: GraduationCap,
+      label: "Education",
+      value: Array.isArray(profile.education)
+        ? profile.education
+            .map((e) => [e.institution || e.board, e.stream, e.year].filter(Boolean).join(", "))
+            .join(" · ")
+        : profile.education || null,
+    },
     { icon: Briefcase, label: "Experience", value: profile.experience ? `${profile.experience} year(s)` : null },
     { icon: Linkedin, label: "LinkedIn", value: profile.linkedin, isLink: true },
   ].filter((f) => f.value);

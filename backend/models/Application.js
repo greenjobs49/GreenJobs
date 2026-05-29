@@ -29,7 +29,7 @@ const applicationSchema = new mongoose.Schema(
       email: String,
       mobile: String,
       city: String,
-      education: String,
+      education: mongoose.Schema.Types.Mixed,  // ← accepts String, Array, or Object
       experience: String,
       linkedin: String,
       portfolio: String,

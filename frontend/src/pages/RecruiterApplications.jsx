@@ -52,7 +52,14 @@ const ROUND_TYPE_LABELS = {
   assignment: "Assignment", final_interview: "Final Interview",
   offer: "Offer / Selection", other: "Other",
 };
-
+const formatEducation = (education) => {
+  if (!education) return null;
+  if (Array.isArray(education))
+    return education
+      .map(e => [e.institution || e.board, e.stream, e.year].filter(Boolean).join(", "))
+      .join(" · ");
+  return education;
+};
 /* ─────────────────────────────────────────────────────────────
    ApplicationCard
 ───────────────────────────────────────────────────────────── */
@@ -140,7 +147,7 @@ const ApplicationCard = ({
             {new Date(app.createdAt).toLocaleDateString("en-IN", { day:"2-digit", month:"short", year:"numeric" })}
           </div>
           {snap.experience && <div className="ra-card-sub-item"><Briefcase size={12} />{snap.experience} yrs exp</div>}
-          {snap.education  && <div className="ra-card-sub-item"><GraduationCap size={12} />{snap.education}</div>}
+          {snap.education && <div className="ra-card-sub-item"><GraduationCap size={12} />{formatEducation(snap.education)}</div>}
 
           <div className="ra-stars" onClick={(e) => e.stopPropagation()}>
             {[1,2,3,4,5].map((s) => (
@@ -189,7 +196,7 @@ const ApplicationCard = ({
             <div>
               <div className="ra-section-label">Applicant Profile</div>
               {[
-                [GraduationCap, "Education",  snap.education,                                  false],
+                [GraduationCap, "Education",  formatEducation(snap.education), false],
                 [Briefcase,     "Experience", snap.experience ? `${snap.experience} year(s)` : null, false],
                 [MapPin,        "City",       snap.city,                                       false],
                 [Phone,         "Mobile",     snap.mobile,                                     false],
