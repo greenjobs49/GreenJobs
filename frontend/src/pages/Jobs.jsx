@@ -1053,7 +1053,6 @@ const Jobs = () => {
                     onClick={() => setShowRecommended((p) => !p)}
                     title={showRecommended ? "Show all jobs" : "Show jobs matched to your skills"}
                   >
-                    <Sparkles size={14} />
                     Recommended for you
                     {recommendedJobs.length > 0 && (
                       <span className="tb-pill">{recommendedJobs.length}</span>
