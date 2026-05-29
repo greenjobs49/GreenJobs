@@ -21,9 +21,9 @@ import {
   Filter,
   Check,
   BookmarkCheck,
+  Zap,
 } from "lucide-react";
 import { Link } from "react-router-dom";
-import toast from "react-hot-toast";
 
 const ROUND_TYPE_LABELS = {
   resume_screening: "Resume Screening",
@@ -54,32 +54,47 @@ const TYPE_COLORS = {
 };
 const defaultTypeColor = { bg: "#f1f5f9", color: "#475569" };
 
-// ── Unified Filter Panel ──────────────────────────────────────────────────────
+// ── Compute match score between a job and user skills ─────────────────────────
+const computeMatchScore = (job, userSkills) => {
+  if (!userSkills || userSkills.length === 0) return { score: 0, matchedSkills: [] };
+  const jobSkills = (job.skills || []).map((s) => s.toLowerCase());
+  const matchedSkills = userSkills.filter((us) =>
+    jobSkills.some((js) => js.includes(us.toLowerCase()) || us.toLowerCase().includes(js))
+  );
+  const score =
+    jobSkills.length > 0
+      ? (matchedSkills.length / Math.max(jobSkills.length, userSkills.length)) * 100
+      : 0;
+  return { score: Math.round(score), matchedSkills };
+};
+
+// ── Unified Filter Panel ───────────────────────────────────────────────────────
 const FilterPanel = ({
   open,
   onClose,
-  selectedPay, setSelectedPay,
-  skillFilter, setSkillFilter,
-  allSkills, skillCounts,
-  activeCount,
+  selectedPay,
+  setSelectedPay,
+  skillFilter,
+  setSkillFilter,
+  allSkills,
+  skillCounts,
+  filterBtnRef,
 }) => {
   const [skillSearch, setSkillSearch] = useState("");
   const panelRef = useRef(null);
 
-  // Close on outside click
-useEffect(() => {
-  if (!open) return;
-  const handler = (e) => {
-    if (panelRef.current && !panelRef.current.contains(e.target)) {
-      if (filterBtnRef?.current && filterBtnRef.current.contains(e.target)) return; // ← add this
-      onClose();
-    }
-  };
-  document.addEventListener("mousedown", handler);
-  return () => document.removeEventListener("mousedown", handler);
-}, [open, onClose]);
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e) => {
+      if (panelRef.current && !panelRef.current.contains(e.target)) {
+        if (filterBtnRef?.current && filterBtnRef.current.contains(e.target)) return;
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open, onClose, filterBtnRef]);
 
-  // Reset skill search when panel closes
   useEffect(() => {
     if (!open) setSkillSearch("");
   }, [open]);
@@ -101,7 +116,7 @@ useEffect(() => {
               key={p}
               type="button"
               className={`fp-chip${selectedPay === p ? " active" : ""}`}
-              onClick={() => setSelectedPay(p)}
+              onClick={() => setSelectedPay(selectedPay === p ? "All" : p)}
             >
               {selectedPay === p && <Check size={11} />}
               {p}
@@ -114,20 +129,29 @@ useEffect(() => {
 
       {/* Skills */}
       <div className="fp-section">
-        <div className="fp-section-label" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div
+          className="fp-section-label"
+          style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+        >
           <span>Filter by Skill</span>
           {skillFilter && (
-            <button
-              type="button"
-              className="fp-clear-skill"
-              onClick={() => setSkillFilter("")}
-            >
+            <button type="button" className="fp-clear-skill" onClick={() => setSkillFilter("")}>
               Clear ×
             </button>
           )}
         </div>
         <div className="fp-skill-search-wrap">
-          <Search size={13} color="#9ca3af" style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
+          <Search
+            size={13}
+            color="#9ca3af"
+            style={{
+              position: "absolute",
+              left: 10,
+              top: "50%",
+              transform: "translateY(-50%)",
+              pointerEvents: "none",
+            }}
+          />
           <input
             className="fp-skill-search"
             placeholder="Search skills..."
@@ -145,9 +169,7 @@ useEffect(() => {
                 <div
                   key={skill}
                   className={`fp-skill-option${active ? " active" : ""}`}
-                  onClick={() => {
-                    setSkillFilter(active ? "" : skill);
-                  }}
+                  onClick={() => setSkillFilter(active ? "" : skill)}
                 >
                   <span>{skill}</span>
                   <span style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
@@ -169,21 +191,22 @@ useEffect(() => {
   );
 };
 
+// ── Main Jobs Component ────────────────────────────────────────────────────────
 const Jobs = () => {
   const { user, token } = useAuth();
   const isJobSeeker = user?.role === "jobseeker";
 
-  // ── Core state ────────────────────────────────────────────────────────────
+  // ── Core state ──────────────────────────────────────────────────────────────
   const [jobs, setJobs]       = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
 
-  // ── Pagination ────────────────────────────────────────────────────────────
-  const [page, setPage]       = useState(1);
-  const [hasMore, setHasMore] = useState(false);
+  // ── Pagination ──────────────────────────────────────────────────────────────
+  const [page, setPage]               = useState(1);
+  const [hasMore, setHasMore]         = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  // ── Filters ───────────────────────────────────────────────────────────────
+  // ── Filters ─────────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm]             = useState("");
   const [selectedLocation, setSelectedLocation] = useState("All");
   const [selectedType, setSelectedType]         = useState("All");
@@ -191,22 +214,27 @@ const Jobs = () => {
   const [skillFilter, setSkillFilter]           = useState("");
   const [showFilters, setShowFilters]           = useState(false);
   const [showAppliedOnly, setShowAppliedOnly]   = useState(false);
+  const [showRecommended, setShowRecommended]   = useState(false);
 
-  // ── Applied jobs ──────────────────────────────────────────────────────────
+  // ── Applied jobs ────────────────────────────────────────────────────────────
   const [appliedJobIds, setAppliedJobIds]   = useState(new Set());
   const [appliedLoading, setAppliedLoading] = useState(false);
 
-  // ── UI ────────────────────────────────────────────────────────────────────
+  // ── UI ──────────────────────────────────────────────────────────────────────
   const [expandedRounds, setExpandedRounds] = useState({});
-  const [totalJobCount, setTotalJobCount] = useState(null);
+  const [totalJobCount, setTotalJobCount]   = useState(null);
 
-  // ── Refs ──────────────────────────────────────────────────────────────────
-  const observerRef   = useRef(null);
-  const filterBtnRef  = useRef(null);
+  // ── Refs ────────────────────────────────────────────────────────────────────
+  const observerRef  = useRef(null);
+  const filterBtnRef = useRef(null);
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Fetch applied jobs
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── User skills ─────────────────────────────────────────────────────────────
+  const userSkills = useMemo(() => {
+    if (!isJobSeeker || !user?.jobSeekerProfile?.skills) return [];
+    return user.jobSeekerProfile.skills.filter(Boolean);
+  }, [user, isJobSeeker]);
+
+  // ── Fetch applied jobs ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!token || !isJobSeeker) return;
     const fetchApplied = async () => {
@@ -218,7 +246,9 @@ const Jobs = () => {
         });
         const apps = res.data?.applications || res.data || [];
         const ids = new Set(
-          apps.map((a) => (typeof a.job === "object" ? a.job?._id : a.job)).filter(Boolean)
+          apps
+            .map((a) => (typeof a.job === "object" ? a.job?._id : a.job))
+            .filter(Boolean)
         );
         setAppliedJobIds(ids);
       } catch (err) {
@@ -230,9 +260,7 @@ const Jobs = () => {
     fetchApplied();
   }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // fetchJobs
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── fetchJobs ────────────────────────────────────────────────────────────────
   const fetchJobs = useCallback(async (pageNum = 1, append = false) => {
     try {
       if (!append) setLoading(true);
@@ -245,7 +273,8 @@ const Jobs = () => {
       );
 
       let newJobs = [];
-      if (response.data.jobs && Array.isArray(response.data.jobs)) newJobs = response.data.jobs;
+      if (response.data.jobs && Array.isArray(response.data.jobs))
+        newJobs = response.data.jobs;
       else if (Array.isArray(response.data)) newJobs = response.data;
 
       if (!append && response.data.total) setTotalJobCount(response.data.total);
@@ -286,34 +315,33 @@ const Jobs = () => {
     fetchJobs(1, false);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Infinite scroll
-  // ─────────────────────────────────────────────────────────────────────────
-  const sentinelRef = useCallback((node) => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-      observerRef.current = null;
-    }
-    if (!node || !hasMore || loadingMore) return;
+  // ── Infinite scroll ──────────────────────────────────────────────────────────
+  const sentinelRef = useCallback(
+    (node) => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+        observerRef.current = null;
+      }
+      if (!node || !hasMore || loadingMore) return;
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !loadingMore) {
-          setPage((prev) => {
-            const next = prev + 1;
-            fetchJobs(next, true);
-            return next;
-          });
-        }
-      },
-      { threshold: 0.1, rootMargin: "150px" }
-    );
-    observerRef.current.observe(node);
-  }, [hasMore, loadingMore, fetchJobs]);
+      observerRef.current = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && !loadingMore) {
+            setPage((prev) => {
+              const next = prev + 1;
+              fetchJobs(next, true);
+              return next;
+            });
+          }
+        },
+        { threshold: 0.1, rootMargin: "150px" }
+      );
+      observerRef.current.observe(node);
+    },
+    [hasMore, loadingMore, fetchJobs]
+  );
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Client-side filtering
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Client-side filtering ────────────────────────────────────────────────────
   const filteredJobs = useMemo(() => {
     let filtered = jobs;
 
@@ -343,18 +371,60 @@ const Jobs = () => {
 
     if (skillFilter.trim()) {
       const sq = skillFilter.toLowerCase();
-      filtered = filtered.filter((job) => (job.skills || []).some((s) => s.toLowerCase().includes(sq)));
+      filtered = filtered.filter((job) =>
+        (job.skills || []).some((s) => s.toLowerCase().includes(sq))
+      );
     }
 
     if (showAppliedOnly)
       filtered = filtered.filter((job) => appliedJobIds.has(job._id));
 
-    return filtered;
-  }, [searchTerm, selectedLocation, selectedType, selectedPay, skillFilter, showAppliedOnly, appliedJobIds, jobs]);
+    if (showRecommended) {
+      const withScores = filtered.map((job) => ({
+        job,
+        ...computeMatchScore(job, userSkills),
+      }));
+      return withScores
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .map(({ job }) => job);
+    }
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Helpers
-  // ─────────────────────────────────────────────────────────────────────────
+    return filtered;
+  }, [
+    searchTerm,
+    selectedLocation,
+    selectedType,
+    selectedPay,
+    skillFilter,
+    showAppliedOnly,
+    showRecommended,
+    appliedJobIds,
+    jobs,
+    userSkills,
+  ]);
+
+  // ── Recommended count (for badge on button) ──────────────────────────────────
+  const recommendedJobs = useMemo(() => {
+    if (!isJobSeeker || userSkills.length === 0) return [];
+    return jobs
+      .map((job) => ({ job, ...computeMatchScore(job, userSkills) }))
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 50);
+  }, [jobs, userSkills, isJobSeeker]);
+
+  // ── Derived flags ────────────────────────────────────────────────────────────
+  const hasActiveFilters =
+    searchTerm ||
+    selectedLocation !== "All" ||
+    selectedType !== "All" ||
+    selectedPay !== "All" ||
+    skillFilter ||
+    showAppliedOnly ||
+    showRecommended;
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
   const resetFilters = () => {
     setSearchTerm("");
     setSelectedLocation("All");
@@ -362,6 +432,7 @@ const Jobs = () => {
     setSelectedPay("All");
     setSkillFilter("");
     setShowAppliedOnly(false);
+    setShowRecommended(false);
     setPage(1);
     fetchJobs(1, false);
   };
@@ -369,9 +440,15 @@ const Jobs = () => {
   const toggleRounds = (jobId) =>
     setExpandedRounds((prev) => ({ ...prev, [jobId]: !prev[jobId] }));
 
-  const locations = Array.from(new Set(jobs.map((job) => job.location))).sort().filter(Boolean);
-  const types     = Array.from(new Set(jobs.flatMap((job) => getTypeArr(job.type)))).sort().filter(Boolean);
-  const allSkills = Array.from(new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))).sort();
+  const locations = Array.from(new Set(jobs.map((job) => job.location)))
+    .sort()
+    .filter(Boolean);
+  const types = Array.from(new Set(jobs.flatMap((job) => getTypeArr(job.type))))
+    .sort()
+    .filter(Boolean);
+  const allSkills = Array.from(
+    new Set(jobs.flatMap((j) => j.skills || []).filter(Boolean))
+  ).sort();
 
   const skillCounts = allSkills.reduce((acc, skill) => {
     acc[skill] = jobs.filter((j) =>
@@ -380,29 +457,39 @@ const Jobs = () => {
     return acc;
   }, {});
 
-  // Count active advanced filters (pay + skill)
-  const advancedActiveCount =
-    (selectedPay !== "All" ? 1 : 0) + (skillFilter ? 1 : 0);
-
-  const hasActiveFilters =
-    searchTerm || selectedLocation !== "All" || selectedType !== "All" ||
-    selectedPay !== "All" || skillFilter || showAppliedOnly;
+  const advancedActiveCount = (selectedPay !== "All" ? 1 : 0) + (skillFilter ? 1 : 0);
 
   const formatPay = (job) => {
-    if (!job.isPaid) return { label: "Unpaid", color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0" };
+    if (!job.isPaid)
+      return { label: "Unpaid", color: "#64748b", bg: "#f1f5f9", border: "#e2e8f0" };
     if (job.stipend) {
-      const period = { monthly: "/mo", yearly: "/yr", weekly: "/wk", hourly: "/hr", project: "/project" };
-      return { label: `₹${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(), color: "#065f46", bg: "#d1fae5", border: "#6ee7b7" };
+      const period = {
+        monthly: "/mo",
+        yearly: "/yr",
+        weekly: "/wk",
+        hourly: "/hr",
+        project: "/project",
+      };
+      return {
+        label: `₹${job.stipend} ${period[job.stipendPeriod] || ""}`.trim(),
+        color: "#065f46",
+        bg: "#d1fae5",
+        border: "#6ee7b7",
+      };
     }
-    if (job.salary) return { label: job.salary.startsWith("₹") ? job.salary : `₹${job.salary}`, color: "#065f46", bg: "#d1fae5", border: "#6ee7b7" };
+    if (job.salary)
+      return {
+        label: job.salary.startsWith("₹") ? job.salary : `₹${job.salary}`,
+        color: "#065f46",
+        bg: "#d1fae5",
+        border: "#6ee7b7",
+      };
     return { label: "Paid", color: "#065f46", bg: "#d1fae5", border: "#6ee7b7" };
   };
 
   const appliedCount = jobs.filter((j) => appliedJobIds.has(j._id)).length;
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // Render
-  // ─────────────────────────────────────────────────────────────────────────
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <>
       <style>{`
@@ -416,9 +503,11 @@ const Jobs = () => {
         @keyframes spin   { to { transform: rotate(360deg); } }
         @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes panelIn { from { opacity: 0; transform: translateY(-8px) scale(0.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
         .jobs-wrapper { background: #f8fafc; min-height: 100vh; width: 100%; overflow-x: hidden; }
 
+        /* ── Hero ── */
         .hero-section {
           background: linear-gradient(160deg, #052e16 0%, #14532d 50%, #166534 100%);
           padding: 64px 24px 88px; position: relative; overflow: visible; width: 100%;
@@ -469,7 +558,7 @@ const Jobs = () => {
         }
         .search-select:focus { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.1); }
 
-        /* ── Filter Toggle Button (unified) ── */
+        /* ── Filter Toggle Button ── */
         .filter-toggle-wrap { position: relative; flex: 0 0 auto; }
         .filter-toggle-btn {
           display: flex; align-items: center; gap: 6px;
@@ -477,7 +566,6 @@ const Jobs = () => {
           color: #475569; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px;
           cursor: pointer; font-family: 'Inter', sans-serif;
           transition: border-color 0.2s, color 0.2s, background 0.2s; white-space: nowrap;
-          position: relative;
         }
         .filter-toggle-btn:hover { border-color: #10b981; color: #10b981; background: #f0fdf4; }
         .filter-toggle-btn.active { border-color: #10b981; color: #10b981; background: #f0fdf4; }
@@ -485,11 +573,10 @@ const Jobs = () => {
           min-width: 18px; height: 18px; padding: 0 5px;
           background: #10b981; color: white;
           font-size: 11px; font-weight: 700; border-radius: 100px;
-          display: inline-flex; align-items: center; justify-content: center;
-          line-height: 1;
+          display: inline-flex; align-items: center; justify-content: center; line-height: 1;
         }
 
-        /* ── Unified Filter Panel ── */
+        /* ── Filter Panel ── */
         .filter-panel {
           position: absolute; top: calc(100% + 8px); right: 0; z-index: 99999;
           background: white; border: 1.5px solid #e2e8f0; border-radius: 14px;
@@ -512,7 +599,7 @@ const Jobs = () => {
         }
         .fp-chip:hover { border-color: #6ee7b7; color: #065f46; background: #f0fdf4; }
         .fp-chip.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
-        .fp-divider { height: 1px; background: #f1f5f9; margin: 0; }
+        .fp-divider { height: 1px; background: #f1f5f9; }
         .fp-clear-skill {
           font-size: 11px; font-weight: 600; color: #9ca3af;
           background: none; border: none; cursor: pointer;
@@ -550,11 +637,9 @@ const Jobs = () => {
         }
         .fp-skill-option.active .fp-skill-count { background: rgba(16,185,129,0.15); color: #065f46; }
         .fp-skill-empty { padding: 16px; text-align: center; font-size: 13px; color: #9ca3af; }
-        .fp-skill-footer {
-          padding: 8px 0 0; font-size: 11px; color: #9ca3af; font-weight: 500; text-align: right;
-        }
+        .fp-skill-footer { padding: 8px 0 0; font-size: 11px; color: #9ca3af; font-weight: 500; text-align: right; }
 
-        /* ── Active filter tags (shown in search bar area) ── */
+        /* ── Active filter tags ── */
         .active-filter-tags {
           max-width: 900px; margin: 8px auto 0;
           display: flex; flex-wrap: wrap; gap: 6px; align-items: center; width: 100%;
@@ -571,7 +656,7 @@ const Jobs = () => {
         }
         .active-tag button:hover { color: white; }
 
-        /* ── Applied filter button ── */
+        /* ── Toolbar buttons (Applied / Recommended / Filters / Clear) ── */
         .applied-filter-btn {
           flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
           padding: 13px 16px; font-size: 14px; font-weight: 600;
@@ -587,6 +672,23 @@ const Jobs = () => {
           padding: 1px 7px; border-radius: 100px; line-height: 1.6;
         }
         .applied-filter-btn.active .applied-count { background: #065f46; }
+
+        /* Recommended button — amber accent when inactive */
+        .rec-filter-btn {
+          flex: 0 0 auto; display: flex; align-items: center; gap: 7px;
+          padding: 13px 16px; font-size: 14px; font-weight: 600;
+          background: #fef9ec; border: 1px solid #f0b429; border-radius: 8px;
+          cursor: pointer; font-family: 'Inter', sans-serif;
+          transition: all 0.2s; white-space: nowrap; color: #92400e;
+        }
+        .rec-filter-btn:hover { background: #fef3c7; border-color: #d97706; }
+        .rec-filter-btn.active { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+        .rec-filter-btn .rec-count {
+          background: #f0b429; color: white;
+          font-size: 11px; font-weight: 700;
+          padding: 1px 7px; border-radius: 100px; line-height: 1.6;
+        }
+        .rec-filter-btn.active .rec-count { background: #065f46; }
 
         .clear-btn {
           flex: 0 0 auto; padding: 13px 18px; font-size: 14px; font-weight: 600;
@@ -614,6 +716,30 @@ const Jobs = () => {
           color: #065f46; font-size: 12px; font-weight: 700; cursor: pointer;
         }
 
+        /* ── Recommended banner (shown below stats when filter is active) ── */
+        .rec-banner {
+          max-width: 1200px; margin: -12px auto 28px; padding: 0 24px;
+          animation: fadeUp 0.25s ease;
+        }
+        .rec-banner-inner {
+          display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+          background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+          border: 1.5px solid #6ee7b7; border-radius: 12px; padding: 14px 18px;
+        }
+        .rec-banner-icon {
+          width: 36px; height: 36px; border-radius: 10px; flex-shrink: 0;
+          background: linear-gradient(135deg, #10b981, #059669);
+          display: flex; align-items: center; justify-content: center;
+        }
+        .rec-banner-text { flex: 1; min-width: 0; }
+        .rec-banner-title { font-size: 14px; font-weight: 700; color: #065f46; }
+        .rec-banner-sub { font-size: 12px; color: #10b981; margin-top: 2px; }
+        .rec-skills-pill {
+          display: inline-flex; align-items: center; gap: 6px;
+          padding: 5px 12px; background: white; border: 1px solid #6ee7b7;
+          border-radius: 100px; font-size: 12px; font-weight: 600; color: #065f46; flex-shrink: 0;
+        }
+
         /* ── Jobs grid ── */
         .jobs-container { max-width: 1200px; margin: 0 auto; padding: 0 24px 80px; width: 100%; }
         .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px; }
@@ -630,6 +756,17 @@ const Jobs = () => {
           background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 80px);
         }
         .job-card.applied:hover { border-color: #10b981; box-shadow: 0 4px 24px rgba(16,185,129,0.15); }
+        .job-card.recommended {
+          border-color: #6ee7b7;
+          background: linear-gradient(160deg, #f0fdf4 0%, #ffffff 70px);
+        }
+        .job-card.recommended::before {
+          content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+          background: linear-gradient(90deg, #10b981, #34d399, #10b981);
+          background-size: 200% 100%;
+          animation: shimmer 2.5s linear infinite;
+        }
+        .job-card.recommended:hover { border-color: #10b981; box-shadow: 0 6px 28px rgba(16,185,129,0.15); }
 
         .applied-ribbon {
           position: absolute; top: 0; right: 0;
@@ -639,6 +776,16 @@ const Jobs = () => {
           border-radius: 0 14px 0 10px;
           display: flex; align-items: center; gap: 4px;
           letter-spacing: 0.3px; text-transform: uppercase;
+        }
+
+        /* Match badge on cards */
+        .match-badge {
+          display: inline-flex; align-items: center; gap: 5px;
+          padding: 4px 10px; border-radius: 100px;
+          background: linear-gradient(135deg, #10b981, #059669);
+          color: white; font-size: 11px; font-weight: 700;
+          margin-bottom: 8px; align-self: flex-start;
+          box-shadow: 0 2px 8px rgba(16,185,129,0.25);
         }
 
         .job-tags { display: flex; gap: 5px; margin-bottom: 14px; flex-wrap: wrap; align-items: center; }
@@ -667,7 +814,16 @@ const Jobs = () => {
         .job-skill-pill { padding: 3px 10px; border-radius: 100px; font-size: 12px; font-weight: 500; background: #f1f5f9; border: 1px solid #e2e8f0; color: #475569; cursor: pointer; transition: border-color 0.15s, color 0.15s; white-space: nowrap; }
         .job-skill-pill:hover { border-color: #10b981; color: #10b981; }
         .job-skill-pill.highlighted { background: #d1fae5; border-color: #6ee7b7; color: #065f46; }
+        .job-skill-pill.matched { background: #d1fae5; border-color: #6ee7b7; color: #065f46; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+        .job-skill-pill.matched:hover { border-color: #10b981; background: #a7f3d0; }
         .job-skill-more { font-size: 12px; color: #94a3b8; padding: 3px 0; }
+        .matched-summary {
+          display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+          font-size: 12px; color: #10b981; font-weight: 600;
+          padding: 8px 10px; background: #f0fdf4; border-radius: 8px;
+          margin-bottom: 14px; border: 1px solid #d1fae5;
+        }
+        .matched-summary-list { color: #065f46; font-weight: 700; }
         .job-divider { height: 1px; background: #f1f5f9; margin: 12px 0; }
         .job-rounds-toggle { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border-radius: 8px; background: #f8fafc; border: 1px solid #e2e8f0; cursor: pointer; font-size: 13px; font-weight: 600; color: #475569; font-family: 'Inter', sans-serif; transition: all 0.2s; width: 100%; text-align: left; }
         .job-rounds-toggle:hover { background: #f0fdf4; border-color: #6ee7b7; color: #065f46; }
@@ -681,9 +837,10 @@ const Jobs = () => {
         .job-actions { display: flex; gap: 10px; padding-top: 14px; margin-top: auto; }
         .btn-view { flex: 1; background: #0f172a; color: white; padding: 12px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: background 0.2s; text-decoration: none; font-family: 'Inter', sans-serif; white-space: nowrap; }
         .btn-view:hover { background: #10b981; }
-        .job-card.applied .btn-view { background: #059669; }
+        .job-card.applied .btn-view, .job-card.recommended.applied .btn-view { background: #059669; }
         .job-card.applied .btn-view:hover { background: #047857; }
 
+        /* ── States ── */
         .loading-state, .error-state, .empty-state { text-align: center; padding: 80px 24px; }
         .state-icon { width: 64px; height: 64px; margin: 0 auto 24px; background: #f1f5f9; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
         .state-title { font-size: 20px; font-weight: 600; color: #0f172a; margin-bottom: 8px; }
@@ -697,6 +854,7 @@ const Jobs = () => {
         .load-more-text { font-size: 14px; color: #94a3b8; margin-top: 10px; }
         .spinner { animation: spin 1s linear infinite; }
 
+        /* ── Responsive ── */
         @media (max-width: 900px) {
           .hero-title { font-size: 32px; }
           .jobs-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
@@ -708,7 +866,8 @@ const Jobs = () => {
           .search-container { padding: 0; }
           .search-box { flex-direction: column; gap: 8px; border-radius: 10px; }
           .search-input-wrapper { flex: 1 1 auto; width: 100%; }
-          .search-select, .filter-toggle-btn, .clear-btn, .applied-filter-btn { width: 100%; justify-content: center; }
+          .search-select, .filter-toggle-btn, .clear-btn,
+          .applied-filter-btn, .rec-filter-btn { width: 100%; justify-content: center; }
           .filter-toggle-wrap { width: 100%; }
           .filter-panel { right: 0; left: 0; width: auto; }
           .stats-bar { margin: -20px auto 28px; padding: 0 16px; }
@@ -720,6 +879,7 @@ const Jobs = () => {
           .job-card { padding: 18px; }
           .job-title { font-size: 16px; }
           .job-meta { gap: 8px; }
+          .rec-banner { padding: 0 16px; }
         }
         @media (max-width: 480px) {
           .hero-title { font-size: 22px; }
@@ -733,17 +893,19 @@ const Jobs = () => {
       <Navbar />
 
       <div className="jobs-wrapper">
+        {/* ── Hero ── */}
         <div className="hero-section">
           <div className="hero-glow" />
           <div className="hero-container">
             <div className="hero-badge">
-            {hasActiveFilters
-              ? `${filteredJobs.length} matching positions`
-              : totalJobCount !== null
-                ? `${totalJobCount} open positions`
-                : `${filteredJobs.length} open positions`
-            }
-          </div>
+              {showRecommended
+                ? `${filteredJobs.length} recommended position${filteredJobs.length !== 1 ? "s" : ""}`
+                : hasActiveFilters
+                  ? `${filteredJobs.length} matching position${filteredJobs.length !== 1 ? "s" : ""}`
+                  : totalJobCount !== null
+                    ? `${totalJobCount} open positions`
+                    : `${filteredJobs.length} open positions`}
+            </div>
             <h1 className="hero-title">Find your next opportunity</h1>
             <p className="hero-subtitle">
               Discover verified roles — see the full hiring process before you apply
@@ -752,6 +914,7 @@ const Jobs = () => {
 
           <div className="search-container">
             <div className="search-box">
+              {/* Search input */}
               <div className="search-input-wrapper">
                 <Search className="search-icon" size={18} color="#94a3b8" />
                 <input
@@ -765,16 +928,33 @@ const Jobs = () => {
                 />
               </div>
 
-              <select value={selectedLocation} onChange={(e) => setSelectedLocation(e.target.value)} className="search-select" name="location-select">
+              {/* Location */}
+              <select
+                value={selectedLocation}
+                onChange={(e) => setSelectedLocation(e.target.value)}
+                className="search-select"
+                name="location-select"
+              >
                 <option value="All">All Locations</option>
-                {locations.map((loc) => <option key={loc}>{loc}</option>)}
+                {locations.map((loc) => (
+                  <option key={loc}>{loc}</option>
+                ))}
               </select>
 
-              <select value={selectedType} onChange={(e) => setSelectedType(e.target.value)} className="search-select" name="type-select">
+              {/* Type */}
+              <select
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="search-select"
+                name="type-select"
+              >
                 <option value="All">All Types</option>
-                {types.map((type) => <option key={type}>{type}</option>)}
+                {types.map((type) => (
+                  <option key={type}>{type}</option>
+                ))}
               </select>
 
+              {/* Applied filter */}
               {isJobSeeker && appliedCount > 0 && (
                 <button
                   type="button"
@@ -788,7 +968,22 @@ const Jobs = () => {
                 </button>
               )}
 
-              {/* ── Unified Filters button + panel ── */}
+              {/* ── Recommended for You button ── */}
+              {isJobSeeker && userSkills.length > 0 && (
+                <button
+                  type="button"
+                  className={`rec-filter-btn${showRecommended ? " active" : ""}`}
+                  onClick={() => setShowRecommended((p) => !p)}
+                  title={showRecommended ? "Show all jobs" : "Show jobs matched to your skills"}
+                >
+                  Recommended for you
+                  {recommendedJobs.length > 0 && (
+                    <span className="rec-count">{recommendedJobs.length}</span>
+                  )}
+                </button>
+              )}
+
+              {/* Filters panel */}
               <div className="filter-toggle-wrap" ref={filterBtnRef}>
                 <button
                   type="button"
@@ -812,9 +1007,11 @@ const Jobs = () => {
                   allSkills={allSkills}
                   skillCounts={skillCounts}
                   activeCount={advancedActiveCount}
+                  filterBtnRef={filterBtnRef}
                 />
               </div>
 
+              {/* Clear */}
               {hasActiveFilters && (
                 <button type="button" onClick={resetFilters} className="clear-btn">
                   <X size={15} />
@@ -823,20 +1020,33 @@ const Jobs = () => {
               )}
             </div>
 
-            {/* Active filter tags shown below the search bar */}
-            {(selectedPay !== "All" || skillFilter) && (
+            {/* Active filter tags below search bar */}
+            {(selectedPay !== "All" || skillFilter || showRecommended) && (
               <div className="active-filter-tags">
+                {showRecommended && (
+                  <span className="active-tag">
+                    <Sparkles size={11} />
+                    Recommended
+                    <button type="button" onClick={() => setShowRecommended(false)}>
+                      <X size={11} />
+                    </button>
+                  </span>
+                )}
                 {selectedPay !== "All" && (
                   <span className="active-tag">
                     {selectedPay}
-                    <button type="button" onClick={() => setSelectedPay("All")}><X size={11} /></button>
+                    <button type="button" onClick={() => setSelectedPay("All")}>
+                      <X size={11} />
+                    </button>
                   </span>
                 )}
                 {skillFilter && (
                   <span className="active-tag">
                     <Code2 size={11} />
                     {skillFilter}
-                    <button type="button" onClick={() => setSkillFilter("")}><X size={11} /></button>
+                    <button type="button" onClick={() => setSkillFilter("")}>
+                      <X size={11} />
+                    </button>
                   </span>
                 )}
               </div>
@@ -844,24 +1054,38 @@ const Jobs = () => {
           </div>
         </div>
 
+        {/* ── Stats bar ── */}
         <div className="stats-bar">
           <div className="stats-card">
-            <span className="stat-item"><span className="stat-value">{hasActiveFilters
-              ? filteredJobs.length
-              : totalJobCount !== null
-                ? totalJobCount
-                : filteredJobs.length
-            }</span> jobs</span>
+            <span className="stat-item">
+              <span className="stat-value">
+                {hasActiveFilters
+                  ? filteredJobs.length
+                  : totalJobCount !== null
+                    ? totalJobCount
+                    : filteredJobs.length}
+              </span>{" "}
+              jobs
+            </span>
             <span className="stat-divider">|</span>
-            <span className="stat-item"><span className="stat-value">{locations.length}</span> locations</span>
+            <span className="stat-item">
+              <span className="stat-value">{locations.length}</span> locations
+            </span>
             <span className="stat-divider">|</span>
-            <span className="stat-item"><span className="stat-value">{types.length}</span> types</span>
+            <span className="stat-item">
+              <span className="stat-value">{types.length}</span> types
+            </span>
             <span className="stat-divider">|</span>
-            <span className="stat-item"><span className="stat-value">{allSkills.length}</span> skills</span>
+            <span className="stat-item">
+              <span className="stat-value">{allSkills.length}</span> skills
+            </span>
             {isJobSeeker && appliedCount > 0 && (
               <>
                 <span className="stat-divider">|</span>
-                <span className="applied-stat" onClick={() => setShowAppliedOnly((p) => !p)}>
+                <span
+                  className="applied-stat"
+                  onClick={() => setShowAppliedOnly((p) => !p)}
+                >
                   <BookmarkCheck size={12} />
                   {appliedCount} applied
                 </span>
@@ -874,38 +1098,92 @@ const Jobs = () => {
           </div>
         </div>
 
+        {/* ── Recommended banner (shown when filter is active) ── */}
+        {showRecommended && !loading && (
+          <div className="rec-banner">
+            <div className="rec-banner-inner">
+              <div className="rec-banner-icon">
+                <Zap size={18} color="white" />
+              </div>
+              <div className="rec-banner-text">
+                <div className="rec-banner-title">
+                  {filteredJobs.length > 0
+                    ? `${filteredJobs.length} job${filteredJobs.length !== 1 ? "s" : ""} matched to your skills`
+                    : "No skill matches found"}
+                </div>
+                <div className="rec-banner-sub">
+                  Sorted by best match · based on your profile skills
+                </div>
+              </div>
+              {userSkills.length > 0 && (
+                <div className="rec-skills-pill">
+                  <Code2 size={12} />
+                  {userSkills.slice(0, 3).join(", ")}
+                  {userSkills.length > 3 ? ` +${userSkills.length - 3} more` : ""}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ── Jobs grid ── */}
         <div className="jobs-container">
           {loading ? (
             <div className="loading-state">
-              <div className="state-icon"><Loader2 size={32} color="#10b981" className="spinner" /></div>
+              <div className="state-icon">
+                <Loader2 size={32} color="#10b981" className="spinner" />
+              </div>
               <p className="state-title">Finding opportunities...</p>
             </div>
-
           ) : error && jobs.length === 0 ? (
             <div className="error-state">
-              <div className="state-icon"><Briefcase size={32} color="#cbd5e1" /></div>
+              <div className="state-icon">
+                <Briefcase size={32} color="#cbd5e1" />
+              </div>
               <h3 className="state-title">{error}</h3>
-              <p className="state-description">Ensure your backend is running and jobs are approved</p>
+              <p className="state-description">
+                Ensure your backend is running and jobs are approved
+              </p>
               <div className="state-actions">
-                <button type="button" onClick={() => window.location.reload()} className="btn-action">Reload</button>
-                <button type="button" onClick={() => fetchJobs(1, false)} className="btn-action btn-action-secondary">Retry</button>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="btn-action"
+                >
+                  Reload
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fetchJobs(1, false)}
+                  className="btn-action btn-action-secondary"
+                >
+                  Retry
+                </button>
               </div>
             </div>
-
           ) : filteredJobs.length === 0 ? (
             <div className="empty-state">
-              <div className="state-icon"><Search size={32} color="#cbd5e1" /></div>
+              <div className="state-icon">
+                <Search size={32} color="#cbd5e1" />
+              </div>
               <h3 className="state-title">
-                {showAppliedOnly ? "You haven't applied to any jobs yet" : "No jobs match your search"}
+                {showRecommended
+                  ? "No skill matches found"
+                  : showAppliedOnly
+                    ? "You haven't applied to any jobs yet"
+                    : "No jobs match your search"}
               </h3>
               <p className="state-description">
-                {showAppliedOnly ? "Browse open positions and start applying" : "Try different keywords or clear your filters"}
+                {showRecommended
+                  ? "No jobs currently match your profile skills. Try browsing all jobs or update your skills."
+                  : showAppliedOnly
+                    ? "Browse open positions and start applying"
+                    : "Try different keywords or clear your filters"}
               </p>
               <button type="button" onClick={resetFilters} className="btn-action">
-                {showAppliedOnly ? "Browse All Jobs" : "Clear Filters"}
+                {showRecommended || showAppliedOnly ? "Browse All Jobs" : "Clear Filters"}
               </button>
             </div>
-
           ) : (
             <div className="jobs-grid">
               {filteredJobs.map((job, index) => {
@@ -918,12 +1196,19 @@ const Jobs = () => {
                 const isApplied  = isJobSeeker && appliedJobIds.has(job._id);
                 const typeArr    = getTypeArr(job.type);
 
+                // Match info — only computed when recommended filter is active
+                const { score: matchScore, matchedSkills: cardMatchedSkills } =
+                  showRecommended
+                    ? computeMatchScore(job, userSkills)
+                    : { score: 0, matchedSkills: [] };
+
                 return (
                   <div
                     key={job._id}
                     ref={isLast ? sentinelRef : null}
-                    className={`job-card${isApplied ? " applied" : ""}`}
+                    className={`job-card${isApplied ? " applied" : ""}${showRecommended ? " recommended" : ""}`}
                   >
+                    {/* Applied ribbon */}
                     {isApplied && (
                       <div className="applied-ribbon">
                         <BookmarkCheck size={10} />
@@ -931,68 +1216,166 @@ const Jobs = () => {
                       </div>
                     )}
 
+                    {/* Match badge */}
+                    {showRecommended && matchScore > 0 && (
+                      <div className="match-badge">
+                        <Zap size={11} />
+                        {matchScore}% match
+                      </div>
+                    )}
+
+                    {/* Tags */}
                     <div className="job-tags" style={{ paddingRight: isApplied ? 72 : 0 }}>
                       {typeArr.map((t) => {
                         const c = TYPE_COLORS[t] || defaultTypeColor;
                         return (
-                          <span key={t} className="job-tag" style={{ background: c.bg, color: c.color }}>
+                          <span
+                            key={t}
+                            className="job-tag"
+                            style={{ background: c.bg, color: c.color }}
+                          >
                             {t}
                           </span>
                         );
                       })}
                       <span className="job-tag tag-live">
-                        <span className="live-dot" />Live
+                        <span className="live-dot" />
+                        Live
                       </span>
-                      <span className="tag-pay" style={{ background: pay.bg, color: pay.color, borderColor: pay.border }}>
+                      <span
+                        className="tag-pay"
+                        style={{
+                          background: pay.bg,
+                          color: pay.color,
+                          borderColor: pay.border,
+                        }}
+                      >
                         {pay.label}
                       </span>
                     </div>
 
                     <h2 className="job-title">{job.title}</h2>
 
+                    {/* Company */}
                     <div className="job-company">
-                    <div className="company-logo" style={{ overflow: "hidden" }}>
-                    {job.business?.profilePicture ? (
-                      <img src={job.business.profilePicture} alt={job.company} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
-                    ) : job.business?.businessProfile?.images?.[0] ? (
-                      <img src={job.business.businessProfile.images[0]} alt={job.company} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
-                    ) : job.recruiter?.recruiterProfile?.companyLogo ? (
-                      <img src={job.recruiter.recruiterProfile.companyLogo} alt={job.company} style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }} />
-                    ) : (
-                      <Building2 size={18} color="white" />
-                    )}
-                  </div>
-                    <div className="company-info">
-                      <div className="company-name">
-                        {job.company || job.business?.businessProfile?.businessName || "Direct Hire"}
+                      <div className="company-logo" style={{ overflow: "hidden" }}>
+                        {job.business?.profilePicture ? (
+                          <img
+                            src={job.business.profilePicture}
+                            alt={job.company}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                          />
+                        ) : job.business?.businessProfile?.images?.[0] ? (
+                          <img
+                            src={job.business.businessProfile.images[0]}
+                            alt={job.company}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                          />
+                        ) : job.recruiter?.recruiterProfile?.companyLogo ? (
+                          <img
+                            src={job.recruiter.recruiterProfile.companyLogo}
+                            alt={job.company}
+                            style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: 8 }}
+                          />
+                        ) : (
+                          <Building2 size={18} color="white" />
+                        )}
                       </div>
-                      <div className="company-verified"><CheckCircle size={11} />Verified</div>
+                      <div className="company-info">
+                        <div className="company-name">
+                          {job.company ||
+                            job.business?.businessProfile?.businessName ||
+                            "Direct Hire"}
+                        </div>
+                        <div className="company-verified">
+                          <CheckCircle size={11} />
+                          Verified
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
+                    {/* Meta */}
                     <div className="job-meta">
-                      <div className="job-meta-item"><MapPin size={13} />{job.location}</div>
-                      {rounds.length > 0 && <div className="job-meta-item"><Layers size={13} />{rounds.length} round{rounds.length !== 1 ? "s" : ""}</div>}
-                      {skills.length > 0 && <div className="job-meta-item"><Code2 size={13} />{skills.length} skill{skills.length !== 1 ? "s" : ""}</div>}
+                      <div className="job-meta-item">
+                        <MapPin size={13} />
+                        {job.location}
+                      </div>
+                      {rounds.length > 0 && (
+                        <div className="job-meta-item">
+                          <Layers size={13} />
+                          {rounds.length} round{rounds.length !== 1 ? "s" : ""}
+                        </div>
+                      )}
+                      {skills.length > 0 && (
+                        <div className="job-meta-item">
+                          <Code2 size={13} />
+                          {skills.length} skill{skills.length !== 1 ? "s" : ""}
+                        </div>
+                      )}
                     </div>
 
+                    {/* Skills */}
                     {skills.length > 0 && (
                       <div className="job-skills">
-                        {skills.slice(0, SKILL_LIMIT).map((s) => (
-                          <button key={s} type="button"
-                            className={`job-skill-pill${skillFilter && s.toLowerCase().includes(skillFilter.toLowerCase()) ? " highlighted" : ""}`}
-                            onClick={() => setSkillFilter(s)}>{s}</button>
-                        ))}
-                        {skills.length > SKILL_LIMIT && <span className="job-skill-more">+{skills.length - SKILL_LIMIT} more</span>}
+                        {skills.slice(0, SKILL_LIMIT).map((s) => {
+                          const isMatched =
+                            showRecommended &&
+                            cardMatchedSkills.some(
+                              (ms) =>
+                                ms.toLowerCase() === s.toLowerCase() ||
+                                s.toLowerCase().includes(ms.toLowerCase()) ||
+                                ms.toLowerCase().includes(s.toLowerCase())
+                            );
+                          const isHighlighted =
+                            skillFilter &&
+                            s.toLowerCase().includes(skillFilter.toLowerCase());
+                          return (
+                            <button
+                              key={s}
+                              type="button"
+                              className={`job-skill-pill${isMatched ? " matched" : ""}${isHighlighted ? " highlighted" : ""}`}
+                              onClick={() => setSkillFilter(s)}
+                            >
+                              {isMatched && <Zap size={10} style={{ flexShrink: 0 }} />}
+                              {s}
+                            </button>
+                          );
+                        })}
+                        {skills.length > SKILL_LIMIT && (
+                          <span className="job-skill-more">
+                            +{skills.length - SKILL_LIMIT} more
+                          </span>
+                        )}
                       </div>
                     )}
 
+                    {/* Matched skills summary */}
+                    {showRecommended && cardMatchedSkills.length > 0 && (
+                      <div className="matched-summary">
+                        <Zap size={11} />
+                        Matches {cardMatchedSkills.length} of your skill
+                        {cardMatchedSkills.length !== 1 ? "s" : ""}:&nbsp;
+                        <span className="matched-summary-list">
+                          {cardMatchedSkills.slice(0, 3).join(", ")}
+                          {cardMatchedSkills.length > 3
+                            ? ` +${cardMatchedSkills.length - 3}`
+                            : ""}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Rounds */}
                     {rounds.length > 0 && (
                       <>
                         <div className="job-divider" />
-                        <button type="button" className="job-rounds-toggle" onClick={() => toggleRounds(job._id)}>
+                        <button
+                          type="button"
+                          className="job-rounds-toggle"
+                          onClick={() => toggleRounds(job._id)}
+                        >
                           <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                            <Layers size={14} />Hiring Process ({rounds.length} rounds)
+                            <Layers size={14} />
+                            Hiring Process ({rounds.length} rounds)
                           </span>
                           {roundsOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
@@ -1002,9 +1385,22 @@ const Jobs = () => {
                               <div key={r._id || i} className="job-round-item">
                                 <div className="job-round-num">{r.order || i + 1}</div>
                                 <div className="job-round-info">
-                                  <div className="job-round-title">{r.title || ROUND_TYPE_LABELS[r.type] || r.type}</div>
-                                  {r.description && <div className="job-round-desc">{r.description.length > 90 ? r.description.slice(0, 90) + "…" : r.description}</div>}
-                                  {r.duration && <div className="job-round-dur"><Clock size={10} />{r.duration}</div>}
+                                  <div className="job-round-title">
+                                    {r.title || ROUND_TYPE_LABELS[r.type] || r.type}
+                                  </div>
+                                  {r.description && (
+                                    <div className="job-round-desc">
+                                      {r.description.length > 90
+                                        ? r.description.slice(0, 90) + "…"
+                                        : r.description}
+                                    </div>
+                                  )}
+                                  {r.duration && (
+                                    <div className="job-round-dur">
+                                      <Clock size={10} />
+                                      {r.duration}
+                                    </div>
+                                  )}
                                 </div>
                               </div>
                             ))}

@@ -311,7 +311,7 @@ export default function GreenJobsHomepage() {
         .companies-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px; max-width: 1200px; margin: 0 auto; }
         .company-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 40px; display: flex; align-items: center; justify-content: center; min-height: 140px; transition: all 0.2s; cursor: pointer; }
         .company-card:hover { border-color: #10b981; box-shadow: 0 4px 12px rgba(16,185,129,0.1); transform: translateY(-2px); }
-        .company-logo { max-width: 100%; max-height: 70px; width: auto; height: auto; object-fit: contain; }
+        .company-logo { max-width: 100%; max-height: 90px; width: auto; height: auto; object-fit: contain; }
 
         /* ══ REVIEWS ══ */
         .reviews-section { background: #ffffff; padding: 60px 40px; }
