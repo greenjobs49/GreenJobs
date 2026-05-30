@@ -59,6 +59,8 @@ export default function GreenJobsHomepage() {
   const [jobsError, setJobsError]       = useState(null);
   const [activeAd, setActiveAd] = useState(0);
   const [activeFB, setActiveFB]           = useState(0);
+  const [topRecruiters, setTopRecruiters] = useState([]);
+  const [recruitersLoading, setRecruitersLoading] = useState(true);
   const [spotlightAds, setSpotlightAds]   = useState([]);
   const [fullBannerAds, setFullBannerAds] = useState([]);
   const [adsLoading, setAdsLoading]       = useState(true);
@@ -91,6 +93,33 @@ export default function GreenJobsHomepage() {
   };
   fetchTopCompanies();
 }, []);
+useEffect(() => {
+  const fetchRecruiters = async () => {
+    try {
+      const res = await axios.get(`${API_BASE_URL}/api/admin/top-recruiters`);
+      // Only show recruiters who have at least 1 active job
+      setTopRecruiters((res.data.recruiters || []).filter(r => r.jobCount > 0));
+    } catch (err) {
+      console.error("Top recruiters fetch failed:", err);
+    } finally {
+      setRecruitersLoading(false);
+    }
+  };
+  fetchRecruiters();
+}, []);
+useEffect(() => {
+  const el = document.getElementById("recruitersScroll");
+  const btnLeft  = document.getElementById("recBtnLeft");
+  const btnRight = document.getElementById("recBtnRight");
+  if (!el || !btnLeft || !btnRight) return;
+
+  // Set initial arrow states once the scroll container has rendered
+  const atEnd = el.scrollWidth <= el.clientWidth;
+  btnLeft.style.color   = "#cbd5e1";
+  btnLeft.style.opacity = "0.5";
+  btnRight.style.color   = atEnd ? "#cbd5e1" : "#475569";
+  btnRight.style.opacity = atEnd ? "0.5" : "1";
+}, [topRecruiters]);
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -335,16 +364,16 @@ export default function GreenJobsHomepage() {
         .fb-banner { position: relative; min-height: 260px; display: flex; align-items: center; overflow: hidden; cursor: pointer; }
         .fb-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: transform 7s ease; transform: scale(1.05); }
         .fb-banner:hover .fb-bg-img { transform: scale(1); }
-        .fb-gradient { position: absolute; inset: 0; z-index: 1; background: linear-gradient(to bottom, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.72) 100%); }
+        .fb-gradient { display: none; }
         .fb-accent-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
-        .fb-inner { position: relative; z-index: 3; width: 100%; padding: 48px 72px; display: flex; align-items: flex-end; justify-content: center; min-height: 260px; }
-        .fb-copy { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; }
+        .fb-inner { position: absolute; inset: 0; z-index: 3; width: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0; }
+        .fb-copy { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; padding: 24px 28px 32px; background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.00) 100%); }
         .fb-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
-        .fb-headline { font-size: 28px; font-weight: 500; color: #ffffff; line-height: 1.2; letter-spacing: 0px; margin: 0 0 8px; text-shadow: 0 1px 8px rgba(0,0,0,0.5); }
+        .fb-headline { font-size: 20px; font-weight: 700; color: white; line-height: 1.3; margin: 0 0 8px; text-shadow: 0 1px 6px rgba(0,0,0,0.6); letter-spacing: 0px; }
         .fb-sub { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.55; max-width: 520px; margin: 0 0 18px; font-weight: 400; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
         .fb-btns { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-        .fb-btn-main { display: inline-flex; align-items: center; gap: 8px; padding: 10px 22px; border-radius: 8px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; letter-spacing: 0.1px; color: white; }
-        .fb-btn-main:hover { transform: translateY(-2px); filter: brightness(1.1); }
+        .fb-btn-main { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; letter-spacing: 0.1px; color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
+        .fb-btn-main:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.12); box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
         .fb-btn-ghost { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.09); color: white; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px); font-family: 'Inter', sans-serif; transition: all 0.2s; }
         .fb-btn-ghost:hover { background: rgba(255,255,255,0.18); border-color: rgba(255,255,255,0.55); }
         .fb-right { flex-shrink: 0; display: flex; flex-direction: row; gap: 12px; }
@@ -433,6 +462,9 @@ export default function GreenJobsHomepage() {
         .ad-side-arrow { display: flex; align-items: center; justify-content: center; padding: 0 14px; color: #cbd5e1; transition: color 0.2s; flex-shrink: 0; }
         .ad-side-card:hover .ad-side-arrow { color: #10b981; }
 
+        /* Recruiters listing*/ 
+        .recruiters-scroll::-webkit-scrollbar { display: none; }
+
         /* ══ JOBS ══ */
         .jobs-section { padding: 60px 40px; background: white; }
         .jobs-header { text-align: center; margin-bottom: 48px; }
@@ -516,7 +548,6 @@ export default function GreenJobsHomepage() {
           .hero-title { font-size: 40px; letter-spacing: -1.5px; }
           .hero-right { flex: 0 0 380px; }
           .hero-person { transform: translateX(20px); }
-          .fb-inner { padding: 48px 40px; }
           .fb-headline { font-size: 40px; }
         }
         @media (max-width: 960px) {
@@ -567,12 +598,10 @@ export default function GreenJobsHomepage() {
           .footer { padding-top: 40px; padding-bottom: 24px; }
           .phrase-dots { justify-content: center; }
           .fb-banner { min-height: 220px; }
-          .fb-inner { padding: 24px 16px; flex-direction: column; gap: 16px; }
-          .fb-headline { font-size: 20px; letter-spacing: -0.5px; }
+          .fb-copy { padding: 20px 16px 24px; }
+          .fb-headline { font-size: 18px; }
           .fb-sub { font-size: 13px; margin-bottom: 14px; }
-          .fb-right { flex-direction: row; width: 100%; justify-content: center; }
-          .fb-btns { flex-direction: column; width: 100%; }
-          .fb-btn-main, .fb-btn-ghost { width: 100%; justify-content: center; }
+          .fb-btns { justify-content: center; }
           .ad-side-thumb, .ad-side-thumb-placeholder { width: 90px; min-width: 90px; }
           .reviews-section { padding-left: 16px; padding-right: 16px; padding-top: 40px; padding-bottom: 40px; }
           .reviews-title { font-size: 26px; }
@@ -993,6 +1022,186 @@ export default function GreenJobsHomepage() {
                   </div>
                 </div>
               )}
+            </div>
+          </section>
+        )}
+
+                {/* ══ FEATURED RECRUITERS ══ */}
+        {!recruitersLoading && topRecruiters.length > 0 && (
+          <section style={{ background: "#f8fafc", padding: "60px 40px", borderTop: "1px solid #f1f5f9" }}>
+            <div style={{ maxWidth: 1200, margin: "0 auto" }}>
+              <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", marginBottom: 32 }}>
+                <div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontWeight: 700,
+                    textTransform: "uppercase", letterSpacing: "1.2px", color: "#10b981", marginBottom: 6 }}>
+                    <span style={{ width: 28, height: 2, background: "#10b981", borderRadius: 2, display: "inline-block" }} />
+                    Featured Recruiters
+                  </div>
+                  <h2 style={{ fontSize: 32, fontWeight: 700, color: "#0f172a", margin: 0 }}>
+                    Actively Hiring on GreenJobs
+                  </h2>
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById("recruitersScroll");
+                      if (el) el.scrollBy({ left: -(210 + 16) * 2, behavior: "smooth" });
+                    }}
+                    id="recBtnLeft"
+                    style={{
+                      width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #e2e8f0",
+                      background: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", color: "#cbd5e1", transition: "all 0.2s",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)", flexShrink: 0,
+                    }}
+                    onMouseEnter={e => {
+                      const el = document.getElementById("recruitersScroll");
+                      if (el && el.scrollLeft > 4) {
+                        e.currentTarget.style.background = "#10b981";
+                        e.currentTarget.style.borderColor = "#10b981";
+                        e.currentTarget.style.color = "white";
+                      }
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.borderColor = "#e2e8f0";
+                      e.currentTarget.style.color = "#cbd5e1";
+                    }}
+                  >
+                    <ChevronLeft size={17} />
+                  </button>
+                  <button
+                    onClick={() => {
+                      const el = document.getElementById("recruitersScroll");
+                      if (el) el.scrollBy({ left: (210 + 16) * 2, behavior: "smooth" });
+                    }}
+                    id="recBtnRight"
+                    style={{
+                      width: 36, height: 36, borderRadius: "50%", border: "1.5px solid #e2e8f0",
+                      background: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                      cursor: "pointer", color: "#475569", transition: "all 0.2s",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)", flexShrink: 0,
+                    }}
+                    onMouseEnter={e => {
+                      e.currentTarget.style.background = "#10b981";
+                      e.currentTarget.style.borderColor = "#10b981";
+                      e.currentTarget.style.color = "white";
+                    }}
+                    onMouseLeave={e => {
+                      e.currentTarget.style.background = "white";
+                      e.currentTarget.style.borderColor = "#e2e8f0";
+                      e.currentTarget.style.color = "#475569";
+                    }}
+                  >
+                    <ChevronRight size={17} />
+                  </button>
+                  <button onClick={() => navigate("/jobs")}
+                    style={{ fontSize: 14, color: "#10b981", background: "none", border: "none",
+                      cursor: "pointer", fontWeight: 600 }}>
+                    View all jobs →
+                  </button>
+                </div>
+              </div>
+
+              <div
+                id="recruitersScroll"
+                className="recruiters-scroll"
+                onScroll={(e) => {
+                  const el = e.currentTarget;
+                  const atStart = el.scrollLeft <= 4;
+                  const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 4;
+                  const btnLeft  = document.getElementById("recBtnLeft");
+                  const btnRight = document.getElementById("recBtnRight");
+                  if (btnLeft)  { btnLeft.style.color  = atStart ? "#cbd5e1" : "#475569"; btnLeft.style.opacity  = atStart ? "0.5" : "1"; }
+                  if (btnRight) { btnRight.style.color = atEnd   ? "#cbd5e1" : "#475569"; btnRight.style.opacity = atEnd   ? "0.5" : "1"; }
+                }}
+                style={{ display: "flex", gap: 16, overflowX: "auto", paddingBottom: 12, paddingTop: 8, scrollbarWidth: "none" }}
+              >
+                {topRecruiters.map((rec, i) => {
+                  const initials = rec.name?.split(" ").map(w => w[0]).slice(0, 2).join("").toUpperCase();
+                  const avatarColors = [
+                    { bg: "#E1F5EE", color: "#0F6E56" }, { bg: "#EEEDFE", color: "#3C3489" },
+                    { bg: "#FAEEDA", color: "#633806" }, { bg: "#FAECE7", color: "#712B13" },
+                    { bg: "#E6F1FB", color: "#0C447C" },
+                  ];
+                  const ac = avatarColors[i % avatarColors.length];
+
+                  return (
+                    <div key={rec._id}
+                      onClick={() => navigate(`/jobs?recruiter=${rec._id}`)}
+                      style={{
+                        flexShrink: 0, width: 210, minWidth: 200,
+                        background: "white", border: "1px solid #e2e8f0", borderRadius: 16,
+                        padding: "18px 16px 14px", display: "flex", flexDirection: "column",
+                        alignItems: "center", textAlign: "center", gap: 8, cursor: "pointer",
+                        transition: "all 0.2s", position: "relative"
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.borderColor = "#10b981"; e.currentTarget.style.transform = "translateY(-3px)"; e.currentTarget.style.boxShadow = "0 8px 24px rgba(16,185,129,0.12)"; }}
+                      onMouseLeave={e => { e.currentTarget.style.borderColor = "#e2e8f0"; e.currentTarget.style.transform = ""; e.currentTarget.style.boxShadow = ""; }}
+                    >
+                      <div style={{ position: "relative" }}>
+                        {rec.logoUrl ? (
+                          <div style={{ width: 58, height: 58, borderRadius: "50%", overflow: "hidden", border: "2px solid #e2e8f0", flexShrink: 0 }}>
+                            <img src={rec.logoUrl} alt={rec.name}
+                              style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+                              onError={e => {
+                                e.target.parentElement.style.background = ac.bg;
+                                e.target.parentElement.style.display = "flex";
+                                e.target.parentElement.style.alignItems = "center";
+                                e.target.parentElement.style.justifyContent = "center";
+                                e.target.outerHTML = `<span style="font-size:20px;font-weight:700;color:${ac.color}">${initials}</span>`;
+                              }} />
+                          </div>
+                        ) : (
+                          <div style={{ width: 58, height: 58, borderRadius: "50%", background: ac.bg, color: ac.color,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            fontSize: 20, fontWeight: 700, border: "2px solid transparent", flexShrink: 0 }}>
+                            {initials}
+                          </div>
+                        )}
+                        <div style={{
+                          position: "absolute", bottom: 2, right: 2,
+                          width: 13, height: 13, background: "#10b981", borderRadius: "50%",
+                          border: "2px solid white",
+                        }} />
+                      </div>
+
+                      <p style={{ margin: 0, fontSize: 14, fontWeight: 700, color: "#0f172a", lineHeight: 1.3 }}>
+                        {rec.name}
+                      </p>
+                      {rec.companyName && (
+                        <p style={{ margin: 0, fontSize: 12, color: "#64748b", display: "flex",
+                          alignItems: "center", gap: 4, justifyContent: "center" }}>
+                          {rec.companyName}
+                        </p>
+                      )}
+                      {(rec.industryType || rec.companyLocation) && (
+                        <p style={{ margin: 0, fontSize: 11, color: "#94a3b8" }}>
+                          {[rec.industryType, rec.companyLocation].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+
+                      <div style={{ width: "100%", height: 1, background: "#f1f5f9", margin: "2px 0" }} />
+
+                      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#10b981", fontWeight: 600 }}>
+                        <span style={{ width: 6, height: 6, background: "#10b981", borderRadius: "50%", animation: "pulse 2s infinite", flexShrink: 0 }} />
+                        {rec.jobCount} active job{rec.jobCount !== 1 ? "s" : ""}
+                      </div>
+                      <div style={{ flex: 1 }} />
+                      <button
+                        onClick={e => { e.stopPropagation(); navigate(`/jobs?recruiter=${rec._id}`); }}
+                        style={{ marginTop: 0, width: "100%", padding: "7px 0", background: "#0f172a",
+                          color: "white", border: "none", borderRadius: 8, fontSize: 12, fontWeight: 700,
+                          cursor: "pointer", transition: "background 0.2s", fontFamily: "inherit" }}
+                        onMouseEnter={e => { e.target.style.background = "#10b981"; }}
+                        onMouseLeave={e => { e.target.style.background = "#0f172a"; }}
+                      >
+                        View Jobs →
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </section>
         )}

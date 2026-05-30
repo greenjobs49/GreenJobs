@@ -13,6 +13,7 @@ import toast from "react-hot-toast";
 import API_BASE_URL from "../config/api";
 import AdminAdsManager from "./AdminAdsManager";
 import AdminTopCompanies from "./AdminTopCompanies";
+import AdminTopRecruiters from "./AdminTopRecruiters";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 50;
@@ -637,6 +638,7 @@ const AdminDashboard = () => {
               { key: "recruiters",   label: "Recruiter Verifications",       badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
               { key: "ads",          label: "Ad Manager",                    badge: null },
               { key: "topcompanies", label: "Top Companies",                 badge: null },
+              { key: "toprecruiters", label: "Top Recruiters", badge: null },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -1201,6 +1203,8 @@ const AdminDashboard = () => {
           {activeTab === "topcompanies" && (
             <AdminTopCompanies token={token} />
           )}
+
+          {activeTab === "toprecruiters" && <AdminTopRecruiters token={token} />}
 
         </div>
       </div>

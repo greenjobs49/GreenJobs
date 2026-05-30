@@ -152,6 +152,9 @@ const userSchema = new mongoose.Schema(
       verificationRequestedAt: { type: Date },
       verificationReviewedAt:  { type: Date },
       rejectionReason:         { type: String, default: "" },
+      featuredOrder:   { type: Number,  default: 0    },
+      isFeatured:      { type: Boolean, default: false },
+      featuredLogoUrl: { type: String,  default: ""   },
     },
 
     // ================= BUSINESS =================
@@ -206,6 +209,7 @@ userSchema.index({ role: 1 });
 userSchema.index({ "businessProfile.status": 1 });
 userSchema.index({ "recruiterProfile.linkedBusiness": 1 });
 userSchema.index({ "recruiterProfile.verificationStatus": 1 });
+userSchema.index({ "recruiterProfile.isFeatured": 1, "recruiterProfile.featuredOrder": 1 });
 userSchema.index({ profileCompleted: 1, createdAt: 1, role: 1 });
 // ─── Profile progress ────────────────────────────────────────────────────────
 // education is now an array — counts as filled when at least 1 entry exists

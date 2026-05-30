@@ -31,14 +31,18 @@ const {
   toggleBannerStatus,
 } = require("../controllers/admin.controller");
 
-// ── ADD THIS IMPORT ────────────────────────────────────────────────────────
 const {
   getTopCompanies,
   getAllTopCompanies,
   updateTopCompany,
   batchUpdateTopCompanies,
 } = require("../controllers/topCompany.controller");
-
+const {
+  getTopRecruiters,
+  getAllTopRecruiters,
+  updateTopRecruiter,
+  batchUpdateTopRecruiters,
+} = require("../controllers/topRecruiter.controller");
 // ── Profile reminders ──────────────────────────────────────────────────────
 router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendProfileReminders);
 
@@ -100,5 +104,21 @@ router.post("/top-companies/batch", protect, authorizeRoles("admin"), batchUpdat
 
 // Admin — update a single company
 router.patch("/top-companies/:id",  protect, authorizeRoles("admin"), updateTopCompany);
+
+// ── Top Recruiters ─────────────────────────────────────────────────────────
+// NOTE: /top-recruiters/all and /top-recruiters/batch must come BEFORE
+// /top-recruiters/:id to avoid "all" and "batch" being swallowed as :id param.
+
+// Public — homepage fetches this (no token required)
+router.get("/top-recruiters", getTopRecruiters);
+
+// Admin — all recruiters with featured meta
+router.get("/top-recruiters/all",    protect, authorizeRoles("admin"), getAllTopRecruiters);
+
+// Admin — batch save order + featured for all at once
+router.post("/top-recruiters/batch", protect, authorizeRoles("admin"), batchUpdateTopRecruiters);
+
+// Admin — update a single recruiter
+router.patch("/top-recruiters/:id",  protect, authorizeRoles("admin"), updateTopRecruiter);
 
 module.exports = router;
