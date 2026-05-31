@@ -44,6 +44,12 @@ const {
   updateTopRecruiter,
   batchUpdateTopRecruiters,
 } = require("../controllers/topRecruiter.controller");
+const {
+  getAllSeoPages,
+  getSeoPage,
+  upsertSeoPage,
+  bulkUpsertSeo,
+} = require("../controllers/seo.controller");
 // ── Profile reminders ──────────────────────────────────────────────────────
 router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendProfileReminders);
 
@@ -76,6 +82,12 @@ router.patch("/recruiters/:id/verify",         protect, authorizeRoles("admin"),
 
 // ── Admin Management ───────────────────────────────────────────────────────
 router.post("/create-admin", protect, authorizeRoles("admin"), createAdmin);
+
+// ── SEO Management ─────────────────────────────────────────────────────────
+router.get("/seo",           protect, authorizeRoles("admin"), getAllSeoPages);
+router.post("/seo/bulk",     protect, authorizeRoles("admin"), bulkUpsertSeo);  // ← moved up
+router.get("/seo/:pageKey",  protect, authorizeRoles("admin"), getSeoPage);
+router.put("/seo/:pageKey",  protect, authorizeRoles("admin"), upsertSeoPage);
 
 // ── Navbar Banner ──────────────────────────────────────────────────────────
 router.get("/navbar-banner", getNavbarBanner);

@@ -6,6 +6,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 import ApplyModal from "./ApplyModal";
 import API_BASE_URL from "../config/api";
+import { useSeoMeta } from "../hooks/useSeoMeta";
 import {
   ArrowLeft,
   MapPin,
@@ -97,7 +98,19 @@ const JobDetail = () => {
   const [error, setError] = useState(null);
   const [applied, setApplied] = useState(false);
   const [showApplyModal, setShowApplyModal] = useState(false);
-
+  //seo
+  useSeoMeta(job ? "job-detail" : null, job ? {
+    title:       `${job.title} at ${
+      job.company ||
+      job.business?.businessProfile?.businessName ||
+      "GreenJobs"
+    } | GreenJobs`,
+    description: job.description?.replace(/\n/g, " ").slice(0, 160),
+    ogImage:     job.business?.profilePicture ||
+                 job.business?.businessProfile?.images?.[0] ||
+                 job.recruiter?.recruiterProfile?.companyLogo || "",
+    canonical:   `https://jobs.solarismypassion.com/jobs/${job._id}`,
+  } : {});
   const isJobSeeker = user?.role === "jobseeker";
   const isLoggedIn  = !!token;
 

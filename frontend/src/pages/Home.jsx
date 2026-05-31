@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
+import { useSeoMeta } from "../hooks/useSeoMeta";
 import {
   Search,
   MapPin,
@@ -48,6 +49,7 @@ const normalizeDbAd = (ad) => ({
 });
 
 export default function GreenJobsHomepage() {
+  useSeoMeta("home");
   const navigate = useNavigate();
 
   const [searchKeyword, setSearchKeyword] = useState("");

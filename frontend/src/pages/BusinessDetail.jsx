@@ -3,6 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import Navbar from "../components/common/Navbar";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
+import { useSeoMeta } from "../hooks/useSeoMeta";
 import {
   Building2, MapPin, Phone, Star, ArrowLeft, CheckCircle,
   ExternalLink, Globe, Mail, Briefcase, Users, Shield,
@@ -16,6 +17,13 @@ export default function BusinessDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lightboxIdx, setLightboxIdx] = useState(null);
+    useSeoMeta("company-detail", business ? {
+    title:       `${business.businessProfile?.businessName} | GreenJobs`,
+    description: business.businessProfile?.description?.replace(/\n/g, " ").slice(0, 160),
+    ogImage:     business.profilePicture ||
+                business.businessProfile?.images?.[0] || "",
+    canonical:   `https://jobs.solarismypassion.com/businesses/${business._id}`,
+  } : {});
 
   useEffect(() => {
     const fetchBusiness = async () => {

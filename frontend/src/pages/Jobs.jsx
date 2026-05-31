@@ -3,6 +3,7 @@ import Navbar from "../components/common/Navbar";
 import axios from "axios";
 import API_BASE_URL from "../config/api";
 import { useAuth } from "../context/AuthContext";
+import { useSeoMeta } from "../hooks/useSeoMeta";
 import {
   Search,
   Briefcase,
@@ -193,6 +194,7 @@ const FilterPanel = ({
 
 // ── Main Jobs Component ────────────────────────────────────────────────────────
 const Jobs = () => {
+  useSeoMeta("jobs");
   const { user, token } = useAuth();
   const isJobSeeker = user?.role === "jobseeker";
 

@@ -7,8 +7,10 @@ import {
   ChevronDown, X, CheckCircle, Filter, Loader2
 } from "lucide-react";
 import API_BASE_URL from "../config/api";
+import { useSeoMeta } from "../hooks/useSeoMeta";
 
 export default function Businesses() {
+  useSeoMeta("businesses");
   const navigate = useNavigate();
   const [biz, setBiz] = useState([]);
   const [loading, setLoading] = useState(true);

@@ -1,10 +1,10 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback,useRef } from "react";
 import Navbar from "../components/common/Navbar";
 import {
   Users, Briefcase, Building, TrendingUp, CheckCircle,
   Clock, XCircle, Eye, RefreshCw, Loader2, Search,
   MapPin, Mail, Calendar, ArrowUpRight, ShieldOff,
-  ShieldCheck, UserCheck, X, UserPlus, Building2,
+  ShieldCheck, UserCheck, X, UserPlus, Building2, Globe,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -14,6 +14,7 @@ import API_BASE_URL from "../config/api";
 import AdminAdsManager from "./AdminAdsManager";
 import AdminTopCompanies from "./AdminTopCompanies";
 import AdminTopRecruiters from "./AdminTopRecruiters";
+import AdminSeoDashboard from "./AdminSeoDashboard";
 
 // ── Constants ────────────────────────────────────────────────────────────────
 const PAGE_SIZE = 50;
@@ -64,6 +65,7 @@ const AdminDashboard = () => {
   const [verifyingId,     setVerifyingId]     = useState(null);
   const [revokingJobId,   setRevokingJobId]   = useState(null);
   const [restoringJobId,  setRestoringJobId]  = useState(null);
+  const appsSearchTimer = useRef(null);
 
   // ── Add Admin modal state ────────────────────────────────────────────────
   const [showAddAdmin, setShowAddAdmin] = useState(false);
@@ -692,6 +694,7 @@ const AdminDashboard = () => {
               { key: "ads",          label: "Ad Manager",                    badge: null },
               { key: "topcompanies", label: "Top Companies",                 badge: null },
               { key: "toprecruiters", label: "Top Recruiters", badge: null },
+              { key: "seo", label: "SEO Manager", badge: null },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -1264,8 +1267,8 @@ const AdminDashboard = () => {
                       onChange={(e) => {
                         const val = e.target.value;
                         setAppsSearch(val);
-                        clearTimeout(window._appsSearchTimer);
-                        window._appsSearchTimer = setTimeout(() => {
+                        clearTimeout(appsSearchTimer.current);
+                        appsSearchTimer.current = setTimeout(() => {
                           fetchApplications(1, appStatusFilter, val);
                         }, 350);
                       }}
@@ -1456,6 +1459,22 @@ const AdminDashboard = () => {
           )}
 
           {activeTab === "toprecruiters" && <AdminTopRecruiters token={token} />}
+          {/* ══════════════════════════════════════════
+              ── SEO Manager Tab ──
+          ══════════════════════════════════════════ */}
+          {activeTab === "seo" && (
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <Globe size={20} /> SEO Manager
+                </h2>
+                <span style={{ fontSize:12, color:"#64748b" }}>
+                  Manage meta tags, Open Graph, sitemap &amp; robots.txt
+                </span>
+              </div>
+              <AdminSeoDashboard token={token} />
+            </div>
+          )}
 
         </div>
       </div>
