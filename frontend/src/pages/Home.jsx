@@ -336,6 +336,49 @@ useEffect(() => {
         .cat-arrow-left { left: -18px; }
         .cat-arrow-right { right: -18px; }
 
+        /* ══ POPULAR ROLES ══ */
+        .roles-section { background: white; padding: 60px 40px; border-top: 1px solid #f1f5f9; }
+        .roles-inner { max-width: 1200px; margin: 0 auto; display: flex; gap: 28px; align-items: stretch; }
+        .roles-left-panel {
+          flex: 0 0 300px; min-width: 280px;
+          background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 40%, #d1fae5 100%);
+          border-radius: 20px;
+          display: flex; flex-direction: column; justify-content: flex-end;
+          position: relative; overflow: hidden; min-height: 460px;
+          padding: 0;
+        }
+        .roles-left-panel::before { display: none; }
+
+        .roles-illustration {
+          position: absolute; top: 0; left: 0; right: 0;
+          display: flex; align-items: center; justify-content: center;
+          padding-top: 24px;
+        }
+        .roles-panel-title { font-size: 26px; font-weight: 800; color: #0f172a; line-height: 1.25; margin-bottom: 10px; position: relative; z-index: 1; }
+        .roles-panel-sub { font-size: 14px; color: #64748b; line-height: 1.6; position: relative; z-index: 1; }
+        .roles-right { flex: 1; min-width: 0; }
+        .roles-grid-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .roles-eyebrow { display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: #10b981; }
+        .roles-eyebrow-line { width: 24px; height: 2px; background: #10b981; border-radius: 2px; }
+        .roles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .role-card {
+          background: #f8fafc; border: 1.5px solid #e2e8f0; border-radius: 14px;
+          padding: 18px 20px; cursor: pointer; transition: all 0.22s;
+          display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        }
+        .role-card:hover {
+          border-color: #10b981; background: #f0fdf4;
+          box-shadow: 0 4px 16px rgba(16,185,129,0.12); transform: translateY(-2px);
+        }
+        .role-card-left { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+        .role-card-name { font-size: 15px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .role-card-count { font-size: 12px; color: #64748b; font-weight: 500; }
+        .role-card-arrow { color: #cbd5e1; transition: color 0.2s; flex-shrink: 0; font-size: 16px; font-weight: 700; }
+        .role-card:hover .role-card-arrow { color: #10b981; }
+        .roles-view-all { margin-top: 16px; text-align: right; }
+        .roles-view-all-btn { font-size: 13px; font-weight: 600; color: #10b981; background: none; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: color 0.2s; padding: 0; }
+        .roles-view-all-btn:hover { color: #059669; }
+
         /* ══ COMPANIES ══ */
         .companies-section { background: #f8fafc; padding: 60px 40px; }
         .companies-title { text-align: center; font-size: 32px; font-weight: 700; color: #0f172a; margin-bottom: 40px; }
@@ -563,6 +606,11 @@ useEffect(() => {
           .hero-person { transform: translateX(0); max-width: 320px; max-height: 280px; object-fit: contain; }
           .ads-spotlight { grid-template-columns: 1fr; }
           .ad-main-card { min-height: 300px; }
+          .roles-inner { flex-direction: column; }
+          .roles-left-panel { flex: none; min-height: 220px; flex-direction: row; align-items: center; gap: 20px; padding: 20px 24px 20px 200px; }
+          .roles-illustration { position: relative; top: auto; left: auto; padding: 0; flex-shrink: 0; }
+          .roles-panel-title { font-size: 22px; margin-bottom: 6px; }
+          .roles-left-panel::before { display: none; }
         }
         @media (max-width: 767px) {
           .hero-section { overflow: hidden; }
@@ -605,6 +653,10 @@ useEffect(() => {
           .ad-side-thumb, .ad-side-thumb-placeholder { width: 90px; min-width: 90px; }
           .reviews-section { padding-left: 16px; padding-right: 16px; padding-top: 40px; padding-bottom: 40px; }
           .reviews-title { font-size: 26px; }
+          .roles-section { padding: 40px 16px; }
+          .roles-grid { grid-template-columns: 1fr; }
+          .roles-left-panel { flex-direction: column; min-height: auto; align-items: flex-start; }
+          .roles-illustration { position: relative; padding: 0; justify-content: flex-start; }
         }
         @media (max-width: 480px) {
           .fb-right { display: none; }
@@ -722,7 +774,112 @@ useEffect(() => {
             <button className="cat-arrow cat-arrow-right" onClick={() => document.getElementById("categoriesScroll").scrollBy({ left: 240, behavior: "smooth" })}>→</button>
           </div>
         </section>
+        {/* ══ POPULAR ROLES ══ */}
+        <section className="roles-section">
+          <div className="roles-inner">
 
+            {/* Left panel */}
+            <div className="roles-left-panel">
+            <img
+              src="/discover.png"
+              alt="GreenJobs professional"
+              style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                objectPosition: "center top",
+                mixBlendMode: "multiply",
+                zIndex: 1,
+                pointerEvents: "none",
+                borderRadius: 20,
+              }}
+              onError={e => { e.target.style.display = "none"; }}
+            />
+
+            {/* Bottom fade — ensures text is always readable */}
+            <div style={{
+              position: "absolute",
+              bottom: 0, left: 0, right: 0,
+              height: "50%",
+              background: "linear-gradient(to top, rgba(0,40,20,0.85) 0%, rgba(0,40,20,0.4) 60%, transparent 100%)",
+              zIndex: 2,
+              borderRadius: "0 0 20px 20px",
+              pointerEvents: "none",
+            }} />
+
+            {/* Text — bottom left, white, above gradient */}
+            <div style={{
+              position: "relative",
+              zIndex: 3,
+              padding: "0 20px 24px",
+            }}>
+              <div className="roles-panel-title" style={{
+                color: "white",
+                textShadow: "0 2px 8px rgba(0,0,0,0.5)",
+                fontSize: 28,
+                lineHeight: 1.2,
+                marginBottom: 8,
+              }}>
+                Discover jobs across popular roles
+              </div>
+              <p className="roles-panel-sub" style={{
+                color: "rgba(255,255,255,0.90)",
+                textShadow: "0 1px 4px rgba(0,0,0,0.4)",
+                fontSize: 14,
+                margin: 0,
+              }}>
+                Select a role and we'll show you relevant green energy jobs for it!
+              </p>
+            </div>
+
+          </div>
+
+            {/* Right grid */}
+            <div className="roles-right">
+              <div className="roles-grid-header">
+                <div className="roles-eyebrow">
+                  <span className="roles-eyebrow-line" />
+                  Browse by Role
+                </div>
+              </div>
+              <div className="roles-grid">
+                {[
+                  { name: "Solar Installer",       count: 12 },
+                  { name: "EV Technician",         count: 8  },
+                  { name: "Energy Auditor",        count: 6  },
+                  { name: "Wind Turbine Engineer", count: 5  },
+                  { name: "Sustainability Manager",count: 9  },
+                  { name: "Project Manager",       count: 14 },
+                  { name: "Business Development",  count: 7  },
+                  { name: "Field Sales Executive", count: 11 },
+                  { name: "Design Engineer",       count: 6  },
+                  { name: "O&M Technician",        count: 10 },
+                ].map((role, i) => (
+                  <div
+                    key={i}
+                    className="role-card"
+                    onClick={() => navigate(`/jobs?search=${encodeURIComponent(role.name)}`)}
+                  >
+                    <div className="role-card-left">
+                      <div className="role-card-name">{role.name}</div>
+                      <div className="role-card-count">{role.count} Jobs</div>
+                    </div>
+                    <span className="role-card-arrow">›</span>
+                  </div>
+                ))}
+              </div>
+              <div className="roles-view-all">
+                <button className="roles-view-all-btn" onClick={() => navigate("/jobs")}>
+                  View all roles →
+                </button>
+              </div>
+            </div>
+
+          </div>
+        </section>
         {/* ══ LIVE JOBS ══ */}
         <section className="jobs-section">
           <div className="jobs-header">
