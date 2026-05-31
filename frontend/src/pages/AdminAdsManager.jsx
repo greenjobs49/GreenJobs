@@ -286,12 +286,12 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  // ✅ FIX 4: Reads from formRef.current which is always up-to-date
+  //FIX 4: Reads from formRef.current which is always up-to-date
   const handleSaveClick = () => {
     onSave(formRef.current, uploadedFile);
   };
 
-  const canSave = !saving && !uploading && form.title.trim();
+  const canSave = !saving && !uploading;
 
   return (
     <div
@@ -349,7 +349,7 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
           </Field>
 
           {/* Title */}
-          <Field label="Title *">
+          <Field label="Title">
             <input style={inp} value={form.title} placeholder="e.g. Solar Careers Drive 2026"
               onChange={e => set("title", e.target.value)}
               onFocus={e => e.target.style.borderColor="#10b981"}

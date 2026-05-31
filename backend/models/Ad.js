@@ -4,7 +4,6 @@ const adSchema = new mongoose.Schema(
   {
     title: {
       type: String,
-      required: true,
       trim: true,
       maxlength: 120,
     },
