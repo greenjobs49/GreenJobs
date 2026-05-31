@@ -29,6 +29,7 @@ const {
   updateNavbarBanner,
   uploadNavbarBannerImage,
   toggleBannerStatus,
+  getApplications,
 } = require("../controllers/admin.controller");
 
 const {
@@ -61,6 +62,7 @@ router.patch("/jobs/:id/status",  protect, authorizeRoles("admin"), updateJobSta
 router.delete("/jobs/:id",        protect, authorizeRoles("admin"), deleteJob);
 router.patch("/jobs/:id/revoke",  protect, authorizeRoles("admin"), revokeJob);
 router.patch("/jobs/:id/restore", protect, authorizeRoles("admin"), restoreJob);
+router.get("/applications", protect, authorizeRoles("admin"), getApplications);
 
 // ── Businesses ─────────────────────────────────────────────────────────────
 router.get("/businesses",               protect, authorizeRoles("admin"), getBusinesses);

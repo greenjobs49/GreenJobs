@@ -3,7 +3,7 @@ const Job  = require("../models/Job");
 const RecruiterBusinessLink = require("../models/RecruiterBusinessLink");
 const NavbarBanner = require("../models/NavbarBanner");
 const email = require("../services/emailService");
-
+const Application = require("../models/Application");
 /* =========================================================
    ADMIN STATS
 ========================================================= */
@@ -13,7 +13,7 @@ exports.getStats = async (req, res) => {
       totalUsers, jobseekers, recruiters, businesses, admins,
       approvedBusinesses, pendingBusinesses, rejectedBusinesses,
       liveJobs, pendingJobs, rejectedJobs, profilesCompleted,
-      pendingRecruiterVerifications,
+      pendingRecruiterVerifications, totalApplications, hiredApplications,
     ] = await Promise.all([
       User.countDocuments({}),
       User.countDocuments({ role: "jobseeker" }),
@@ -28,6 +28,8 @@ exports.getStats = async (req, res) => {
       Job.countDocuments({ status: "rejected_business" }),
       User.countDocuments({ profileCompleted: true }),
       User.countDocuments({ role: "recruiter", "recruiterProfile.verificationStatus": "pending" }),
+      Application.countDocuments({}),
+      Application.countDocuments({ status: "hired" }),
     ]);
 
     res.json({
@@ -36,6 +38,8 @@ exports.getStats = async (req, res) => {
       approvedBusinesses, pendingBusinesses, rejectedBusinesses,
       liveJobs, pendingJobs, rejectedJobs, profilesCompleted,
       pendingRecruiters: pendingRecruiterVerifications,
+      totalApplications,
+      totalHired: hiredApplications,
     });
   } catch (err) {
     console.error("GET STATS ERROR:", err);
@@ -867,5 +871,52 @@ exports.toggleBannerStatus = async (req, res) => {
   } catch (err) {
     console.error("TOGGLE BANNER STATUS ERROR:", err);
     res.status(500).json({ success: false, message: "Failed to toggle banner status" });
+  }
+};
+
+/* =========================================================
+   GET ALL APPLICATIONS (with full detail)
+   GET /api/admin/applications
+========================================================= */
+exports.getApplications = async (req, res) => {
+  try {
+    const { status, search, page = 1, limit = 50 } = req.query;
+    const query = {};
+
+    if (status && status !== "all") query.status = status;
+
+    // Push search into the DB query so pagination is accurate
+    if (search) {
+      const q = { $regex: search, $options: "i" };
+      query.$or = [
+        { "applicantSnapshot.fullName":  q },
+        { "applicantSnapshot.email":     q },
+      ];
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const [applications, total] = await Promise.all([
+      Application.find(query)
+        .populate("job",       "title company location type salary")
+        .populate("jobseeker", "name email jobSeekerProfile")
+        .populate("recruiter", "name email recruiterProfile.companyName")
+        .populate("business",  "name businessProfile.businessName")
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(parseInt(limit)),
+      Application.countDocuments(query),
+    ]);
+
+    res.json({
+      success: true,
+      applications,
+      total,
+      page: parseInt(page),
+      totalPages: Math.ceil(total / parseInt(limit)),
+    });
+  } catch (err) {
+    console.error("GET APPLICATIONS ERROR:", err);
+    res.status(500).json({ success: false, message: "Failed to fetch applications" });
   }
 };

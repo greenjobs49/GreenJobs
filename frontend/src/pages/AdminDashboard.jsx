@@ -35,12 +35,20 @@ const AdminDashboard = () => {
     totalUsers: 0, jobseekers: 0, recruiters: 0, businesses: 0,
     liveJobs: 0, pendingJobs: 0, pendingBusinesses: 0, approvedBusinesses: 0,
     pendingRecruiters: 0, incompleteUsers: 0,
+    totalApplications: 0,
+    totalHired: 0,
   });
   const [users,             setUsers]             = useState([]);
   const [liveJobs,          setLiveJobs]          = useState([]);
   const [businesses,        setBusinesses]        = useState([]);
   const [pendingBusinesses, setPendingBusinesses] = useState([]);
   const [pendingRecruiters, setPendingRecruiters] = useState([]);
+  const [applications,    setApplications]    = useState([]);
+  const [appsLoading,     setAppsLoading]     = useState(false);
+  const [appsPage,        setAppsPage]        = useState(1);
+  const [appsTotal,       setAppsTotal]       = useState(0);
+  const [appStatusFilter, setAppStatusFilter] = useState("all");
+  const [appsSearch,      setAppsSearch]      = useState("");
 
   // ── UI / loading state ───────────────────────────────────────────────────
   const [loading,          setLoading]          = useState(true);
@@ -103,12 +111,35 @@ const AdminDashboard = () => {
         approvedBusinesses: s.approvedBusinesses ?? approvedBizData.length,
         pendingRecruiters:  s.pendingRecruiters  ?? pendingRecData.length,
         incompleteUsers:    s.incompleteUsers    ?? usersData.filter(u => !u.profileCompleted && u.role !== "admin").length,
+        totalApplications: s.totalApplications ?? 0,  // ← add
+        totalHired:        s.totalHired        ?? 0,
       });
     } catch (err) {
       console.error("Fetch data error:", err);
       toast.error("Failed to load dashboard data");
     } finally {
       setLoading(false);
+    }
+  }, [token]);
+
+    const fetchApplications = useCallback(async (page = 1, status = "all", search = "") => {
+    if (!token) return;
+    try {
+      setAppsLoading(true);
+      const params = new URLSearchParams({ page, limit: 50 });
+      if (status !== "all") params.append("status", status);
+      if (search)           params.append("search", search);
+      const res = await axios.get(
+        `${API_BASE_URL}/api/admin/applications?${params}`,
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      setApplications(res.data.applications || []);
+      setAppsTotal(res.data.total || 0);
+      setAppsPage(page);
+    } catch (err) {
+      toast.error("Failed to load applications");
+    } finally {
+      setAppsLoading(false);
     }
   }, [token]);
 
@@ -120,7 +151,12 @@ const AdminDashboard = () => {
     setSearchTerm("");
     setJobStatusFilter("all");
     setRoleFilter("all");
-    setUserPage(1); // FIX: reset pagination on tab change
+    setUserPage(1);
+    if (key === "applications") {
+      setAppStatusFilter("all");
+      setAppsSearch("");
+      fetchApplications(1, "all", "");
+    }
   };
 
   // ── Job revoke / restore ─────────────────────────────────────────────────
@@ -357,6 +393,22 @@ const AdminDashboard = () => {
       subtitle: "Recruiters awaiting verification",
       tab: "recruiters",
       urgent: stats.pendingRecruiters > 0 ? "red" : null,
+    },
+    {
+      icon: TrendingUp,
+      label: "Total Applications",
+      value: stats.totalApplications,
+      color: "#0d9488",
+      subtitle: `${stats.totalHired} successful hires`,
+      tab: "applications",   // ← was "overview"
+    },
+    {
+      icon: UserCheck,
+      label: "Jobseekers Hired",
+      value: stats.totalHired,
+      color: "#f59e0b",
+      subtitle: "Successful placements to date",
+      tab: "applications",   // ← was "overview"
     },
   ];
 
@@ -636,6 +688,7 @@ const AdminDashboard = () => {
               { key: "jobs",         label: `Live Jobs (${stats.liveJobs})`, badge: null },
               { key: "businesses",   label: "Businesses",                    badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
               { key: "recruiters",   label: "Recruiter Verifications",       badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
+              { key: "applications", label: `Applications (${stats.totalApplications})`, badge: null },
               { key: "ads",          label: "Ad Manager",                    badge: null },
               { key: "topcompanies", label: "Top Companies",                 badge: null },
               { key: "toprecruiters", label: "Top Recruiters", badge: null },
@@ -745,6 +798,8 @@ const AdminDashboard = () => {
                     { label: "Approved Businesses",     value: stats.approvedBusinesses,  bg: "#f0fdf4", border: "#bbf7d0", text: "#15803d" },
                     { label: "Pending Businesses",      value: stats.pendingBusinesses,   bg: stats.pendingBusinesses > 0 ? "#fffbeb" : "#f8fafc", border: stats.pendingBusinesses > 0 ? "#fcd34d" : "#e2e8f0", text: stats.pendingBusinesses > 0 ? "#d97706" : "#64748b" },
                     { label: "Incomplete Profiles",     value: stats.incompleteUsers ?? 0, bg: "#fef2f2", border: "#fecaca", text: "#dc2626" },
+                    { label: "Total Applications", value: stats.totalApplications, bg: "#f0fdfa", border: "#99f6e4", text: "#0f766e" },
+                    { label: "Successful Hires",   value: stats.totalHired,        bg: "#fffbeb", border: "#fde68a", text: "#92400e" },
                   ].map((item, i) => (
                     <div key={i} style={{ padding: "20px", background: item.bg, borderRadius: "12px", border: `1px solid ${item.border}` }}>
                       <div style={{ fontSize: "12px", color: item.text, marginBottom: "4px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" }}>{item.label}</div>
@@ -1189,7 +1244,203 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+          {/* ══════════════════════════════════════════
+              ── Applications Tab ──
+          ══════════════════════════════════════════ */}
+          {activeTab === "applications" && (
+            <div className="section-card">
+              <div className="section-header">
+                <h2 className="section-title">
+                  <Briefcase size={20} /> All Applications ({appsTotal})
+                </h2>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" }}>
+                  <div className="search-box" style={{ maxWidth: 280 }}>
+                    <Search size={16} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Search applicant, job, company…"
+                      className="search-input"
+                      value={appsSearch}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setAppsSearch(val);
+                        clearTimeout(window._appsSearchTimer);
+                        window._appsSearchTimer = setTimeout(() => {
+                          fetchApplications(1, appStatusFilter, val);
+                        }, 350);
+                      }}
+                    />
+                  </div>
+                  <button className="btn btn-secondary btn-sm" onClick={() => fetchApplications(appsPage, appStatusFilter, appsSearch)}>
+                    <RefreshCw size={14} /> Refresh
+                  </button>
+                </div>
+              </div>
 
+              {/* Status filter pills */}
+              <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 20 }}>
+                {[
+                  { key: "all",          label: "All",          color: "#0f172a" },
+                  { key: "applied",      label: "Applied",      color: "#3b82f6" },
+                  { key: "under_review", label: "Under Review", color: "#8b5cf6" },
+                  { key: "shortlisted",  label: "Shortlisted",  color: "#f59e0b" },
+                  { key: "round_update", label: "In Rounds",    color: "#06b6d4" },
+                  { key: "hired",        label: "Hired",      color: "#10b981" },
+                  { key: "rejected",     label: "Rejected",     color: "#ef4444" },
+                  { key: "withdrawn",    label: "Withdrawn",    color: "#94a3b8" },
+                ].map(f => (
+                  <button
+                    key={f.key}
+                    onClick={() => { setAppStatusFilter(f.key); fetchApplications(1, f.key, appsSearch); }}
+                    style={{
+                      padding: "5px 14px", borderRadius: 100, border: "none",
+                      fontSize: 12, fontWeight: 600, cursor: "pointer", transition: "all 0.15s",
+                      background: appStatusFilter === f.key ? f.color : "#f1f5f9",
+                      color:      appStatusFilter === f.key ? "#fff"   : "#64748b",
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              {appsLoading ? (
+                <div style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                  <Loader2 className="animate-spin" size={32} style={{ color: "#3b82f6" }} />
+                </div>
+              ) : applications.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon"><Briefcase size={28} color="#cbd5e1" /></div>
+                  <div className="empty-title">No applications found</div>
+                  <div className="empty-desc">Try adjusting your search or status filter</div>
+                </div>
+              ) : (
+                <>
+                  <div style={{ overflowX: "auto" }}>
+                    <table className="data-table">
+                      <thead>
+                        <tr>
+                          <th>Applicant</th>
+                          <th>Applied For</th>
+                          <th>Company</th>
+                          <th>Via</th>
+                          <th>Status</th>
+                          <th>Round</th>
+                          <th>Applied On</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {applications.map((app) => {
+                          const applicantName = app.applicantSnapshot?.fullName || app.jobseeker?.name || "—";
+                          const applicantEmail = app.applicantSnapshot?.email  || app.jobseeker?.email || "—";
+                          const jobTitle   = app.job?.title   || "—";
+                          const company    = app.job?.company || app.business?.businessProfile?.businessName || "—";
+                          const location   = app.job?.location || "";
+                          const poster     = app.recruiter
+                            ? `Recruiter: ${app.recruiter.name}`
+                            : app.business?.businessProfile?.businessName
+                              ? `Business: ${app.business.businessProfile.businessName}`
+                              : "—";
+
+                          const statusStyle = {
+                            applied:      { bg: "#dbeafe", color: "#1e40af", label: "Applied" },
+                            under_review: { bg: "#ede9fe", color: "#5b21b6", label: "Under Review" },
+                            shortlisted:  { bg: "#fef3c7", color: "#92400e", label: "Shortlisted" },
+                            round_update: { bg: "#cffafe", color: "#155e75", label: "In Rounds" },
+                            hired:        { bg: "#d1fae5", color: "#065f46", label: "Hired ✓" },
+                            rejected:     { bg: "#fee2e2", color: "#991b1b", label: "Rejected" },
+                            withdrawn:    { bg: "#f1f5f9", color: "#475569", label: "Withdrawn" },
+                          }[app.status] || { bg: "#f1f5f9", color: "#64748b", label: app.status };
+
+                          return (
+                            <tr key={app._id}>
+                              <td>
+                                <div className="user-info">
+                                  <div className="user-avatar" style={{ width: 34, height: 34, fontSize: 13 }}>
+                                    {applicantName.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div>
+                                    <div className="user-name" style={{ fontSize: 13 }}>{applicantName}</div>
+                                    <div className="user-email">{applicantEmail}</div>
+                                    {app.applicantSnapshot?.city && (
+                                      <div style={{ fontSize: 11, color: "#94a3b8", display: "flex", alignItems: "center", gap: 3 }}>
+                                        <MapPin size={10} />{app.applicantSnapshot.city}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a", marginBottom: 2 }}>{jobTitle}</div>
+                                {location && (
+                                  <div style={{ fontSize: 12, color: "#64748b", display: "flex", alignItems: "center", gap: 3 }}>
+                                    <MapPin size={11} />{location}
+                                  </div>
+                                )}
+                                {app.job?.type && (
+                                  <div style={{ fontSize: 11, color: "#94a3b8" }}>{Array.isArray(app.job.type) ? app.job.type.join(", ") : app.job.type}</div>
+                                )}
+                              </td>
+                              <td>
+                                <div style={{ fontWeight: 600, fontSize: 13, color: "#0f172a" }}>{company}</div>
+                              </td>
+                              <td>
+                                <div style={{ fontSize: 12, color: "#64748b" }}>{poster}</div>
+                              </td>
+                              <td>
+                                <span style={{
+                                  background: statusStyle.bg, color: statusStyle.color,
+                                  padding: "4px 10px", borderRadius: 100, fontSize: 12, fontWeight: 600,
+                                  whiteSpace: "nowrap",
+                                }}>
+                                  {statusStyle.label}
+                                </span>
+                              </td>
+                              <td>
+                                {app.currentRound > 0 ? (
+                                  <span style={{ fontSize: 13, color: "#06b6d4", fontWeight: 600 }}>
+                                    Round {app.currentRound}
+                                  </span>
+                                ) : (
+                                  <span style={{ fontSize: 12, color: "#94a3b8" }}>—</span>
+                                )}
+                              </td>
+                              <td style={{ fontSize: 12, color: "#64748b", whiteSpace: "nowrap" }}>
+                                {new Date(app.createdAt).toLocaleDateString("en-IN", {
+                                  day: "numeric", month: "short", year: "numeric",
+                                })}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Pagination */}
+                  {appsTotal > 50 && (
+                    <div className="load-more-wrap">
+                      <div className="load-more-info">
+                        Showing {Math.min(appsPage * 50, appsTotal)} of {appsTotal} applications
+                      </div>
+                      <div style={{ display: "flex", gap: 8, justifyContent: "center" }}>
+                        {appsPage > 1 && (
+                          <button className="btn btn-secondary btn-sm" onClick={() => fetchApplications(appsPage - 1, appStatusFilter, appsSearch)}>
+                            ← Previous
+                          </button>
+                        )}
+                        {appsPage * 50 < appsTotal && (
+                          <button className="btn btn-secondary btn-sm" onClick={() => fetchApplications(appsPage + 1, appStatusFilter, appsSearch)}>
+                            Next →
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
           {/* ══════════════════════════════════════════
               ── Ad Manager Tab ──
           ══════════════════════════════════════════ */}
