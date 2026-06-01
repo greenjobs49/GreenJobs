@@ -168,6 +168,7 @@ app.use("/api/admin",        require("./routes/admin.routes"));
 app.use("/api/applications", require("./routes/application.routes"));
 app.use("/api/ads",          require("./routes/ad.routes"));
 app.use("/api/seo",          require("./routes/seo.routes"));
+app.use("/api/blogs", require("./routes/blog.routes"));
 
 // ── Health check ──────────────────────────────────────────────────────────
 app.get("/health", (_req, res) =>

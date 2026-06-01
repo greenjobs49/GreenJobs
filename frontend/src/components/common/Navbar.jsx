@@ -74,8 +74,8 @@ const UserMenu = ({ user, roleLabel, dashboardRoute, onProfile, onLogout, onClos
     <div className="um-panel">
       <div className="um-header">
         <div className="um-avatar-lg">
-          {user?.profilePicture ? (
-            <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+          {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
+            <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", borderRadius: "inherit", objectFit: "cover" }} />
           ) : (
             user?.name?.charAt(0).toUpperCase() || "U"
           )}
@@ -267,10 +267,10 @@ const Navbar = ({ title }) => {
         body { padding-top: 82px; }
         .navbar-container {
           max-width: 100%; margin: 0 auto; padding: 0 40px;
-          display: flex; align-items: center; justify-content: space-between;
-          height: 82px; position: relative;
+          display: flex; align-items: center;
+          height: 82px;
         }
-        .navbar-left { display: flex; align-items: center; gap: 16px; }
+        .navbar-left  { flex-shrink: 0; }
         .navbar-logo { display: flex; flex-direction: column; align-items: center; justify-content: center; text-decoration: none; cursor: pointer; min-width: 120px; }
         .logo-image { height: 52px; width: auto; object-fit: contain; }
         .logo-text { display: flex; flex-direction: column; align-items: center; justify-content: center; margin-top: 2px; }
@@ -278,11 +278,15 @@ const Navbar = ({ title }) => {
         .logo-green { color: #16a34a; }
         .logo-black { color: #111827; }
         .navbar-center {
-          position: absolute; left: 48%; transform: translateX(-50%);
-          display: flex; align-items: center; pointer-events: none; z-index: 5;
+          flex: 1;
+          display: flex; align-items: center; justify-content: center;
+          pointer-events: auto;
+          min-width: 0;
+          max-height: 82px;
+          overflow: hidden;
         }
-        .worker-image { width: auto; object-fit: contain; cursor: pointer; transition: opacity 0.3s; }
-        .navbar-right { display: flex; align-items: center; gap: 8px; position: relative; z-index: 1; }
+        .worker-image { width: auto; max-height: 70px; object-fit: contain; cursor: pointer; transition: opacity 0.3s; }
+        .navbar-right { flex-shrink: 0; margin-left: auto; display: flex; align-items: center; gap: 8px; }
         .nav-links {
           display: flex; align-items: center; gap: 2px;
           background: #f7f8fa; border: 1px solid #eaecef;
@@ -531,14 +535,23 @@ const Navbar = ({ title }) => {
             {isAuthenticated ? (
               <>
                 <div className="nav-links">
-                  <Link to="/jobs" className="nav-link">Jobs</Link>
-                  {showCompanies && <Link to="/businesses" className="nav-link">Companies</Link>}
-                </div>
+  <Link to="/jobs" className="nav-link">
+    Jobs
+  </Link>
+
+  <Link to="/businesses" className="nav-link">
+    Companies
+  </Link>
+
+  <Link to="/blog" className="nav-link">
+    Blog
+  </Link>
+</div>
                 <div className="nav-sep" />
                 <div className="user-menu-wrap" ref={userMenuRef}>
                   <div className={`user-chip${userMenuOpen ? " open" : ""}`} onClick={() => setUserMenuOpen((v) => !v)}>
                     <div className="user-avatar">
-                      {user?.profilePicture ? (
+                      {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
                         <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       ) : (
                         user?.name?.charAt(0).toUpperCase() || "U"
@@ -558,9 +571,18 @@ const Navbar = ({ title }) => {
             ) : (
               <>
                 <div className="nav-links">
-                  <Link to="/jobs" className="nav-link">Jobs</Link>
-                  <Link to="/businesses" className="nav-link">Companies</Link>
-                </div>
+  <Link to="/jobs" className="nav-link">Jobs</Link>
+
+  {showCompanies && (
+    <Link to="/businesses" className="nav-link">
+      Companies
+    </Link>
+  )}
+
+  <Link to="/blog" className="nav-link">
+    Blog
+  </Link>
+</div>
                 <div className="nav-sep" />
                 <div className="auth-btn-group">
                   <div className="dropdown-wrapper" ref={loginRef}>
@@ -610,11 +632,11 @@ const Navbar = ({ title }) => {
         {isAuthenticated && (
           <div className="md-user-card">
             <div className="md-user-avatar">
-              {user?.profilePicture ? (
-                  <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                ) : (
-                  user?.name?.charAt(0).toUpperCase() || "U"
-                )}
+              {user?.profilePicture && (user.role === "business" || user.role === "recruiter") ? (
+                <img src={user.profilePicture} alt={user.name} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+              ) : (
+                user?.name?.charAt(0).toUpperCase() || "U"
+              )}
             </div>
             <div className="md-user-info">
               <div className="md-user-name">{user?.name || "User"}</div>
@@ -626,11 +648,48 @@ const Navbar = ({ title }) => {
 
         <div className="md-section">
           <div className="md-section-title">Navigation</div>
-          <Link to="/jobs" className="md-nav-item" onClick={closeMobileMenu}>
-            <div className="md-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
-            <div className="md-nav-text"><div className="md-nav-label">Jobs</div><div className="md-nav-desc">Browse all open positions</div></div>
-            <svg className="md-nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
+          <Link
+  to="/blog"
+  className="md-nav-item"
+  onClick={closeMobileMenu}
+>
+  <div className="md-nav-icon">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  </div>
+
+  <div className="md-nav-text">
+    <div className="md-nav-label">Blog</div>
+    <div className="md-nav-desc">
+      Read latest articles and updates
+    </div>
+  </div>
+
+  <svg
+    className="md-nav-arrow"
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+</Link>
           {(!isAuthenticated || showCompanies) && (
             <Link to="/businesses" className="md-nav-item" onClick={closeMobileMenu}>
               <div className="md-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>

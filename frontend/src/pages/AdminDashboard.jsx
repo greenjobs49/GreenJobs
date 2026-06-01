@@ -4,7 +4,7 @@ import {
   Users, Briefcase, Building, TrendingUp, CheckCircle,
   Clock, XCircle, Eye, RefreshCw, Loader2, Search,
   MapPin, Mail, Calendar, ArrowUpRight, ShieldOff,
-  ShieldCheck, UserCheck, X, UserPlus, Building2, Globe,
+  ShieldCheck, UserCheck, X, UserPlus, Building2, Globe, FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -695,6 +695,7 @@ const AdminDashboard = () => {
               { key: "topcompanies", label: "Top Companies",                 badge: null },
               { key: "toprecruiters", label: "Top Recruiters", badge: null },
               { key: "seo", label: "SEO Manager", badge: null },
+              { key: "blogs", label: "Blogs", badge: null },
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -1475,7 +1476,24 @@ const AdminDashboard = () => {
               <AdminSeoDashboard token={token} />
             </div>
           )}
-
+          {activeTab === "blogs" && (
+          <div className="section-card">
+            <div className="section-header">
+              <h2 className="section-title">
+                <FileText size={20} />
+                Blog Management
+              </h2>
+            </div>
+            <div style={{ display: "flex", gap: "12px", marginTop: "20px" }}>
+              <button className="btn btn-success" onClick={() => navigate("/admin/blogs/create")}>
+                Create Blog
+              </button>
+              <button className="btn btn-secondary" onClick={() => navigate("/admin/blogs")}>
+                View Blogs
+              </button>
+            </div>
+          </div>
+        )}
         </div>
       </div>
 
