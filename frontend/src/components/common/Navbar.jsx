@@ -531,9 +531,18 @@ const Navbar = ({ title }) => {
             {isAuthenticated ? (
               <>
                 <div className="nav-links">
-                  <Link to="/jobs" className="nav-link">Jobs</Link>
-                  {showCompanies && <Link to="/businesses" className="nav-link">Companies</Link>}
-                </div>
+  <Link to="/jobs" className="nav-link">
+    Jobs
+  </Link>
+
+  <Link to="/businesses" className="nav-link">
+    Companies
+  </Link>
+
+  <Link to="/blog" className="nav-link">
+    Blog
+  </Link>
+</div>
                 <div className="nav-sep" />
                 <div className="user-menu-wrap" ref={userMenuRef}>
                   <div className={`user-chip${userMenuOpen ? " open" : ""}`} onClick={() => setUserMenuOpen((v) => !v)}>
@@ -558,9 +567,18 @@ const Navbar = ({ title }) => {
             ) : (
               <>
                 <div className="nav-links">
-                  <Link to="/jobs" className="nav-link">Jobs</Link>
-                  <Link to="/businesses" className="nav-link">Companies</Link>
-                </div>
+  <Link to="/jobs" className="nav-link">Jobs</Link>
+
+  {showCompanies && (
+    <Link to="/businesses" className="nav-link">
+      Companies
+    </Link>
+  )}
+
+  <Link to="/blog" className="nav-link">
+    Blog
+  </Link>
+</div>
                 <div className="nav-sep" />
                 <div className="auth-btn-group">
                   <div className="dropdown-wrapper" ref={loginRef}>
@@ -626,11 +644,48 @@ const Navbar = ({ title }) => {
 
         <div className="md-section">
           <div className="md-section-title">Navigation</div>
-          <Link to="/jobs" className="md-nav-item" onClick={closeMobileMenu}>
-            <div className="md-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
-            <div className="md-nav-text"><div className="md-nav-label">Jobs</div><div className="md-nav-desc">Browse all open positions</div></div>
-            <svg className="md-nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
-          </Link>
+          <Link
+  to="/blog"
+  className="md-nav-item"
+  onClick={closeMobileMenu}
+>
+  <div className="md-nav-icon">
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z" />
+    </svg>
+  </div>
+
+  <div className="md-nav-text">
+    <div className="md-nav-label">Blog</div>
+    <div className="md-nav-desc">
+      Read latest articles and updates
+    </div>
+  </div>
+
+  <svg
+    className="md-nav-arrow"
+    width="14"
+    height="14"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 12h14M12 5l7 7-7 7" />
+  </svg>
+</Link>
           {(!isAuthenticated || showCompanies) && (
             <Link to="/businesses" className="md-nav-item" onClick={closeMobileMenu}>
               <div className="md-nav-icon"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>

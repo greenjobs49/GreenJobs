@@ -2,6 +2,14 @@ import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
+import BlogPage from "./pages/blog/BlogPage";
+import BlogDetails from "./pages/blog/BlogDetails";
+
+// Admin Blog Management
+import AdminBlogs from "./pages/admin/blog/AdminBlogs";
+import CreateBlog from "./pages/admin/blog/CreateBlog";
+import EditBlog from "./pages/admin/blog/EditBlog";
+
 // Role-based login pages
 import JobSeekerLogin from "./pages/Jobseekerlogin";
 import RecruiterLogin from "./pages/Recruiterlogin";
@@ -83,6 +91,14 @@ function App() {
           {/* Public */}
           <Route path="/" element={<Home />} />
 
+<Route path="/jobs" element={<Jobs />} />
+<Route path="/jobs/:jobId" element={<JobDetail />} />
+
+<Route path="/blog" element={<BlogPage />} />
+<Route path="/blog/:slug" element={<BlogDetails />} />
+
+<Route path="/businesses" element={<Businesses />} />
+<Route path="/businesses/:id" element={<BusinessDetail />} />
           {/* Role-based login pages */}
           <Route path="/login"            element={<JobSeekerLogin />} />
           <Route path="/recruiter/login"  element={<RecruiterLogin />} />
@@ -163,6 +179,14 @@ function App() {
               </ProtectedRoute>
             }
           />
+<Route
+  path="/admin/blogs/create"
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <CreateBlog />
+    </ProtectedRoute>
+  }
+/>
           <Route
             path="/admin/pending-jobs"
             element={
@@ -183,6 +207,32 @@ function App() {
             path="/admin/approved-businesses"
             element={<ApprovedBusinesses />}
           />
+          <Route
+  path="/admin/blogs"
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <AdminBlogs />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/blogs/new"
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <CreateBlog />
+    </ProtectedRoute>
+  }
+/>
+
+<Route
+  path="/admin/blogs/edit/:id"
+  element={
+    <ProtectedRoute allowedRoles={["admin"]}>
+      <EditBlog />
+    </ProtectedRoute>
+  }
+/>
 
           {/* Complete profile */}
           <Route

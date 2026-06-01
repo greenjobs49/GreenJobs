@@ -12,7 +12,7 @@ import {
 import apiClient from "../api/apiClient";
 
 export default function MyProfile() {
-  const { user, refreshUser } = useAuth();
+  const { user, token, refreshUser } = useAuth();
   const navigate = useNavigate();
 
   const fileInputLogoRef   = useRef(null);
@@ -98,7 +98,7 @@ export default function MyProfile() {
     try {
       await apiClient.post("/profile/upload-avatar", formData, {
   headers: {
-    Authorization: `Bearer ${localStorage.getItem("token")}`,
+    Authorization: `Bearer ${token}`,
   },
 });
       await refreshUser();

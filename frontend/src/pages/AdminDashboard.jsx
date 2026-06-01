@@ -4,7 +4,7 @@ import {
   Users, Briefcase, Building, TrendingUp, CheckCircle,
   Clock, XCircle, Eye, RefreshCw, Loader2, Search,
   MapPin, Mail, Calendar, ArrowUpRight, ShieldOff,
-  ShieldCheck, UserCheck, X, UserPlus, Building2,
+  ShieldCheck, UserCheck, X, UserPlus, Building2,FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -607,6 +607,7 @@ const AdminDashboard = () => {
               { key: "businesses", label: `Businesses`,                      badge: stats.pendingBusinesses > 0 ? { count: stats.pendingBusinesses, type: "amber" } : null },
               { key: "recruiters", label: "Recruiter Verifications",         badge: stats.pendingRecruiters > 0 ? { count: stats.pendingRecruiters, type: "red" } : null },
               { key: "ads",        label: "Ad Manager",                   badge: null },
+              { key: "blogs", label: "Blogs", icon: FileText }
             ].map((tab) => (
               <button
                 key={tab.key}
@@ -1132,6 +1133,41 @@ const AdminDashboard = () => {
               )}
             </div>
           )}
+
+          {/* ── Blogs Tab ── */}
+{activeTab === "blogs" && (
+  <div className="section-card">
+    <div className="section-header">
+      <h2 className="section-title">
+        <FileText size={20} />
+        Blog Management
+      </h2>
+    </div>
+
+    <div
+      style={{
+        display: "flex",
+        gap: "12px",
+        marginTop: "20px"
+      }}
+    >
+      <button
+        className="btn btn-success"
+        onClick={() => navigate("/admin/blogs/create")}
+      >
+        Create Blog
+      </button>
+
+      <button
+        className="btn btn-secondary"
+        onClick={() => navigate("/admin/blogs")}
+      >
+        View Blogs
+      </button>
+    </div>
+  </div>
+)}
+
 
           {/* ══════════════════════════════════════════
               ── Ad Manager Tab ──

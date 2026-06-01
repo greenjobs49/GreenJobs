@@ -88,8 +88,7 @@ const userSchema = new mongoose.Schema(
       name: { type: String, trim: true },
       phone: { type: String, trim: true }
     }
-  ]
-
+  ],
   portfolio: { type: String },
   expectedSalary: String,
   preferredRole: { type: String, trim: true, maxlength: 100 },
