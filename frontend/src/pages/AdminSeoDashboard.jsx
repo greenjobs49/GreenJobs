@@ -670,9 +670,6 @@ const AdminSeoDashboard = ({ token }) => {
               <div style={{ fontSize:11, fontWeight:700, color:"#94a3b8", textTransform:"uppercase", letterSpacing:"0.08em", margin:"20px 0 10px" }}>
                 Dynamic Page Templates
               </div>
-              <div style={{ background:"#fffbeb", border:"1px solid #fcd34d", borderRadius:8, padding:"10px 14px", fontSize:12, color:"#92400e", marginBottom:12 }}>
-                Dynamic page templates set default SEO for all job/company pages. Use the <code>useSeoMeta</code> hook with dynamic overrides for per-item customization.
-              </div>
               {filteredPages.filter(p => p.pageType === "dynamic").map(page => {
                 const issues = getPageHealth(page);
                 return (
