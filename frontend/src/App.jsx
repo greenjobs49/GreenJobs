@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Toaster } from "react-hot-toast";
 
-import BlogPage from "./pages/blog/BlogPage";
+import BlogPage from "./pages/blog/BlogPages";
 import BlogDetails from "./pages/blog/BlogDetails";
 
 // Admin Blog Management
