@@ -4,6 +4,7 @@ const router  = express.Router();
 const protect        = require("../middleware/auth");
 const authorizeRoles = require("../middleware/role");
 const uploadBanner   = require("../middleware/uploadBanner");
+const uploadSeoBanner = require("../middleware/uploadSeoImage");
 
 const { sendProfileReminders } = require("../controllers/reminderController");
 
@@ -49,6 +50,7 @@ const {
   getSeoPage,
   upsertSeoPage,
   bulkUpsertSeo,
+  uploadSeoImage,
 } = require("../controllers/seo.controller");
 // ── Profile reminders ──────────────────────────────────────────────────────
 router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendProfileReminders);
@@ -85,7 +87,14 @@ router.post("/create-admin", protect, authorizeRoles("admin"), createAdmin);
 
 // ── SEO Management ─────────────────────────────────────────────────────────
 router.get("/seo",           protect, authorizeRoles("admin"), getAllSeoPages);
-router.post("/seo/bulk",     protect, authorizeRoles("admin"), bulkUpsertSeo);  // ← moved up
+router.post("/seo/bulk",     protect, authorizeRoles("admin"), bulkUpsertSeo); 
+router.post(                                                        
+  "/seo/upload-image",
+  protect,
+  authorizeRoles("admin"),
+  uploadSeoBanner.single("ogImage"),
+  uploadSeoImage,              // controller
+);
 router.get("/seo/:pageKey",  protect, authorizeRoles("admin"), getSeoPage);
 router.put("/seo/:pageKey",  protect, authorizeRoles("admin"), upsertSeoPage);
 

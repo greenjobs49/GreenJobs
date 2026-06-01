@@ -1,7 +1,7 @@
 const SeoMeta = require("../models/SeoMeta");
 const Job     = require("../models/Job");
 const User    = require("../models/User");
-
+const s3      = require("../config/s3");
 // ── Default page seeds ────────────────────────────────────────────────────────
 const DEFAULT_PAGES = [
   {
@@ -113,7 +113,7 @@ exports.getPublicSeo = async (req, res) => {
 ========================================================= */
 exports.getSitemap = async (req, res) => {
   try {
-    const siteUrl = process.env.SITE_URL || "https://jobs.solarismypassion.com";
+    const siteUrl = process.env.FRONTEND_URL || "https://jobs.solarismypassion.com";
     const now     = new Date().toISOString();
 
     // Fetch everything in parallel — jobSeo and companySeo share the first query
@@ -394,5 +394,51 @@ exports.bulkUpsertSeo = async (req, res) => {
   } catch (err) {
     console.error("[SEO] bulkUpsertSeo error:", err.message);
     return res.status(500).json({ success: false, message: "Bulk update failed" });
+  }
+};
+
+/* =========================================================
+   ADMIN — UPLOAD SEO OG IMAGE TO S3
+   POST /api/admin/seo/upload-image
+========================================================= */
+exports.uploadSeoImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "No image file uploaded" });
+    }
+
+    // If pageKey is provided, delete the old OG image from S3
+    if (req.body?.pageKey) {
+      try {
+        const existing = await SeoMeta.findOne({ pageKey: req.body.pageKey }).lean();
+        if (existing?.ogImage) {
+          const url = new URL(existing.ogImage);
+          if (url.hostname.includes("amazonaws.com") || url.hostname.includes("s3.")) {
+            const { DeleteObjectCommand } = require("@aws-sdk/client-s3");
+            const key = decodeURIComponent(url.pathname.substring(1));
+            await s3.send(new DeleteObjectCommand({
+              Bucket: process.env.AWS_S3_BUCKET_NAME,
+              Key: key,
+            }));
+            console.log(`[SEO] Old OG image deleted from S3: ${key}`);
+          }
+        }
+      } catch (e) {
+        console.warn("[SEO] Could not delete old OG image (non-fatal):", e.message);
+      }
+    }
+
+    const imageUrl = req.file.location; // S3 URL from multer-s3
+
+    console.log(`[SEO] OG image uploaded by admin ${req.user.id}: ${imageUrl}`);
+
+    return res.json({
+      success: true,
+      message: "SEO image uploaded successfully",
+      imageUrl,
+    });
+  } catch (err) {
+    console.error("[SEO] uploadSeoImage error:", err.message);
+    return res.status(500).json({ success: false, message: "Failed to upload SEO image" });
   }
 };

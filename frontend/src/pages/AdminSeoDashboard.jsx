@@ -9,9 +9,9 @@ import {
 import API_BASE_URL from "../config/api";
 import toast from "react-hot-toast";
 
-const ROBOTS_OPTIONS    = ["index,follow","index,nofollow","noindex,follow","noindex,nofollow"];
+const ROBOTS_OPTIONS     = ["index,follow","index,nofollow","noindex,follow","noindex,nofollow"];
 const CHANGEFREQ_OPTIONS = ["always","hourly","daily","weekly","monthly","yearly","never"];
-const OG_TYPE_OPTIONS   = ["website","article","job_listing","profile"];
+const OG_TYPE_OPTIONS    = ["website","article","job_listing","profile"];
 
 // ── Tiny helper components ────────────────────────────────────────────────────
 const Label = ({ children }) => (
@@ -146,23 +146,24 @@ const AdminSeoDashboard = ({ token }) => {
   const [previewTab,     setPreviewTab]     = useState("google");
   const [sitemapXml,     setSitemapXml]     = useState("");
   const [loadingSitemap, setLoadingSitemap] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const getHeaders = () => ({ Authorization: `Bearer ${token}` });
 
   // ── Fetch pages ────────────────────────────────────────────────────────────
-    const fetchPages = useCallback(async () => {
+  const fetchPages = useCallback(async () => {
     try {
-        setLoading(true);
-        const res = await axios.get(`${API_BASE_URL}/api/admin/seo`, {
-        headers: getHeaders(),  // ← was: headers
-        });
-        setPages(res.data.pages || []);
+      setLoading(true);
+      const res = await axios.get(`${API_BASE_URL}/api/admin/seo`, {
+        headers: getHeaders(),
+      });
+      setPages(res.data.pages || []);
     } catch {
-        toast.error("Failed to load SEO pages");
+      toast.error("Failed to load SEO pages");
     } finally {
-        setLoading(false);
+      setLoading(false);
     }
-    }, [token]);
+  }, [token]);
 
   useEffect(() => { fetchPages(); }, [fetchPages]);
 
@@ -170,24 +171,24 @@ const AdminSeoDashboard = ({ token }) => {
   const openEdit = (page) => {
     setEditingPage(page);
     setForm({
-      title:              page.title             || "",
-      description:        page.description       || "",
+      title:              page.title              || "",
+      description:        page.description        || "",
       keywords:           (page.keywords || []).join(", "),
-      canonical:          page.canonical         || "",
-      robots:             page.robots            || "index,follow",
-      ogTitle:            page.ogTitle           || "",
-      ogDescription:      page.ogDescription     || "",
-      ogImage:            page.ogImage           || "",
-      ogType:             page.ogType            || "website",
-      twitterCard:        page.twitterCard       || "summary_large_image",
-      twitterTitle:       page.twitterTitle      || "",
-      twitterDescription: page.twitterDescription|| "",
-      twitterImage:       page.twitterImage      || "",
-      schemaMarkup:       page.schemaMarkup      || "",
+      canonical:          page.canonical          || "",
+      robots:             page.robots             || "index,follow",
+      ogTitle:            page.ogTitle            || "",
+      ogDescription:      page.ogDescription      || "",
+      ogImage:            page.ogImage            || "",
+      ogType:             page.ogType             || "website",
+      twitterCard:        page.twitterCard        || "summary_large_image",
+      twitterTitle:       page.twitterTitle       || "",
+      twitterDescription: page.twitterDescription || "",
+      twitterImage:       page.twitterImage       || "",
+      schemaMarkup:       page.schemaMarkup       || "",
       includeInSitemap:   page.includeInSitemap !== false,
-      sitemapPriority:    page.sitemapPriority   ?? 0.8,
-      sitemapChangefreq:  page.sitemapChangefreq || "weekly",
-      robotsTxtContent:   page.robotsTxtContent  || "",
+      sitemapPriority:    page.sitemapPriority    ?? 0.8,
+      sitemapChangefreq:  page.sitemapChangefreq  || "weekly",
+      robotsTxtContent:   page.robotsTxtContent   || "",
     });
     setPreviewTab("google");
   };
@@ -196,39 +197,63 @@ const AdminSeoDashboard = ({ token }) => {
   const fb = (field) => (val) => setForm(p => ({ ...p, [field]: val }));
 
   // ── Save ───────────────────────────────────────────────────────────────────
-    const handleSave = async () => {
+  const handleSave = async () => {
     if (!editingPage) return;
 
     if (form.schemaMarkup?.trim()) {
-        try { JSON.parse(form.schemaMarkup); }
-        catch {
+      try { JSON.parse(form.schemaMarkup); }
+      catch {
         toast.error("Schema markup is not valid JSON — fix it before saving.");
         return;
-        }
+      }
     }
 
     try {
-        setSaving(true);
-        await axios.put(
+      setSaving(true);
+      await axios.put(
         `${API_BASE_URL}/api/admin/seo/${editingPage.pageKey}`,
         form,
-        { headers: getHeaders() }  // ← only change
-        );
-        toast.success(`"${editingPage.pageLabel || editingPage.pageKey}" saved!`);
-        await fetchPages();
-        setEditingPage(null);
+        { headers: getHeaders() }
+      );
+      toast.success(`"${editingPage.pageLabel || editingPage.pageKey}" saved!`);
+      await fetchPages();
+      setEditingPage(null);
     } catch (err) {
-        toast.error(err.response?.data?.message || "Failed to save");
+      toast.error(err.response?.data?.message || "Failed to save");
     } finally {
-        setSaving(false);
+      setSaving(false);
     }
-    };
+  };
+
+  // ── OG Image upload ────────────────────────────────────────────────────────
+  // FIX 1: moved inside the component so it can access editingPage, getHeaders,
+  //         setUploadingImage, setForm, and toast.
+  const handleOgImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append("ogImage", file);
+    formData.append("pageKey", editingPage.pageKey);
+    try {
+      setUploadingImage(true);
+      const res = await axios.post(
+        `${API_BASE_URL}/api/admin/seo/upload-image`,
+        formData,
+        { headers: { ...getHeaders(), "Content-Type": "multipart/form-data" } }
+      );
+      setForm(p => ({ ...p, ogImage: res.data.imageUrl }));
+      toast.success("Image uploaded!");
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Upload failed");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   // ── Sitemap preview ────────────────────────────────────────────────────────
   const loadSitemap = async () => {
     try {
       setLoadingSitemap(true);
-      // Strip /api suffix if present to hit the root server URL
       const base = API_BASE_URL.endsWith("/api")
         ? API_BASE_URL.slice(0, -4)
         : API_BASE_URL.replace(/\/api$/, "");
@@ -388,9 +413,32 @@ const AdminSeoDashboard = ({ token }) => {
                   <Textarea value={form.ogDescription} onChange={f("ogDescription")} rows={2} placeholder="Description for social sharing" maxLength={320} />
                 </Field>
                 <div style={S.grid2}>
+                  {/* FIX 2: </Field> closing tag is now correctly placed AFTER the upload div */}
                   <Field hint="Recommended: 1200×630px">
                     <Label>OG Image URL</Label>
                     <Input value={form.ogImage} onChange={f("ogImage")} placeholder="https://…/og-image.jpg" />
+                    <div style={{ marginTop:6, display:"flex", alignItems:"center", gap:8 }}>
+                      <label style={{ ...S.btn("secondary"), cursor:"pointer", fontSize:12, padding:"6px 12px" }}>
+                        {uploadingImage
+                          ? <><Loader2 size={12} style={{ animation:"spin 1s linear infinite" }} /> Uploading…</>
+                          : "Upload Image"}
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp"
+                          style={{ display:"none" }}
+                          onChange={handleOgImageUpload}
+                          disabled={uploadingImage}
+                        />
+                      </label>
+                      {form.ogImage && (
+                        <img
+                          src={form.ogImage}
+                          alt="OG preview"
+                          style={{ height:36, borderRadius:4, border:"1px solid #e2e8f0", objectFit:"cover" }}
+                          onError={e => e.target.style.display = "none"}
+                        />
+                      )}
+                    </div>
                   </Field>
                   <Field>
                     <Label>OG Type</Label>
@@ -660,7 +708,6 @@ const AdminSeoDashboard = ({ token }) => {
               <h3 style={{ fontSize:16, fontWeight:700, color:"#0f172a", marginBottom:2 }}>Robots.txt</h3>
               <p style={{ fontSize:13, color:"#64748b" }}>Controls what search engines can crawl on your site.</p>
             </div>
-            {/* ✅ Fixed: proper <a> tag */}
             <a
               href={`${API_BASE_URL.replace(/\/api$/, "")}/robots.txt`}
               target="_blank"
@@ -710,7 +757,6 @@ const AdminSeoDashboard = ({ token }) => {
                   ? <><Loader2 size={13} style={{ animation:"spin 1s linear infinite" }} /> Loading…</>
                   : <><Eye size={13} /> Preview XML</>}
               </button>
-              {/* ✅ Fixed: proper <a> tag */}
               <a
                 href={`${API_BASE_URL.replace(/\/api$/, "")}/sitemap.xml`}
                 target="_blank"

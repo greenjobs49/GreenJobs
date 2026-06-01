@@ -80,7 +80,7 @@ const BOT_RE =
 
 const isBot = (req) => BOT_RE.test(req.headers["user-agent"] || "");
 
-const SITE_URL = process.env.SITE_URL || "https://jobs.solarismypassion.com";
+const SITE_URL = process.env.FRONTEND_URL|| "https://jobs.solarismypassion.com";
 const DEFAULT_OG_IMAGE = `${SITE_URL}/og-default.png`;
 
 // ── Bot shell: /jobs/:id ──────────────────────────────────────────────────
