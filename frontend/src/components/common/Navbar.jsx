@@ -648,6 +648,20 @@ const Navbar = ({ title }) => {
 
         <div className="md-section">
           <div className="md-section-title">Navigation</div>
+            <Link to="/jobs" className="md-nav-item" onClick={closeMobileMenu}>
+    <div className="md-nav-icon">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/>
+      </svg>
+    </div>
+    <div className="md-nav-text">
+      <div className="md-nav-label">Jobs</div>
+      <div className="md-nav-desc">Browse green energy jobs</div>
+    </div>
+    <svg className="md-nav-arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M5 12h14M12 5l7 7-7 7"/>
+    </svg>
+  </Link>
           <Link
   to="/blog"
   className="md-nav-item"
