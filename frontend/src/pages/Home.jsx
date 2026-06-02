@@ -882,6 +882,55 @@ useEffect(() => {
 
           </div>
         </section>
+
+        {/* ══ FULL BANNER ADS ══ */}
+        {fullBannerAds.length > 0 && (
+          <section className="fb-section">
+            {(() => {
+              const ad = fullBannerAds.map(normalizeDbAd)[activeFB];
+              return (
+                <div key={activeFB} className="fb-banner fb-anim" onClick={() => handleAdNav(ad.ctaUrl)}>
+                  {ad.image && (
+                    <img src={ad.image} alt={ad.title} className="fb-bg-img" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
+                      onError={e => { e.target.style.background = "#1e293b"; }} />
+                  )}
+                  <div className="fb-gradient" />
+                  <div className="fb-accent-layer" style={{ background: `linear-gradient(105deg, ${ad.accent}44 0%, transparent 55%)` }} />
+                  <div className="fb-inner">
+                    <div className="fb-copy">
+                      {ad.tag && (
+                        <div className="fb-eyebrow" style={{ background: `${ad.accent}2a`, color: ad.accent, border: `1px solid ${ad.accent}44` }}>
+                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: ad.accent, display: "inline-block" }} />
+                          {ad.tag}
+                        </div>
+                      )}
+                      <h2 className="fb-headline">{ad.bannerHeadline || ad.title}</h2>
+                      <p className="fb-sub">{ad.bannerDescription || ad.subtitle}</p>
+                      <div className="fb-btns">
+                        <button
+                          className="fb-btn-main"
+                          style={{ background: ad.accent, boxShadow: `0 4px 24px ${ad.accent}55` }}
+                          onClick={e => { e.stopPropagation(); handleAdNav(ad.ctaUrl); }}
+                        >
+                          {ad.cta}<ChevronRight size={17} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {fullBannerAds.length > 1 && (
+                    <div className="fb-nav-row">
+                      {fullBannerAds.map((_, i) => (
+                        <div key={i} className={`fb-dot${i === activeFB ? " active" : ""}`}
+                          onClick={e => { e.stopPropagation(); setActiveFB(i); }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </section>
+        )}
+
         {/* ══ LIVE JOBS ══ */}
         <section className="jobs-section">
           <div className="jobs-header">
