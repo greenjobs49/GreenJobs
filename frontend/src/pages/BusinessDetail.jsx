@@ -17,11 +17,13 @@ export default function BusinessDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lightboxIdx, setLightboxIdx] = useState(null);
-    useSeoMeta("company-detail", business ? {
+  useSeoMeta(business ? "company-detail" : null, business ? {
     title:       `${business.businessProfile?.businessName} | GreenJobs`,
-    description: business.businessProfile?.description?.replace(/\n/g, " ").slice(0, 160),
+    description: business.businessProfile?.description
+      ?.replace(/\n/g, " ")
+      .slice(0, 160),
     ogImage:     business.profilePicture ||
-                business.businessProfile?.images?.[0] || "",
+                 business.businessProfile?.images?.[0] || "",
     canonical:   `https://jobs.solarismypassion.com/businesses/${business._id}`,
   } : {});
 

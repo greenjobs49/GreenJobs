@@ -7,7 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import Navbar from "../../../components/common/Navbar";
 import {
   ArrowLeft, Image, Upload, Settings,
-  ChevronRight, Loader2, Sparkles, CheckCircle,
+  ChevronRight, Loader2, CheckCircle, Globe,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import API_BASE_URL from "../../../config/api";
@@ -22,9 +22,17 @@ export default function EditBlog() {
   const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState({
-    title:     "",
-    thumbnail: "",
-    status:    "draft",
+    title:           "",
+    thumbnail:       "",
+    status:          "draft",
+    metaTitle:       "",
+    metaDescription: "",
+    metaKeywords:    "",
+    canonicalUrl:    "",
+    ogTitle:         "",
+    ogDescription:   "",
+    ogImage:         "",
+    robots:          "index, follow",
   });
   const [content, setContent] = useState("");
 
@@ -44,9 +52,19 @@ export default function EditBlog() {
       }
 
       setForm({
-        title:     blog.title     || "",
-        thumbnail: blog.thumbnail || "",
-        status:    blog.status    || "draft",
+        title:           blog.title           || "",
+        thumbnail:       blog.thumbnail       || "",
+        status:          blog.status          || "draft",
+        metaTitle:       blog.metaTitle       || "",
+        metaDescription: blog.metaDescription || "",
+        metaKeywords:    Array.isArray(blog.metaKeywords)
+                          ? blog.metaKeywords.join(", ")
+                          : (blog.metaKeywords || ""),
+        canonicalUrl:    blog.canonicalUrl    || "",
+        ogTitle:         blog.ogTitle         || "",
+        ogDescription:   blog.ogDescription  || "",
+        ogImage:         blog.ogImage         || "",
+        robots:          blog.robots          || "index, follow",
       });
       setContent(blog.content || "");
     } catch (err) {

@@ -23,7 +23,11 @@ const getUniqueSlug = async (titleOrSlug, excludeId = null) => {
 // @route   POST /api/blogs
 exports.createBlog = async (req, res) => {
   try {
-    const { title, content, thumbnail, status } = req.body;
+    const {
+  title, content, thumbnail, status,
+  metaTitle, metaDescription, metaKeywords,
+  canonicalUrl, ogTitle, ogDescription, ogImage, robots,
+} = req.body;
 
     if (!title || !content) {
       return res.status(400).json({ message: "Title and content are required" });
@@ -32,13 +36,23 @@ exports.createBlog = async (req, res) => {
     const finalSlug = await getUniqueSlug(title);
 
     const blog = await Blog.create({
-      title,
-      slug: finalSlug,
-      content,
-      thumbnail: thumbnail || "",
-      status: status || "draft",
-      createdBy: req.user._id,
-    });
+    title,
+    slug: finalSlug,
+    content,
+    thumbnail: thumbnail || "",
+    status: status || "draft",
+    createdBy: req.user._id,
+    metaTitle:       metaTitle       || "",
+    metaDescription: metaDescription || "",
+    metaKeywords: Array.isArray(metaKeywords)
+      ? metaKeywords
+      : (metaKeywords || "").split(",").map(k => k.trim()).filter(Boolean),
+    canonicalUrl:    canonicalUrl    || "",
+    ogTitle:         ogTitle         || "",
+    ogDescription:   ogDescription   || "",
+    ogImage:         ogImage         || "",
+    robots:          robots          || "index, follow",
+  });
 
     res.status(201).json(blog);
   } catch (err) {
@@ -97,8 +111,12 @@ exports.getBlogBySlug = async (req, res) => {
 // @route   PUT /api/blogs/:id
 exports.updateBlog = async (req, res) => {
   try {
-    const { title, content, thumbnail, status } = req.body;
-    
+    const {
+      title, content, thumbnail, status,
+      metaTitle, metaDescription, metaKeywords,
+      canonicalUrl, ogTitle, ogDescription, ogImage, robots,
+    } = req.body;
+
     const blog = await Blog.findById(req.params.id);
     if (!blog) {
       return res.status(404).json({ message: "Blog post not found" });
@@ -107,7 +125,17 @@ exports.updateBlog = async (req, res) => {
     const updateData = {
       content,
       thumbnail,
-      status
+      status,
+      metaTitle:       metaTitle       ?? "",
+      metaDescription: metaDescription ?? "",
+      metaKeywords:    Array.isArray(metaKeywords)
+        ? metaKeywords
+        : (metaKeywords || "").split(",").map(k => k.trim()).filter(Boolean),
+      canonicalUrl:    canonicalUrl    ?? "",
+      ogTitle:         ogTitle         ?? "",
+      ogDescription:   ogDescription   ?? "",
+      ogImage:         ogImage         ?? "",
+      robots:          robots          || "index, follow",
     };
 
     if (title) {

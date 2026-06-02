@@ -7,7 +7,7 @@ import { useAuth } from "../../../context/AuthContext";
 import Navbar from "../../../components/common/Navbar";
 import {
   ArrowLeft, ArrowRight, Image, Upload, Settings,
-  ChevronRight, Loader2, Sparkles,
+  ChevronRight, Loader2, Sparkles, Globe,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import API_BASE_URL from "../../../config/api";
@@ -17,10 +17,18 @@ export default function CreateBlog() {
   const { token } = useAuth();
 
   const [form, setForm] = useState({
-    title: "",
-    thumbnail: "",
-    status: "draft",
-  });
+  title: "",
+  thumbnail: "",
+  status: "draft",
+  metaTitle: "",
+  metaDescription: "",
+  metaKeywords: "",
+  canonicalUrl: "",
+  ogTitle: "",
+  ogDescription: "",
+  ogImage: "",
+  robots: "index, follow",
+});
 
   const [content, setContent] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -544,6 +552,101 @@ export default function CreateBlog() {
                       onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
                     />
                   </div>
+                </div>
+              </div>
+              {/* SEO & Meta Card */}
+              <div className="cb-card"> {/* or eb-card */}
+                <div className="cb-card-header">
+                  <Globe className="cb-card-icon" size={20} />
+                  <h3 className="cb-card-title">SEO & Meta</h3>
+                </div>
+                <div className="cb-card-body">
+                  
+                  <div className="cb-form-group">
+                    <label className="cb-label">Meta Title</label>
+                    <input type="text" className="cb-input"
+                      placeholder="Custom page title (defaults to post title)"
+                      value={form.metaTitle}
+                      onChange={(e) => setForm({ ...form, metaTitle: e.target.value })}
+                    />
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>
+                      {form.metaTitle.length}/60 chars
+                    </div>
+                  </div>
+
+                  <div className="cb-form-group">
+                    <label className="cb-label">Meta Description</label>
+                    <textarea className="cb-input" rows={3}
+                      placeholder="Brief summary shown in search results (150–160 chars ideal)"
+                      value={form.metaDescription}
+                      onChange={(e) => setForm({ ...form, metaDescription: e.target.value })}
+                      style={{ resize: "vertical", lineHeight: 1.5 }}
+                    />
+                    <div style={{ fontSize: 11, color: form.metaDescription.length > 160 ? "#ef4444" : "#94a3b8", marginTop: 4 }}>
+                      {form.metaDescription.length}/160 chars
+                    </div>
+                  </div>
+
+                  <div className="cb-form-group">
+                    <label className="cb-label">Keywords</label>
+                    <input type="text" className="cb-input"
+                      placeholder="solar energy, green jobs, sustainability"
+                      value={form.metaKeywords}
+                      onChange={(e) => setForm({ ...form, metaKeywords: e.target.value })}
+                    />
+                    <div style={{ fontSize: 11, color: "#94a3b8", marginTop: 4 }}>Comma-separated</div>
+                  </div>
+
+                  <div className="cb-form-group">
+                    <label className="cb-label">Canonical URL</label>
+                    <input type="text" className="cb-input"
+                      placeholder="https://yoursite.com/blog/post-slug"
+                      value={form.canonicalUrl}
+                      onChange={(e) => setForm({ ...form, canonicalUrl: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="cb-form-group">
+                    <label className="cb-label">OG Title</label>
+                    <input type="text" className="cb-input"
+                      placeholder="Open Graph title (for social sharing)"
+                      value={form.ogTitle}
+                      onChange={(e) => setForm({ ...form, ogTitle: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="cb-form-group">
+                    <label className="cb-label">OG Description</label>
+                    <textarea className="cb-input" rows={2}
+                      placeholder="Description shown when shared on social media"
+                      value={form.ogDescription}
+                      onChange={(e) => setForm({ ...form, ogDescription: e.target.value })}
+                      style={{ resize: "vertical", lineHeight: 1.5 }}
+                    />
+                  </div>
+
+                  <div className="cb-form-group">
+                    <label className="cb-label">OG Image URL</label>
+                    <input type="text" className="cb-input"
+                      placeholder="https://... (defaults to thumbnail if blank)"
+                      value={form.ogImage}
+                      onChange={(e) => setForm({ ...form, ogImage: e.target.value })}
+                    />
+                  </div>
+
+                  <div className="cb-form-group" style={{ marginBottom: 0 }}>
+                    <label className="cb-label">Robots</label>
+                    <select className="cb-input cb-select"
+                      value={form.robots}
+                      onChange={(e) => setForm({ ...form, robots: e.target.value })}
+                    >
+                      <option value="index, follow">index, follow (default)</option>
+                      <option value="noindex, follow">noindex, follow</option>
+                      <option value="index, nofollow">index, nofollow</option>
+                      <option value="noindex, nofollow">noindex, nofollow</option>
+                    </select>
+                  </div>
+
                 </div>
               </div>
 

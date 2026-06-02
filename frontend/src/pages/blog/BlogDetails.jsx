@@ -33,24 +33,45 @@ export default function BlogDetails() {
     if (!blog) return;
 
     const prevTitle = document.title;
-    document.title  = blog.title || "GreenJobs Blog";
+    document.title = blog.metaTitle || blog.title || "GreenJobs Blog";
 
-    let meta = document.querySelector('meta[name="description"]');
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.setAttribute("name", "description");
-      document.head.appendChild(meta);
-    }
-    const prevDesc = meta.getAttribute("content") || "";
+    const setMeta = (attrName, attrValue, content, isProp = false) => {
+      const sel = isProp ? `meta[property="${attrValue}"]` : `meta[name="${attrValue}"]`;
+      let el = document.querySelector(sel);
+      if (!el) {
+        el = document.createElement("meta");
+        el.setAttribute(isProp ? "property" : "name", attrValue);
+        document.head.appendChild(el);
+      }
+      el.setAttribute("content", content);
+      return el;
+    };
 
-    const excerpt = blog.content
+    const fallbackDesc = blog.content
       ? blog.content.replace(/<[^>]*>/g, "").slice(0, 160) + "..."
       : "Read the latest sustainable development and green job career tips.";
-    meta.setAttribute("content", excerpt);
+
+    const desc = blog.metaDescription || fallbackDesc;
+
+    setMeta("name", "description",  desc);
+    setMeta("name", "robots",       blog.robots || "index, follow");
+    setMeta("prop", "og:title",       blog.ogTitle       || blog.title,     true);
+    setMeta("prop", "og:description", blog.ogDescription || desc,           true);
+    setMeta("prop", "og:image",       blog.ogImage       || blog.thumbnail  || "", true);
+    setMeta("prop", "og:url",         window.location.href,                  true);
+
+    if (blog.canonicalUrl) {
+      let link = document.querySelector('link[rel="canonical"]');
+      if (!link) {
+        link = document.createElement("link");
+        link.setAttribute("rel", "canonical");
+        document.head.appendChild(link);
+      }
+      link.setAttribute("href", blog.canonicalUrl);
+    }
 
     return () => {
       document.title = prevTitle;
-      meta.setAttribute("content", prevDesc);
     };
   }, [blog]);
 
