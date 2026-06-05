@@ -9,7 +9,8 @@ import ImageCropperModal from "../components/common/ImageCropperModal";
 import {
   User, FileText, Info, Zap, GraduationCap, Briefcase, Trophy,
   Building2, LayoutTemplate, Palette, Store, ClipboardList, Image,
-  CheckCircle, Upload, X, ChevronRight, ArrowRight, Camera, Plus, Trash2
+  CheckCircle, Upload, X, ChevronRight, ArrowRight, Camera, Plus, Trash2,
+  AlertCircle
 } from "lucide-react";
 
 /* ─────────────────────────────────────────────
@@ -114,6 +115,36 @@ const SectionHeader = ({ title, subtitle }) => (
 );
 
 /* ─────────────────────────────────────────────
+   IMAGE SPEC BADGE  — reusable info strip
+   Shows recommended dimensions, max file size,
+   accepted formats and aspect ratio hint.
+───────────────────────────────────────────── */
+const ImageSpecBadge = ({ width, height, maxSizeMB = 5, formats = "JPG, PNG, WebP", note }) => (
+  <div style={{
+    display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8,
+    padding: "10px 14px", marginBottom: 14,
+    background: "#eff6ff", border: "1px solid #bfdbfe",
+    borderRadius: 10, fontSize: 12.5,
+  }}>
+    <AlertCircle size={14} color="#3b82f6" style={{ flexShrink: 0 }} />
+    <span style={{ fontWeight: 700, color: "#1e40af" }}>Recommended:</span>
+    <span style={{ color: "#1d4ed8" }}>
+      {width} × {height} px
+    </span>
+    <span style={{ color: "#93c5fd" }}>·</span>
+    <span style={{ color: "#1d4ed8" }}>Max {maxSizeMB} MB</span>
+    <span style={{ color: "#93c5fd" }}>·</span>
+    <span style={{ color: "#1d4ed8" }}>{formats}</span>
+    {note && (
+      <>
+        <span style={{ color: "#93c5fd" }}>·</span>
+        <span style={{ color: "#2563eb", fontStyle: "italic" }}>{note}</span>
+      </>
+    )}
+  </div>
+);
+
+/* ─────────────────────────────────────────────
    EDUCATION ENTRY CARD
 ───────────────────────────────────────────── */
 const EduEntryCard = ({ entry, index, total, usedTypes, onChange, onRemove }) => {
@@ -177,68 +208,38 @@ const EduEntryCard = ({ entry, index, total, usedTypes, onChange, onRemove }) =>
 
       {/* Row 2: conditional + year + grade */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px,1fr))", gap: 16 }}>
-        {/* Board — only for 10th / 12th */}
         {showBoard && (
           <Field label="Board">
-            <select
-              value={entry.board}
-              onChange={(e) => update("board", e.target.value)}
-              style={inputStyle}
-              className="cp-input"
-            >
+            <select value={entry.board} onChange={(e) => update("board", e.target.value)} style={inputStyle} className="cp-input">
               <option value="">Select board</option>
               {BOARDS.map((b) => <option key={b} value={b}>{b}</option>)}
             </select>
           </Field>
         )}
 
-        {/* Stream — for 12th, Diploma, UG */}
         {showStream && (
           <Field label="Stream / Branch">
-            <input
-              value={entry.stream}
-              onChange={(e) => update("stream", e.target.value)}
+            <input value={entry.stream} onChange={(e) => update("stream", e.target.value)}
               placeholder={entry.type === "twelfth" ? "e.g. Science / Commerce" : "e.g. Computer Science"}
-              style={inputStyle}
-              className="cp-input"
-            />
+              style={inputStyle} className="cp-input" />
           </Field>
         )}
 
-        {/* Specialisation — for PG, PhD, Other */}
         {showSpec && (
           <Field label="Specialisation / Major">
-            <input
-              value={entry.stream}
-              onChange={(e) => update("stream", e.target.value)}
-              placeholder="e.g. Machine Learning / Finance"
-              style={inputStyle}
-              className="cp-input"
-            />
+            <input value={entry.stream} onChange={(e) => update("stream", e.target.value)}
+              placeholder="e.g. Machine Learning / Finance" style={inputStyle} className="cp-input" />
           </Field>
         )}
 
-        {/* Year */}
         <Field label="Year of Passing">
-          <input
-            value={entry.year}
-            onChange={(e) => update("year", e.target.value)}
-            placeholder="e.g. 2022"
-            maxLength={4}
-            style={inputStyle}
-            className="cp-input"
-          />
+          <input value={entry.year} onChange={(e) => update("year", e.target.value)}
+            placeholder="e.g. 2022" maxLength={4} style={inputStyle} className="cp-input" />
         </Field>
 
-        {/* Grade */}
         <Field label="Percentage / CGPA">
-          <input
-            value={entry.grade}
-            onChange={(e) => update("grade", e.target.value)}
-            placeholder="e.g. 85% or 8.5 CGPA"
-            style={inputStyle}
-            className="cp-input"
-          />
+          <input value={entry.grade} onChange={(e) => update("grade", e.target.value)}
+            placeholder="e.g. 85% or 8.5 CGPA" style={inputStyle} className="cp-input" />
         </Field>
       </div>
     </div>
@@ -259,12 +260,10 @@ const CompleteProfile = () => {
     return {};
   }, [user]);
 
-  // Normalise seeded education: if it's a plain string (old data), convert to array
   const seedEducation = useMemo(() => {
     const raw = seedProfile.education;
     if (!raw || (Array.isArray(raw) && raw.length === 0)) return [emptyEduEntry()];
     if (Array.isArray(raw)) return raw;
-    // Legacy string — put it in the institution field of a UG entry
     return [{ ...emptyEduEntry(), institution: raw }];
   }, [seedProfile]);
 
@@ -283,7 +282,6 @@ const CompleteProfile = () => {
     city:      seedProfile.city      || "",
     pincode:   seedProfile.pincode   || "",
     about:     seedProfile.about     || "",
-    // education is now an array of entries
     education:       seedEducation,
     experience:      seedProfile.experience      || "",
     accomplishments: seedProfile.accomplishments || "",
@@ -467,7 +465,6 @@ const CompleteProfile = () => {
           city:       form.city?.trim(),
           pincode:    form.pincode?.trim(),
           about:      form.about?.trim(),
-          // Send structured education array; strip empty entries
           education:  form.education.filter((e) => e.institution?.trim()),
           experience: form.experience?.toString().trim() || "0",
           accomplishments: form.accomplishments?.trim() || "",
@@ -543,17 +540,44 @@ const CompleteProfile = () => {
                   <option value="yes">Yes</option>
                 </select>
               </Field>
-              <Field label="Profile Picture">
-                <input type="file" accept="image/*" className="cp-file-input" id="avatar-upload-jobseeker" disabled={uploading}
-                  onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; setAvatarRawSrc(URL.createObjectURL(file)); setAvatarCropOpen(true); e.target.value = ""; }}
-                />
-                <label htmlFor="avatar-upload-jobseeker" className="cp-upload-label">
-                  <Camera size={16} /> {uploading ? "Uploading…" : "Choose Profile Picture"}
-                </label>
-              </Field>
-              {form.profilePicture && (
-                <img src={form.profilePicture} alt="Profile" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", marginTop: 10, border: "2px solid #10b981" }} />
-              )}
+
+              {/* ── Profile Picture — Jobseeker ── */}
+              <div style={{ gridColumn: "1 / -1" }}>
+                <Field label="Profile Picture">
+                  {/* Size spec badge */}
+                  <ImageSpecBadge
+                    width="400"
+                    height="400"
+                    maxSizeMB={2}
+                    formats="JPG, PNG, WebP"
+                    note="Square image · auto-cropped to circle"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="cp-file-input"
+                    id="avatar-upload-jobseeker"
+                    disabled={uploading}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (!file) return;
+                      setAvatarRawSrc(URL.createObjectURL(file));
+                      setAvatarCropOpen(true);
+                      e.target.value = "";
+                    }}
+                  />
+                  <label htmlFor="avatar-upload-jobseeker" className="cp-upload-label">
+                    <Camera size={16} /> {uploading ? "Uploading…" : "Choose Profile Picture"}
+                  </label>
+                </Field>
+                {form.profilePicture && (
+                  <img
+                    src={form.profilePicture}
+                    alt="Profile"
+                    style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover", marginTop: 10, border: "2px solid #10b981" }}
+                  />
+                )}
+              </div>
             </div>
           </div>
         );
@@ -567,11 +591,27 @@ const CompleteProfile = () => {
               </div>
               <div>
                 <div style={{ fontSize: 18, fontWeight: 700, color: "white", marginBottom: 4 }}>Upload Your Resume</div>
-                <div style={{ fontSize: 13.5, color: "#94a3b8" }}>Supported: PDF or DOCX — Max 5MB</div>
+                <div style={{ fontSize: 13.5, color: "#94a3b8" }}>Supported: PDF or DOCX — Max 5 MB</div>
               </div>
             </div>
-            <input type="file" accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-              onChange={(e) => handleResumeUpload(e.target.files[0])} className="cp-file-input" id="resume-upload" disabled={uploading} />
+
+            {/* Size spec badge for resume */}
+            <ImageSpecBadge
+              width="—"
+              height="—"
+              maxSizeMB={5}
+              formats="PDF, DOCX"
+              note="No image size limits · document file only"
+            />
+
+            <input
+              type="file"
+              accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+              onChange={(e) => handleResumeUpload(e.target.files[0])}
+              className="cp-file-input"
+              id="resume-upload"
+              disabled={uploading}
+            />
             <label htmlFor="resume-upload" className="cp-upload-label">
               <Upload size={16} />{uploading ? "Uploading…" : "Choose File"}
             </label>
@@ -619,11 +659,9 @@ const CompleteProfile = () => {
           </div>
         );
 
-        // ── EDUCATION (structured) ────────────────────────────────────────────
         case "education": return (
           <div>
             <SectionHeader title="Education" subtitle="Add your qualifications — 10th, 12th, degree and more" />
-
             {form.education.map((entry, index) => (
               <EduEntryCard
                 key={index}
@@ -635,7 +673,6 @@ const CompleteProfile = () => {
                 onRemove={handleEduRemove}
               />
             ))}
-
             {form.education.length < 7 && (
               <button onClick={handleEduAdd} className="cp-suggestion-tag" style={{ width: "100%", padding: "12px 20px", fontSize: 14, display: "flex", alignItems: "center", justifyContent: "center", gap: 8 }}>
                 <Plus size={15} /> Add Another Qualification
@@ -687,6 +724,7 @@ const CompleteProfile = () => {
       }
     }
 
+    /* ─────────────────────────── RECRUITER ─────────────────────────── */
     if (role === "recruiter") {
       switch (currentSection) {
         case "basicDetails": return (
@@ -699,6 +737,7 @@ const CompleteProfile = () => {
             </div>
           </div>
         );
+
         case "companyDetails": return (
           <div>
             <SectionHeader title="Company Details" subtitle="Help job seekers understand your company" />
@@ -711,33 +750,92 @@ const CompleteProfile = () => {
             </div>
           </div>
         );
+
         case "branding": return (
           <div>
-            <SectionHeader title="Branding" subtitle="Upload your company logo" />
+            <SectionHeader title="Branding" subtitle="Upload your company logo and profile picture" />
+
+            {/* ── Company Logo ── */}
             <Field label="Company Logo" required>
-              <input type="file" accept="image/*" className="cp-file-input" id="logo-upload" disabled={uploading}
-                onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; setLogoRawSrc(URL.createObjectURL(file)); setLogoCropOpen(true); e.target.value = ""; }} />
+              {/* Size spec badge — square logo */}
+              <ImageSpecBadge
+                width="400"
+                height="400"
+                maxSizeMB={2}
+                formats="JPG, PNG, WebP"
+                note="Square (1:1) · transparent PNG preferred for logos"
+              />
+              <input
+                type="file"
+                accept="image/*"
+                className="cp-file-input"
+                id="logo-upload"
+                disabled={uploading}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  setLogoRawSrc(URL.createObjectURL(file));
+                  setLogoCropOpen(true);
+                  e.target.value = "";
+                }}
+              />
               <label htmlFor="logo-upload" className="cp-upload-label">
                 <Upload size={16} />{uploading ? "Uploading…" : "Choose Logo"}
               </label>
             </Field>
-            {form.companyLogo && <img src={form.companyLogo} alt="Logo" style={{ width: 120, height: 120, objectFit: "contain", marginTop: 16, borderRadius: 12, border: "1px solid #e2e8f0", padding: 8, background: "#f8fafc" }} />}
-            <div style={{ marginTop: 24 }}>
-              <Field label="Personal Profile Picture">
-                <input type="file" accept="image/*" className="cp-file-input" id="avatar-upload" disabled={uploading}
-                  onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; setAvatarRawSrc(URL.createObjectURL(file)); setAvatarCropOpen(true); e.target.value = ""; }} />
+            {form.companyLogo && (
+              <img
+                src={form.companyLogo}
+                alt="Logo"
+                style={{ width: 120, height: 120, objectFit: "contain", marginTop: 16, borderRadius: 12, border: "1px solid #e2e8f0", padding: 8, background: "#f8fafc" }}
+              />
+            )}
+
+            {/* ── Upload Business Logo — Recruiter ── */}
+            <div style={{ marginTop: 32 }}>
+              <Field label="Upload Business Logo">
+                {/* Size spec badge — circular avatar */}
+                <ImageSpecBadge
+                  width="400"
+                  height="400"
+                  maxSizeMB={2}
+                  formats="JPG, PNG, WebP"
+                  note="Square image · auto-cropped to circle"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="cp-file-input"
+                  id="avatar-upload"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setAvatarRawSrc(URL.createObjectURL(file));
+                    setAvatarCropOpen(true);
+                    e.target.value = "";
+                  }}
+                />
                 <label htmlFor="avatar-upload" className="cp-upload-label">
-                  <Camera size={16} style={{ marginRight: 8 }} />{uploading ? "Uploading…" : "Choose Profile Picture"}
+                  <Camera size={16} style={{ marginRight: 8 }} />{uploading ? "Uploading…" : "Choose Business Logo"}
                 </label>
               </Field>
-              {form.profilePicture && <img src={form.profilePicture} alt="Avatar" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", border: "2px solid #10b981", marginTop: 12 }} />}
+              {form.profilePicture && (
+                <img
+                  src={form.profilePicture}
+                  alt="Avatar"
+                  style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", border: "2px solid #10b981", marginTop: 12 }}
+                />
+              )}
             </div>
           </div>
         );
+
         default: return null;
       }
     }
 
+    /* ─────────────────────────── BUSINESS ─────────────────────────── */
     if (role === "business") {
       switch (currentSection) {
         case "basicDetails": return (
@@ -750,6 +848,7 @@ const CompleteProfile = () => {
             </div>
           </div>
         );
+
         case "businessDetails": return (
           <div>
             <SectionHeader title="Business Details" subtitle="Location and description" />
@@ -770,23 +869,50 @@ const CompleteProfile = () => {
             )}
           </div>
         );
+
         case "media": return (
           <div>
             <SectionHeader title="Business Media" subtitle="Upload high-quality images of your business (max 5)" />
-            <div style={{ background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)", borderRadius: 16, padding: "24px 28px", display: "flex", alignItems: "center", gap: 20, marginBottom: 28 }}>
+            <div style={{ background: "linear-gradient(135deg,#0f172a 0%,#1e293b 100%)", borderRadius: 16, padding: "24px 28px", display: "flex", alignItems: "center", gap: 20, marginBottom: 20 }}>
               <div style={{ width: 48, height: 48, background: "rgba(16,185,129,0.2)", borderRadius: 12, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
                 <Image size={24} color="#10b981" />
               </div>
               <div>
                 <div style={{ fontSize: 17, fontWeight: 700, color: "white", marginBottom: 3 }}>Upload Business Images</div>
-                <div style={{ fontSize: 13, color: "#94a3b8" }}>Up to 5 images — Max 5MB each</div>
+                <div style={{ fontSize: 13, color: "#94a3b8" }}>Up to 5 images — Max 5 MB each</div>
               </div>
             </div>
-            <input type="file" accept="image/*" multiple className="cp-file-input" id="business-images" disabled={uploading || bizCropOpen}
-              onChange={(e) => { const files = Array.from(e.target.files || []); if (!files.length) return; const [first, ...rest] = files; setBizRawSrc(URL.createObjectURL(first)); setBizCropQueue(rest); setBizCropOpen(true); e.target.value = ""; }} />
+
+            {/* ── Size spec badge — business gallery images (4:3 landscape) ── */}
+            <ImageSpecBadge
+              width="1200"
+              height="900"
+              maxSizeMB={5}
+              formats="JPG, PNG, WebP"
+              note="Landscape 4:3 ratio · auto-cropped in the next step"
+            />
+
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              className="cp-file-input"
+              id="business-images"
+              disabled={uploading || bizCropOpen}
+              onChange={(e) => {
+                const files = Array.from(e.target.files || []);
+                if (!files.length) return;
+                const [first, ...rest] = files;
+                setBizRawSrc(URL.createObjectURL(first));
+                setBizCropQueue(rest);
+                setBizCropOpen(true);
+                e.target.value = "";
+              }}
+            />
             <label htmlFor="business-images" className="cp-upload-label">
               <Upload size={16} />{uploading ? "Uploading…" : "Choose Images"}
             </label>
+
             {form.images?.length > 0 && (
               <div style={{ marginTop: 20 }}>
                 <div style={{ fontSize: 11.5, fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.6px", marginBottom: 12 }}>Uploaded ({form.images.length}/5)</div>
@@ -794,26 +920,59 @@ const CompleteProfile = () => {
                   {form.images.map((url, i) => (
                     <div key={i} style={{ position: "relative", borderRadius: 10, overflow: "hidden", border: "1px solid #e2e8f0" }}>
                       <img src={url} alt={`Business ${i + 1}`} style={{ width: "100%", height: 110, objectFit: "cover", display: "block" }} />
-                      <button onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i) }))}
+                      <button
+                        onClick={() => setForm((p) => ({ ...p, images: p.images.filter((_, idx) => idx !== i) }))}
                         style={{ position: "absolute", top: 6, right: 6, width: 24, height: 24, background: "rgba(15,23,42,0.75)", border: "none", borderRadius: "50%", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", color: "white" }}
-                        className="cp-remove-img"><X size={12} /></button>
+                        className="cp-remove-img"
+                      >
+                        <X size={12} />
+                      </button>
                     </div>
                   ))}
                 </div>
               </div>
             )}
-            <div style={{ marginTop: 24 }}>
-              <Field label="Personal Profile Picture">
-                <input type="file" accept="image/*" className="cp-file-input" id="avatar-upload-biz" disabled={uploading}
-                  onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; setAvatarRawSrc(URL.createObjectURL(file)); setAvatarCropOpen(true); e.target.value = ""; }} />
+
+            {/* ── Upload Business Logo — Business ── */}
+            <div style={{ marginTop: 32 }}>
+              <Field label="Upload Business Logo">
+                {/* Size spec badge — circular avatar */}
+                <ImageSpecBadge
+                  width="400"
+                  height="400"
+                  maxSizeMB={2}
+                  formats="JPG, PNG, WebP"
+                  note="Square image · auto-cropped to circle"
+                />
+                <input
+                  type="file"
+                  accept="image/*"
+                  className="cp-file-input"
+                  id="avatar-upload-biz"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    setAvatarRawSrc(URL.createObjectURL(file));
+                    setAvatarCropOpen(true);
+                    e.target.value = "";
+                  }}
+                />
                 <label htmlFor="avatar-upload-biz" className="cp-upload-label">
-                  <Camera size={16} style={{ marginRight: 8 }} />{uploading ? "Uploading…" : "Choose Profile Picture"}
+                  <Camera size={16} style={{ marginRight: 8 }} />{uploading ? "Uploading…" : "Choose Business Logo"}
                 </label>
               </Field>
-              {form.profilePicture && <img src={form.profilePicture} alt="Avatar" style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", border: "2px solid #10b981", marginTop: 12 }} />}
+              {form.profilePicture && (
+                <img
+                  src={form.profilePicture}
+                  alt="Avatar"
+                  style={{ width: 80, height: 80, objectFit: "cover", borderRadius: "50%", border: "2px solid #10b981", marginTop: 12 }}
+                />
+              )}
             </div>
           </div>
         );
+
         default: return null;
       }
     }
@@ -970,9 +1129,9 @@ const CompleteProfile = () => {
         </div>
       </div>
 
-      <ImageCropperModal isOpen={logoCropOpen} onClose={() => setLogoCropOpen(false)} onCrop={handleLogoCropDone} imageSrc={logoRawSrc} aspectRatio={1} cropShape="rect" title="Crop Company Logo" hint="Square crop looks best for logos" />
-      <ImageCropperModal isOpen={avatarCropOpen} onClose={() => setAvatarCropOpen(false)} onCrop={handleAvatarCropDone} imageSrc={avatarRawSrc} aspectRatio={1} cropShape="circle" title="Crop Profile Picture" hint="Drag to reposition · scroll to zoom" />
-      <ImageCropperModal isOpen={bizCropOpen} onClose={() => { setBizCropOpen(false); setBizCropQueue([]); }} onCrop={handleBizCropDone} imageSrc={bizRawSrc} aspectRatio={4 / 3} cropShape="rect" title="Crop Business Image" hint={bizCropQueue.length > 0 ? `${bizCropQueue.length} more image(s) after this` : "Crop then click Apply"} />
+      <ImageCropperModal isOpen={logoCropOpen}   onClose={() => setLogoCropOpen(false)}                          onCrop={handleLogoCropDone}   imageSrc={logoRawSrc}   aspectRatio={1}     cropShape="rect"   title="Crop Company Logo"      hint="Square crop looks best for logos" />
+      <ImageCropperModal isOpen={avatarCropOpen} onClose={() => setAvatarCropOpen(false)}                        onCrop={handleAvatarCropDone} imageSrc={avatarRawSrc} aspectRatio={1}     cropShape="circle" title="Crop Profile Picture"   hint="Drag to reposition · scroll to zoom" />
+      <ImageCropperModal isOpen={bizCropOpen}    onClose={() => { setBizCropOpen(false); setBizCropQueue([]); }} onCrop={handleBizCropDone}    imageSrc={bizRawSrc}    aspectRatio={4 / 3} cropShape="rect"   title="Crop Business Image"    hint={bizCropQueue.length > 0 ? `${bizCropQueue.length} more image(s) after this` : "Crop then click Apply"} />
     </>
   );
 };
