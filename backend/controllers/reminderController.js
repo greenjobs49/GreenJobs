@@ -92,3 +92,57 @@ exports.sendProfileReminders = async (req, res) => {
     }
   }
 };
+exports.sendIndividualProfileReminder = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { reminderKey } = req.body; // Optional: "1hr", "1day", "2days", "1week"
+ 
+    // Validate user exists and has email
+    const user = await User.findById(userId).select("name email role profileCompleted");
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found" });
+    }
+ 
+    if (!user.email) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "User has no email address on file" 
+      });
+    }
+ 
+    if (!["jobseeker", "recruiter", "business"].includes(user.role)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: `Cannot send reminder to ${user.role} accounts` 
+      });
+    }
+ 
+    const key = reminderKey || "1day"; // default to 1day
+ 
+    // Send role-specific reminder email
+    if (user.role === "jobseeker") {
+      await email.sendJobseekerProfileReminderEmail(user.email, user.name, key);
+    } else if (user.role === "recruiter") {
+      await email.sendRecruiterProfileReminderEmail(user.email, user.name, key);
+    } else if (user.role === "business") {
+      await email.sendBusinessProfileReminderEmail(user.email, user.name, key);
+    }
+ 
+    return res.json({
+      success: true,
+      message: `Profile reminder sent to ${user.name} (${user.email})`,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        role: user.role,
+      },
+    });
+  } catch (err) {
+    console.error("Send individual reminder error:", err);
+    res.status(500).json({ 
+      success: false, 
+      message: err.message || "Failed to send reminder" 
+    });
+  }
+};

@@ -6,7 +6,7 @@ const authorizeRoles = require("../middleware/role");
 const uploadBanner   = require("../middleware/uploadBanner");
 const uploadSeoBanner = require("../middleware/uploadSeoImage");
 
-const { sendProfileReminders } = require("../controllers/reminderController");
+const { sendProfileReminders,sendIndividualProfileReminder } = require("../controllers/reminderController");
 
 const {
   getStats,
@@ -54,7 +54,7 @@ const {
 } = require("../controllers/seo.controller");
 // ── Profile reminders ──────────────────────────────────────────────────────
 router.post("/send-profile-reminders", protect, authorizeRoles("admin"), sendProfileReminders);
-
+router.post("/send-profile-reminder/:userId", protect, authorizeRoles("admin"), sendIndividualProfileReminder);
 // ── Stats ──────────────────────────────────────────────────────────────────
 router.get("/stats", protect, authorizeRoles("admin"), getStats);
 router.get("/stats/public", getPublicStats);
