@@ -899,22 +899,6 @@ export default function AdminAdsManager({ token }) {
         </button>
       </div>
 
-      {/* Info note */}
-      <div style={{
-        background:"#eff6ff", border:"1px solid #93c5fd", borderRadius:8,
-        padding:"10px 14px", marginBottom:20, fontSize:12, color:"#1e40af",
-        display:"flex", gap:8, alignItems:"flex-start",
-      }}>
-        <AlertCircle size={14} style={{ flexShrink:0, marginTop:1 }} />
-        <span>
-          Images are <strong>uploaded on save</strong> — no blob URLs are stored.
-          Use <strong>Image Display Size</strong> (Small / Medium / Large) to control how the image fills its slot;
-          the resolved <code style={{ background:"#dbeafe", padding:"1px 4px", borderRadius:3 }}>object-fit</code> and{" "}
-          <code style={{ background:"#dbeafe", padding:"1px 4px", borderRadius:3 }}>object-position</code> values are
-          persisted alongside the URL so the frontend renderer applies them exactly.
-        </span>
-      </div>
-
       {/* Content */}
       {loading ? (
         <div style={{ textAlign:"center", padding:60, color:"#64748b" }}>
