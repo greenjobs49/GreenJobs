@@ -343,24 +343,19 @@ const handleViewResume = async () => {
           min-height:200px; height:200px; 
           width: 100%; max-width: 100%;
           cursor:pointer;
-          transition:transform .25s, box-shadow .25s;
           background:#0f172a;
           -webkit-mask-image: -webkit-radial-gradient(white, black);
         }
-        .spot-ad:hover { transform:translateY(-3px); box-shadow:0 16px 40px rgba(0,0,0,.15); }
-        .spot-ad-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover;object-position: center center; z-index:0; }
-        .spot-ad-overlay { position:absolute; inset:0; z-index:1; background:linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.45) 55%,rgba(0,0,0,.1) 100%); }
-        .spot-ad-body { position:absolute; bottom:0; left:0; right:0; padding:20px 20px 24px; z-index:2; }
-        .spot-ad-tag { display:inline-block; padding:3px 10px; border-radius:50px; font-size:9.5px; font-weight:800; letter-spacing:.9px; text-transform:uppercase; margin-bottom:8px; color:#fff; }
-        .spot-ad-title { font-family:'Inter',sans-serif; font-size:18px; font-weight:800; color:#fff; line-height:1.25; margin-bottom:6px; }
-        .spot-ad-sub { font-size:12.5px; color:rgba(255,255,255,.72); line-height:1.5; margin-bottom:14px; }
-        .spot-ad-cta {
-          display:inline-flex; align-items:center; gap:6px;
-          padding:9px 18px; border-radius:8px; font-size:12.5px; font-weight:700;
-          border:none; cursor:pointer; font-family:'Inter',sans-serif;
-          transition:all .18s; color:#fff;
+        .spot-ad-img {
+          position:absolute; inset:0; width:100%; height:100%;
+          object-fit:cover; object-position:center center; z-index:0;
         }
-        .spot-ad-cta:hover { transform:translateX(3px); filter:brightness(1.12); }
+        .spot-ad-overlay { display:none; }
+        .spot-ad-body    { display:none; }
+        .spot-ad-tag     { display:none; }
+        .spot-ad-title   { display:none; }
+        .spot-ad-sub     { display:none; }
+        .spot-ad-cta     { display:none; }
         .spot-ad-dots { display:flex; gap:5px; position:absolute; top:14px; right:14px; z-index:3; }
         .spot-ad-dot { width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.35); transition:all .3s; cursor:pointer; }
         .spot-ad-dot.active { background:#fff; width:14px; border-radius:3px; }
@@ -378,27 +373,22 @@ const handleViewResume = async () => {
         .fb-ad-strip {
           border-radius:18px; overflow:hidden; position:relative;
           min-height:160px; height:160px; cursor:pointer; margin:28px 0;
-          transition:transform .25s; background:#0f172a;
-          isolation: isolate;          /* new */
+          background:#0f172a;
+          isolation: isolate;
           contain: paint;
-         -webkit-mask-image: -webkit-radial-gradient(white, black);
+          -webkit-mask-image: -webkit-radial-gradient(white, black);
         }
-        .fb-ad-strip:hover { transform:translateY(-2px); }
-        .fb-ad-strip .fb-img { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; z-index:0; transition:transform 6s ease; }
-        .fb-ad-strip:hover .fb-img { transform:scale(1.03); }
-        .fb-ad-strip .fb-grad { position:absolute; inset:0; z-index:1; background:linear-gradient(105deg,rgba(0,0,0,.84) 0%,rgba(0,0,0,.5) 60%,rgba(0,0,0,.15) 100%); }
-        .fb-ad-strip .fb-inner { position:relative; z-index:2; padding:28px 32px; display:flex; align-items:center; gap:24px; }
-        .fb-ad-strip .fb-copy { flex:1; }
-        .fb-ad-strip .fb-eyebrow { font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; margin-bottom:6px; }
-        .fb-ad-strip .fb-head { font-family:'Inter',sans-serif; font-size:22px; font-weight:800; color:#fff; line-height:1.2; margin-bottom:6px; letter-spacing:-.3px; }
-        .fb-ad-strip .fb-sub { font-size:13px; color:rgba(255,255,255,.65); line-height:1.5; margin-bottom:16px; }
-        .fb-ad-strip .fb-btn {
-          display:inline-flex; align-items:center; gap:6px;
-          padding:10px 20px; border-radius:9px; font-size:13px; font-weight:700;
-          border:none; cursor:pointer; color:#fff; font-family:'Inter',sans-serif;
-          transition:all .18s;
+        .fb-ad-strip .fb-img {
+          position:absolute; inset:0; width:100%; height:100%;
+          object-fit:cover; object-position:center; z-index:0;
         }
-        .fb-ad-strip .fb-btn:hover { filter:brightness(1.12); transform:translateY(-1px); }
+        .fb-ad-strip .fb-grad    { display:none; }
+        .fb-ad-strip .fb-inner   { display:none; }
+        .fb-ad-strip .fb-copy    { display:none; }
+        .fb-ad-strip .fb-eyebrow { display:none; }
+        .fb-ad-strip .fb-head    { display:none; }
+        .fb-ad-strip .fb-sub     { display:none; }
+        .fb-ad-strip .fb-btn     { display:none; }
         .fb-nav { display:flex; gap:6px; position:absolute; bottom:12px; right:16px; z-index:3; }
         .fb-nav-dot { width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.3); cursor:pointer; transition:all .3s; }
         .fb-nav-dot.active { width:16px; border-radius:3px; background:#fff; }
@@ -452,9 +442,6 @@ const handleViewResume = async () => {
           }
 
           .fb-ad-strip { border-radius: 12px; margin: 18px 0; }
-          .fb-ad-strip .fb-inner { padding: 20px 18px; }
-          .fb-ad-strip .fb-head  { font-size: 17px; }
-          .fb-ad-strip:hover .fb-img { transform: none; }
         }
       `}</style>
 
@@ -600,18 +587,6 @@ const handleViewResume = async () => {
                 return (
                   <div className="fb-ad-strip" onClick={() => handleAdNav(ad.ctaUrl)}>
                     {ad.image && <img src={ad.image} alt={ad.title} className="fb-img" onError={e => e.target.style.display='none'} />}
-                    <div className="fb-grad" />
-                    <div className="fb-inner">
-                      <div className="fb-copy">
-                        {ad.tag && <div className="fb-eyebrow" style={{ color:ad.accent }}>{ad.tag}</div>}
-                        <div className="fb-head">{ad.bannerHeadline || ad.title}</div>
-                        <div className="fb-sub">{ad.bannerDescription || ad.subtitle}</div>
-                        <button className="fb-btn" style={{ background:ad.accent }}
-                          onClick={e => { e.stopPropagation(); handleAdNav(ad.ctaUrl); }}>
-                          {ad.cta} <ChevronRight size={15} />
-                        </button>
-                      </div>
-                    </div>
                     {fbAds.length > 1 && (
                       <div className="fb-nav">
                         {fbAds.map((_,i) => (
