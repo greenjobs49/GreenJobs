@@ -8,11 +8,6 @@ import {
 import toast from "react-hot-toast";
 import API_BASE_URL from "../config/api";
 
-const ACCENT_PRESETS = [
-  "#10b981","#3b82f6","#f59e0b","#ef4444","#8b5cf6",
-  "#06b6d4","#f97316","#ec4899","#14b8a6","#6366f1",
-];
-
 const BANNER_TYPES = [
   {
     value: "spotlight",
@@ -49,13 +44,6 @@ const DEFAULT_FORM = {
   imageSize: "medium",
   objectFit: "cover", objectPosition: "center top",
 };
-
-function hexToRgb(hex) {
-  const r = parseInt(hex.slice(1,3),16);
-  const g = parseInt(hex.slice(3,5),16);
-  const b = parseInt(hex.slice(5,7),16);
-  return { r, g, b };
-}
 
 function getSizeConf(bannerType, imageSize) {
   const opts = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
@@ -117,17 +105,16 @@ const ImageSizeSelector = ({ bannerType, value, onChange }) => {
 
 const ImagePreview = ({ src, accentColor, bannerType, imageSize }) => {
   const sizeConf = getSizeConf(bannerType, imageSize);
-  const { r, g, b } = hexToRgb(accentColor || "#10b981");
 
   // Match the actual rendered height on the homepage
-  const previewHeight = bannerType === "full_banner" ? 260 : sizeConf.previewHeight;  // ← ADD THIS
+   const previewHeight = bannerType === "full_banner" ? 260 : 380;
 
   return (
     <div style={{
       borderRadius:10, overflow:"hidden", position:"relative",
       height: previewHeight,   // ← use previewHeight here
-      background: src ? "transparent" : `rgba(${r},${g},${b},0.08)`,
-      border: `1px solid rgba(${r},${g},${b},0.18)`,
+      background: src ? "transparent" : "#f8fafc",
+      border: `1px solid #e2e8f0`,
       display:"flex", alignItems:"center", justifyContent:"center",
     }}>
       {src ? (
@@ -143,7 +130,7 @@ const ImagePreview = ({ src, accentColor, bannerType, imageSize }) => {
           }}
         />
       ) : (
-        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, color:`rgba(${r},${g},${b},0.5)` }}>
+        <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, color:"#94a3b8" }}>
           <Image size={28} />
           <span style={{ fontSize:11, fontWeight:600 }}>No image yet</span>
         </div>
@@ -510,22 +497,6 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
             </div>
           </Field>
 
-          {/* Accent colour */}
-          <Field label="Accent Color">
-            <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
-              {ACCENT_PRESETS.map(c => (
-                <div key={c} onClick={() => set("accentColor", c)} style={{
-                  width:28, height:28, borderRadius:"50%", background:c, cursor:"pointer",
-                  border: form.accentColor === c ? "3px solid #0f172a" : "2px solid transparent",
-                  transition:"all 0.15s",
-                }} />
-              ))}
-              <input type="color" value={form.accentColor} onChange={e => set("accentColor", e.target.value)}
-                style={{ width:36, height:28, border:"1.5px solid #e2e8f0", borderRadius:6, cursor:"pointer", padding:2 }} />
-              <span style={{ fontSize:12, color:"#94a3b8" }}>{form.accentColor}</span>
-            </div>
-          </Field>
-
           {/* Order + Active */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
             <Field label="Display Order" hint="Lower number = shown first">
@@ -588,12 +559,10 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
 
 /* ── Ad Card thumbnail ──────────────────────────────────────*/
 const AdCardThumbnail = ({ ad }) => {
-  const { r, g, b } = hexToRgb(ad.accentColor || "#10b981");
-  const bg = `rgba(${r},${g},${b},0.10)`;
   return (
     <div style={{
       width:72, height:52, borderRadius:8, overflow:"hidden", flexShrink:0,
-      background:bg, display:"flex", alignItems:"center", justifyContent:"center",
+      background:"#f1f5f9", display:"flex", alignItems:"center", justifyContent:"center",
     }}>
       {ad.imageUrl ? (
         <img
@@ -606,7 +575,7 @@ const AdCardThumbnail = ({ ad }) => {
           onError={e => { e.target.style.display="none"; }}
         />
       ) : (
-        <Image size={20} color={ad.accentColor} />
+        <Image size={20} color="#94a3b8" />
       )}
     </div>
   );
@@ -649,7 +618,7 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
   <div style={{
     background:"white",
     border:`1px solid ${ad.isActive ? "#e2e8f0" : "#fecaca"}`,
-    borderLeft:`4px solid ${ad.isActive ? ad.accentColor : "#ef4444"}`,
+    borderLeft:`4px solid ${ad.isActive ? "#10b981" : "#ef4444"}`,
     borderRadius:10, padding:16, transition:"all 0.2s",
     opacity: ad.isActive ? 1 : 0.7,
   }}>
@@ -673,7 +642,7 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
             <span style={{ padding:"2px 8px", borderRadius:100, fontSize:10, fontWeight:700, background:"#fee2e2", color:"#991b1b" }}>Inactive</span>
           )}
         </div>
-        {ad.tag && <div style={{ fontSize:11, fontWeight:600, color:ad.accentColor, marginBottom:2 }}>{ad.tag}</div>}
+        {ad.tag && <div style={{ fontSize:11, fontWeight:600, color:"#10b981", marginBottom:2 }}>{ad.tag}</div>}
         {ad.subtitle && <div style={{ fontSize:12, color:"#64748b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ad.subtitle}</div>}
         <div style={{ display:"flex", gap:12, marginTop:6, fontSize:11, color:"#94a3b8", flexWrap:"wrap" }}>
           <span>Order: {ad.order}</span>
@@ -746,7 +715,7 @@ export default function AdminAdsManager({ token }) {
       fd.append("tag",               form.tag               || "");
       fd.append("ctaText",           form.ctaText           || "Learn More");
       fd.append("ctaUrl",            form.ctaUrl            || "/jobs");
-      fd.append("accentColor",       form.accentColor       || "#10b981");
+      fd.append("accentColor",       "#10b981");
       fd.append("bannerType",        form.bannerType        || "spotlight");
       fd.append("bannerHeadline",    "");
       fd.append("bannerDescription", "");

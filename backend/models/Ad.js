@@ -61,7 +61,7 @@ const adSchema = new mongoose.Schema(
     },
     objectFit: {
       type: String,
-      enum: ["cover", "contain"],
+      enum: ["cover", "contain", "fill"],
       default: "cover",
     },
     objectPosition: {

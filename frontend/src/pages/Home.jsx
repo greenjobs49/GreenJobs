@@ -448,7 +448,7 @@ useEffect(() => {
         .ads-arrow:hover { border-color: #10b981; background: #f0fdf4; color: #10b981; }
         .ads-spotlight { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
         .ads-spotlight-single { display: block; }
-        .ad-main-card { border-radius: 20px; overflow: hidden; position: relative; min-height: 380px; cursor: pointer; transition: none; animation: none; background: #0f172a; }
+        .ad-main-card { border-radius: 20px; overflow: hidden; position: relative; min-height: 380px; cursor: pointer; transition: none; animation: none; background: white; }
         .ad-main-card:hover { transform: none; box-shadow: none; }
         .ad-main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; transition: none; }
         .ad-main-card:hover .ad-main-img { transform: none; }
@@ -475,7 +475,7 @@ useEffect(() => {
         .ad-side-card { border-radius: 14px; border: 1.5px solid #e2e8f0; background: white; display: flex; align-items: stretch; overflow: hidden; cursor: pointer; transition: all 0.22s; flex: 1; min-height: 110px; }
         .ad-side-card:hover { border-color: transparent; box-shadow: 0 8px 28px rgba(0,0,0,0.11); transform: translateX(4px); }
         .ad-side-card.highlighted { border-color: #10b981; box-shadow: 0 0 0 3px rgba(16,185,129,0.12), 0 4px 16px rgba(16,185,129,0.12); }
-        .ad-side-thumb { width: 110px; min-width: 110px; flex-shrink: 0; object-fit: cover; object-position: center; display: block; align-self: stretch; }
+        .ad-side-thumb { width: 160px; min-width: 160px; flex-shrink: 0; object-fit: contain; object-position: center; display: block; align-self: stretch; background: white; }
         .ad-side-thumb-placeholder { width: 110px; min-width: 110px; flex-shrink: 0; display: block; align-self: stretch; }
         .ad-side-body { padding: 16px 14px; display: flex; flex-direction: column; justify-content: center; gap: 5px; flex: 1; min-width: 0; }
         .ad-side-tag { font-size: 10px; font-weight: 800; letter-spacing: 0.8px; text-transform: uppercase; line-height: 1; }
@@ -1028,7 +1028,6 @@ useEffect(() => {
                       onError={e => { e.target.style.background = "#1e293b"; }} />
                   )}
                   <div className="fb-gradient" />
-                  <div className="fb-accent-layer" style={{ background: `linear-gradient(105deg, ${ad.accent}44 0%, transparent 55%)` }} />
                   <div className="fb-inner">
                     <div className="fb-copy">
                       {ad.tag && (
@@ -1126,7 +1125,7 @@ useEffect(() => {
                   {featuredAds[0].image ? (
                     <img src={featuredAds[0].image} alt={featuredAds[0].title} className="ad-main-img" style={{ objectFit: featuredAds[0].objectFit, objectPosition: featuredAds[0].objectPosition }} onError={e => { e.target.style.display = "none"; }} />
                   ) : (
-                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[0].accent}99, #0f172a)`, zIndex: 0 }} />
+                    <div style={{ position: "absolute", inset: 0, background: "#f8fafc", zIndex: 0 }} />
                   )}
                   <div className="ad-main-overlay" />
                   <div className="ad-main-content">
@@ -1147,7 +1146,7 @@ useEffect(() => {
                   {featuredAds[activeAd].image ? (
                     <img src={featuredAds[activeAd].image} alt="Ad" className="ad-main-img" style={{ objectFit: featuredAds[activeAd].objectFit, objectPosition: featuredAds[activeAd].objectPosition }} onError={e => { e.target.style.display = "none"; }} />
                   ):(
-                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[activeAd].accent}99, #0f172a)`, zIndex: 0 }} />
+                    <div style={{ position: "absolute", inset: 0, background: "#f8fafc", zIndex: 0 }} />
                   )}
                 </div>
 
@@ -1156,7 +1155,7 @@ useEffect(() => {
                     <div key={i} className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
                       onClick={() => { setActiveAd(i); handleAdNav(ad.ctaUrl); }}>
                       {ad.image ? (
-                        <img src={ad.image} alt="Ad" className="ad-side-thumb" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
+                        <img src={ad.image} alt="Ad" className="ad-side-thumb" style={{ objectFit: "contain", objectPosition: "center", background: "white" }}
                           onError={e => { e.target.style.display = "none"; const p = e.target.nextElementSibling; if (p) p.style.display = "block"; }} />
                       ) : null}
                       <div className="ad-side-thumb-placeholder"
