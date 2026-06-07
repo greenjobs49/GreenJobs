@@ -149,7 +149,7 @@ const Navbar = ({ title }) => {
     altText:      "Navbar Banner",
     height:       "75px",
     borderRadius: "8px",
-    ctaUrl:       "/jobs",
+    ctaUrl:       "",
   });
   const [bannerEditOpen, setBannerEditOpen] = useState(false);
   const [bannerLoading,  setBannerLoading]  = useState(false);
