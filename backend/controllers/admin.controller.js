@@ -773,7 +773,7 @@ exports.updateNavbarBanner = async (req, res) => {
       banner.altText = altText?.trim() || "Navbar Banner";
       banner.height = height?.trim() || "75px";
       banner.borderRadius = borderRadius?.trim() || "8px";
-      banner.ctaUrl       = ctaUrl?.trim() || "/jobs";
+      banner.ctaUrl = ctaUrl?.trim() ?? "";
       banner.isActive = isActive !== undefined ? isActive : true;
       banner.updatedBy = req.user.id;
       await banner.save();
@@ -784,7 +784,7 @@ exports.updateNavbarBanner = async (req, res) => {
         altText: altText?.trim() || "Navbar Banner",
         height: height?.trim() || "75px",
         borderRadius: borderRadius?.trim() || "8px",
-        ctaUrl:       ctaUrl?.trim() || "/jobs",
+        ctaUrl: ctaUrl?.trim() ?? "",
         isActive: isActive !== undefined ? isActive : true,
         updatedBy: req.user.id,
       });

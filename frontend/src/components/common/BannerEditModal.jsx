@@ -13,7 +13,7 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
     altText:      banner?.altText      || "Navbar Banner",
     height:       banner?.height       || "75px",
     borderRadius: banner?.borderRadius || "8px",
-    ctaUrl:       banner?.ctaUrl       || "/jobs",
+    ctaUrl: banner?.ctaUrl ?? "",
   });
 
   const [tab,            setTab]            = useState("upload");
@@ -31,7 +31,7 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
         altText:      banner.altText      || "Navbar Banner",
         height:       banner.height       || "75px",
         borderRadius: banner.borderRadius || "8px",
-        ctaUrl:       banner.ctaUrl       || "/jobs",
+        ctaUrl: banner.ctaUrl ?? "",
       });
       setUploadedUrl("");
       setError("");
