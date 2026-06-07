@@ -29,7 +29,7 @@ const navbarBannerSchema = new mongoose.Schema(
     ctaUrl: {           // ← ADD THIS
       type: String,
       trim: true,
-      default: "/jobs",
+      default: "",
     },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,

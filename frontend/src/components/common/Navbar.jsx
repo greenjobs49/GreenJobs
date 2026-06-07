@@ -164,13 +164,14 @@ const Navbar = ({ title }) => {
     try {
       const res = await apiClient.get("/admin/navbar-banner");
       if (res.data?.banner) {
-        setBanner(prev => ({
-          imageUrl:     res.data.banner.imageUrl     || prev.imageUrl,
-          altText:      res.data.banner.altText      || prev.altText,
-          height:       res.data.banner.height       || prev.height,
-          borderRadius: res.data.banner.borderRadius || prev.borderRadius,
-          ctaUrl:       res.data.banner.ctaUrl       || prev.ctaUrl,  // ← Add this
-        }));
+        const b = res.data.banner;
+        setBanner({
+          imageUrl:     b.imageUrl     || "/worker-navbar.jpeg",
+          altText:      b.altText      || "Navbar Banner",
+          height:       b.height       || "75px",
+          borderRadius: b.borderRadius || "8px",
+          ctaUrl:       b.ctaUrl       ?? "",   // ← ?? not ||, empty string is valid
+        });
       }
     } catch {
       // silently keep existing / default banner

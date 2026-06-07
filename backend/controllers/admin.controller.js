@@ -722,31 +722,25 @@ exports.restoreJob = async (req, res) => {
 /* =========================================================
    NAVBAR BANNER MANAGEMENT
 ========================================================= */
-
-/* GET NAVBAR BANNER */
 exports.getNavbarBanner = async (req, res) => {
   try {
-    const banner = await NavbarBanner.findOne({ isActive: true });
+    const banner = await NavbarBanner.findOne();
     
     if (!banner) {
-      return res.status(404).json({ 
-        success: false, 
-        message: "No active banner found",
-        banner: null 
-      });
+      return res.status(404).json({ success: false, message: "No banner found", banner: null });
     }
 
     res.json({
       success: true,
       banner: {
-        _id: banner._id,
-        imageUrl: banner.imageUrl,
-        altText: banner.altText,
-        height: banner.height,
+        _id:          banner._id,
+        imageUrl:     banner.imageUrl,
+        altText:      banner.altText,
+        height:       banner.height,
         borderRadius: banner.borderRadius,
-        ctaUrl: banner.ctaUrl,
-        isActive: banner.isActive,
-        updatedAt: banner.updatedAt,
+        ctaUrl:       banner.ctaUrl ?? "",
+        isActive:     banner.isActive,
+        updatedAt:    banner.updatedAt,
       }
     });
   } catch (err) {
@@ -773,7 +767,9 @@ exports.updateNavbarBanner = async (req, res) => {
       banner.altText = altText?.trim() || "Navbar Banner";
       banner.height = height?.trim() || "75px";
       banner.borderRadius = borderRadius?.trim() || "8px";
-      banner.ctaUrl = ctaUrl?.trim() ?? "";
+      if ("ctaUrl" in req.body) {
+        banner.ctaUrl = (ctaUrl ?? "").trim();
+      }
       banner.isActive = isActive !== undefined ? isActive : true;
       banner.updatedBy = req.user.id;
       await banner.save();
@@ -784,7 +780,7 @@ exports.updateNavbarBanner = async (req, res) => {
         altText: altText?.trim() || "Navbar Banner",
         height: height?.trim() || "75px",
         borderRadius: borderRadius?.trim() || "8px",
-        ctaUrl: ctaUrl?.trim() ?? "",
+        ctaUrl: "ctaUrl" in req.body ? (ctaUrl ?? "").trim() : "",
         isActive: isActive !== undefined ? isActive : true,
         updatedBy: req.user.id,
       });
