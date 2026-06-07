@@ -14,11 +14,21 @@ const ACCENT_PRESETS = [
 ];
 
 const BANNER_TYPES = [
-  { value: "spotlight",   label: "Spotlight Card", desc: "Small card in the rotating spotlight section" },
-  { value: "full_banner", label: "Full Banner",    desc: "Large hero-style banner displayed prominently" },
+  {
+    value: "spotlight",
+    label: "Spotlight Card",
+    desc: "Small card in the rotating spotlight section",
+    dimensions: "Recommended: 800 × 500 px (16:10)",
+  },
+  {
+    value: "full_banner",
+    label: "Full Banner",
+    desc: "Large hero-style banner displayed prominently",
+    dimensions: "Recommended: 1440 × 260 px (wide, short)",
+  },
 ];
 
-/* ─── Image size options per ad type ───────────────────────*/
+/* ── Image size options per ad type ─────────────────────────*/
 const SIZE_OPTIONS = {
   spotlight: [
     { value: "small",  label: "Small",  desc: "Compact · fits within card cleanly",   objectFit: "contain", objectPosition: "center",     previewHeight: 120 },
@@ -26,9 +36,9 @@ const SIZE_OPTIONS = {
     { value: "large",  label: "Large",  desc: "Full bleed · edge-to-edge fill",        objectFit: "cover",   objectPosition: "center",     previewHeight: 240 },
   ],
   full_banner: [
-    { value: "small",  label: "Small",  desc: "Letterboxed · padding on all sides",   objectFit: "contain", objectPosition: "center",     previewHeight: 120 },
-    { value: "medium", label: "Medium", desc: "Balanced · recommended default",        objectFit: "cover",   objectPosition: "center",     previewHeight: 160 },
-    { value: "large",  label: "Large",  desc: "Full hero fill · edge-to-edge",         objectFit: "cover",   objectPosition: "top center", previewHeight: 220 },
+    { value: "small",  label: "Fit",    desc: "Whole image visible · no crop",         objectFit: "contain", objectPosition: "center",     previewHeight: 100 },
+    { value: "medium", label: "Fill",   desc: "Fills banner · slight crop on sides",   objectFit: "cover",   objectPosition: "center",     previewHeight: 100 },  // ← previewHeight matches actual banner height
+    { value: "large",  label: "Stretch",desc: "Stretches to fill · may distort",       objectFit: "fill",    objectPosition: "center",     previewHeight: 100 },
   ],
 };
 
@@ -40,7 +50,6 @@ const DEFAULT_FORM = {
   objectFit: "cover", objectPosition: "center top",
 };
 
-/* ─── Hex → RGB helper ─────────────────────────────────────*/
 function hexToRgb(hex) {
   const r = parseInt(hex.slice(1,3),16);
   const g = parseInt(hex.slice(3,5),16);
@@ -48,13 +57,11 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
-/* ─── Resolve sizeConf from bannerType + imageSize ─────────*/
 function getSizeConf(bannerType, imageSize) {
   const opts = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
   return opts.find(o => o.value === imageSize) || opts[1];
 }
 
-/* ─── Field wrapper ────────────────────────────────────────*/
 const Field = ({ label, children, hint }) => (
   <div style={{ marginBottom: 16 }}>
     <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:6 }}>
@@ -71,7 +78,7 @@ const inp = {
   outline: "none", boxSizing: "border-box", transition: "border 0.2s",
 };
 
-/* ─── Size Selector ────────────────────────────────────────*/
+/* ── Size Selector ─────────────────────────────────────────*/
 const ImageSizeSelector = ({ bannerType, value, onChange }) => {
   const options = SIZE_OPTIONS[bannerType] || SIZE_OPTIONS.spotlight;
   return (
@@ -108,50 +115,33 @@ const ImageSizeSelector = ({ bannerType, value, onChange }) => {
   );
 };
 
-/* ─── Image Preview ────────────────────────────────────────*/
-const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) => {
+const ImagePreview = ({ src, accentColor, bannerType, imageSize }) => {
   const sizeConf = getSizeConf(bannerType, imageSize);
   const { r, g, b } = hexToRgb(accentColor || "#10b981");
-  const isFullBanner = bannerType === "full_banner";
+
+  // Match the actual rendered height on the homepage
+  const previewHeight = bannerType === "full_banner" ? 260 : sizeConf.previewHeight;  // ← ADD THIS
 
   return (
     <div style={{
       borderRadius:10, overflow:"hidden", position:"relative",
-      height: sizeConf.previewHeight,
+      height: previewHeight,   // ← use previewHeight here
       background: src ? "transparent" : `rgba(${r},${g},${b},0.08)`,
       border: `1px solid rgba(${r},${g},${b},0.18)`,
       display:"flex", alignItems:"center", justifyContent:"center",
     }}>
       {src ? (
-        <>
-          <img
-            src={src} alt="preview"
-            onError={e => { e.target.style.display="none"; }}
-            style={{
-              width:"100%", height:"100%",
-              objectFit: sizeConf.objectFit,
-              objectPosition: sizeConf.objectPosition,
-              display:"block",
-            }}
-          />
-          {isFullBanner && (
-            <div style={{
-              position:"absolute", inset:0,
-              background:"linear-gradient(to right, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.15) 60%, transparent 100%)",
-              pointerEvents:"none",
-            }} />
-          )}
-          <div style={{ position:"absolute", bottom:10, left:14, pointerEvents:"none" }}>
-            {tag && (
-              <span style={{ background:accentColor, color:"white", padding:"2px 10px", borderRadius:100, fontSize:10, fontWeight:700 }}>
-                {tag}
-              </span>
-            )}
-            <div style={{ fontSize:15, fontWeight:700, color:"white", marginTop:4, textShadow:"0 1px 4px rgba(0,0,0,0.5)" }}>
-              {title || "Ad Title"}
-            </div>
-          </div>
-        </>
+        <img
+          src={src}
+          alt="preview"
+          onError={e => { e.target.style.display="none"; }}
+          style={{
+            width:"100%", height:"100%",
+            objectFit: sizeConf.objectFit,
+            objectPosition: sizeConf.objectPosition,
+            display:"block",
+          }}
+        />
       ) : (
         <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, color:`rgba(${r},${g},${b},0.5)` }}>
           <Image size={28} />
@@ -162,7 +152,7 @@ const ImagePreview = ({ src, accentColor, bannerType, imageSize, tag, title }) =
   );
 };
 
-/* ─── Upload Progress Bar ──────────────────────────────────*/
+/* ── Upload Progress Bar ────────────────────────────────────*/
 const UploadProgress = ({ progress, fileName }) => (
   <div style={{ marginTop:12, padding:"12px 14px", background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:10 }}>
     <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
@@ -173,27 +163,23 @@ const UploadProgress = ({ progress, fileName }) => (
     </div>
     <div style={{ height:5, background:"#d1fae5", borderRadius:99, overflow:"hidden" }}>
       <div style={{
-        height:"100%",
-        width:`${progress}%`,
+        height:"100%", width:`${progress}%`,
         background:"linear-gradient(90deg, #10b981, #059669)",
-        borderRadius:99,
-        transition:"width 0.3s ease",
+        borderRadius:99, transition:"width 0.3s ease",
       }} />
     </div>
   </div>
 );
 
-/* ─── Ad Form Modal ────────────────────────────────────────*/
+/* ── Ad Form Modal ──────────────────────────────────────────*/
 const AdFormModal = ({ ad, onClose, onSave, saving }) => {
   const [form, setForm] = useState(() =>
     ad ? { ...DEFAULT_FORM, ...ad } : { ...DEFAULT_FORM }
   );
 
-  // ✅ FIX 1: Sync ref inline during render — never stale, no useEffect needed
   const formRef = useRef(form);
   formRef.current = form;
 
-  /* Upload state */
   const [uploadedUrl,      setUploadedUrl]      = useState("");
   const [hasExistingImage, setHasExistingImage] = useState(!!(ad?.imageUrl));
   const [previewUrl,       setPreviewUrl]       = useState(ad?.imageUrl || "");
@@ -205,7 +191,6 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
 
   const fileInputRef = useRef(null);
 
-  // ✅ FIX 2: Every setter also syncs ref immediately so handleSaveClick never reads stale values
   const set = (k, v) => {
     setForm(prev => {
       const next = { ...prev, [k]: v };
@@ -214,7 +199,6 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
     });
   };
 
-  // ✅ FIX 3: applySize syncs ref inside the setForm callback — no race condition
   const applySize = useCallback((bannerType, imageSize) => {
     const conf = getSizeConf(bannerType, imageSize);
     setForm(prev => {
@@ -229,7 +213,6 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
     });
   }, []);
 
-  /* Only reset imageSize to medium on actual bannerType change (not on mount) */
   const isFirstRender  = useRef(true);
   const prevBannerType = useRef(form.bannerType);
 
@@ -241,10 +224,10 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
     }
   }, [form.bannerType, applySize]);
 
-  /* ── Upload file handler ── */
+  /* ── File upload ── */
   const uploadFile = (file) => {
     const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
-    if (!allowed.includes(file.type)) {
+    if (!allowed.includes(file.mimetype || file.type)) {
       setUploadError("Only JPEG, PNG, or WEBP images are allowed.");
       return;
     }
@@ -286,12 +269,14 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  //FIX 4: Reads from formRef.current which is always up-to-date
   const handleSaveClick = () => {
     onSave(formRef.current, uploadedFile);
   };
 
   const canSave = !saving && !uploading;
+
+  /* ── Find dimension hint for selected banner type ── */
+  const bannerTypeConf = BANNER_TYPES.find(t => t.value === form.bannerType);
 
   return (
     <div
@@ -343,49 +328,15 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
                 >
                   <div style={{ fontSize:13, fontWeight:700, color:form.bannerType === t.value ? "#065f46" : "#0f172a" }}>{t.label}</div>
                   <div style={{ fontSize:11, color:"#94a3b8", marginTop:2 }}>{t.desc}</div>
+                  <div style={{ fontSize:10, color:"#10b981", marginTop:4, fontWeight:600 }}>{t.dimensions}</div>
                 </div>
               ))}
             </div>
           </Field>
 
-          {/* Title */}
-          <Field label="Title">
-            <input style={inp} value={form.title} placeholder="e.g. Solar Careers Drive 2026"
-              onChange={e => set("title", e.target.value)}
-              onFocus={e => e.target.style.borderColor="#10b981"}
-              onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-          </Field>
-
-          {/* Subtitle */}
-          <Field label="Subtitle">
-            <input style={inp} value={form.subtitle} placeholder="Short description shown on the card"
-              onChange={e => set("subtitle", e.target.value)}
-              onFocus={e => e.target.style.borderColor="#10b981"}
-              onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-          </Field>
-
-          {/* Full banner extras */}
-          {form.bannerType === "full_banner" && (
-            <>
-              <Field label="Banner Headline" hint="Large headline displayed prominently in the banner">
-                <input style={inp} value={form.bannerHeadline} placeholder="e.g. India's Largest Green Jobs Fair"
-                  onChange={e => set("bannerHeadline", e.target.value)}
-                  onFocus={e => e.target.style.borderColor="#10b981"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-              </Field>
-              <Field label="Banner Description" hint="Detailed text shown in the full banner">
-                <textarea style={{ ...inp, minHeight:80, resize:"vertical" }} value={form.bannerDescription}
-                  placeholder="Describe the opportunity, event or promotion…"
-                  onChange={e => set("bannerDescription", e.target.value)}
-                  onFocus={e => e.target.style.borderColor="#10b981"}
-                  onBlur={e => e.target.style.borderColor="#e2e8f0"} />
-              </Field>
-            </>
-          )}
-
           {/* Tag + CTA row */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-            <Field label="Tag Label">
+            <Field label="Tag Label (Optional)">
               <input style={inp} value={form.tag} placeholder="e.g. Solar Energy"
                 onChange={e => set("tag", e.target.value)}
                 onFocus={e => e.target.style.borderColor="#10b981"}
@@ -408,8 +359,10 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
           </Field>
 
           {/* ── Image Upload ── */}
-          <Field label="Ad Image">
-
+          <Field
+            label="Ad Image"
+            hint={`${bannerTypeConf?.dimensions} · JPEG, PNG, WEBP · Max 5 MB`}
+          >
             {/* Dropzone */}
             <div
               onDragOver={e => { e.preventDefault(); setDragOver(true); }}
@@ -440,12 +393,12 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
                 {uploading ? "Uploading…" : previewUrl ? "Image ready — click to replace" : "Drop image here or click to browse"}
               </div>
               <div style={{ fontSize:11, color:"#94a3b8" }}>
-                {uploading ? "Please wait" : "JPEG, PNG, WEBP · Max 5MB"}
+                {uploading ? "Please wait" : `${bannerTypeConf?.dimensions} · JPEG, PNG, WEBP · Max 5MB`}
               </div>
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp"
+                accept="image/jpeg,image/jpg,image/png,image/webp"
                 style={{ display:"none" }}
                 onChange={handleFileChange}
               />
@@ -467,7 +420,7 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
               </div>
             )}
 
-            {/* Uploaded URL confirmation */}
+            {/* Uploaded file confirmation */}
             {uploadedUrl && !uploading && (
               <div style={{
                 marginTop:8, padding:"9px 12px", background:"#f0fdf4",
@@ -522,7 +475,6 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
                 : "Controls how the image fills the spotlight card"
             }
           >
-            {/* ✅ FIX 5: Pass form.imageSize directly — always reflects current state */}
             <ImageSizeSelector
               bannerType={form.bannerType}
               value={form.imageSize}
@@ -541,23 +493,20 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
             </div>
           </Field>
 
-          {/* ── Live Preview ── */}
+          {/* ── Live Preview — clean, no overlays ── */}
           <Field label="Live Preview">
-            {/* ✅ FIX 6: Preview reads from form state directly — updates immediately on size change */}
             <ImagePreview
               src={previewUrl}
               accentColor={form.accentColor}
               bannerType={form.bannerType}
               imageSize={form.imageSize}
-              tag={form.tag}
-              title={form.title}
             />
             <div style={{
               display:"flex", alignItems:"center", gap:6,
               marginTop:8, fontSize:11, color:"#64748b",
             }}>
               <Info size={11} />
-              Approximate preview. Actual rendering may vary slightly by screen size.
+              Approximate preview · no overlays or effects shown here
             </div>
           </Field>
 
@@ -637,7 +586,7 @@ const AdFormModal = ({ ad, onClose, onSave, saving }) => {
   );
 };
 
-/* ─── Ad Card thumbnail ─────────────────────────────────────*/
+/* ── Ad Card thumbnail ──────────────────────────────────────*/
 const AdCardThumbnail = ({ ad }) => {
   const { r, g, b } = hexToRgb(ad.accentColor || "#10b981");
   const bg = `rgba(${r},${g},${b},0.10)`;
@@ -663,7 +612,7 @@ const AdCardThumbnail = ({ ad }) => {
   );
 };
 
-/* ─── Size badge helper ─────────────────────────────────────*/
+/* ── Size badge helper ──────────────────────────────────────*/
 const SizeBadge = ({ size }) => {
   const colors = {
     small:  { bg:"#f1f5f9", color:"#475569" },
@@ -681,7 +630,21 @@ const SizeBadge = ({ size }) => {
   );
 };
 
-/* ─── Ad Card ───────────────────────────────────────────────*/
+/* ── Banner dimension badge ─────────────────────────────────*/
+const DimensionBadge = ({ bannerType }) => {
+  const conf = BANNER_TYPES.find(t => t.value === bannerType);
+  if (!conf) return null;
+  return (
+    <span style={{
+      padding:"1px 8px", borderRadius:100, fontSize:10, fontWeight:600,
+      background:"#f8fafc", color:"#64748b", border:"1px solid #e2e8f0",
+    }}>
+      {conf.dimensions}
+    </span>
+  );
+};
+
+/* ── Ad Card ────────────────────────────────────────────────*/
 const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst, isLast, deleting, toggling }) => (
   <div style={{
     background:"white",
@@ -694,7 +657,9 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
       <AdCardThumbnail ad={ad} />
       <div style={{ flex:1, minWidth:0 }}>
         <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
-          <span style={{ fontSize:14, fontWeight:700, color:"#0f172a" }}>{ad.title}</span>
+          <span style={{ fontSize:14, fontWeight:700, color:"#0f172a" }}>
+            {ad.title || <span style={{ color:"#94a3b8", fontStyle:"italic" }}>No title</span>}
+          </span>
           <span style={{
             padding:"2px 8px", borderRadius:100, fontSize:10, fontWeight:700,
             background: ad.bannerType === "full_banner" ? "#dbeafe" : "#f0fdf4",
@@ -703,14 +668,20 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
             {ad.bannerType === "full_banner" ? "Full Banner" : "Spotlight"}
           </span>
           <SizeBadge size={ad.imageSize} />
+          <DimensionBadge bannerType={ad.bannerType} />
           {!ad.isActive && (
             <span style={{ padding:"2px 8px", borderRadius:100, fontSize:10, fontWeight:700, background:"#fee2e2", color:"#991b1b" }}>Inactive</span>
           )}
         </div>
-        {ad.tag      && <div style={{ fontSize:11, fontWeight:600, color:ad.accentColor, marginBottom:2 }}>{ad.tag}</div>}
+        {ad.tag && <div style={{ fontSize:11, fontWeight:600, color:ad.accentColor, marginBottom:2 }}>{ad.tag}</div>}
         {ad.subtitle && <div style={{ fontSize:12, color:"#64748b", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{ad.subtitle}</div>}
         <div style={{ display:"flex", gap:12, marginTop:6, fontSize:11, color:"#94a3b8", flexWrap:"wrap" }}>
           <span>Order: {ad.order}</span>
+          {ad.ctaText && (
+            <span style={{ display:"flex", alignItems:"center", gap:3, color:"#10b981", fontWeight:600 }}>
+              CTA: {ad.ctaText}
+            </span>
+          )}
           {ad.ctaUrl && <span style={{ display:"flex", alignItems:"center", gap:3 }}><ExternalLink size={10} />{ad.ctaUrl}</span>}
           {ad.imageUrl && (
             <span style={{ display:"flex", alignItems:"center", gap:3, color:"#10b981" }}>
@@ -738,7 +709,7 @@ const AdCard = ({ ad, onEdit, onDelete, onToggle, onMoveUp, onMoveDown, isFirst,
   </div>
 );
 
-/* ─── Main Component ────────────────────────────────────────*/
+/* ── Main Component ─────────────────────────────────────────*/
 export default function AdminAdsManager({ token }) {
   const [ads, setAds]             = useState([]);
   const [loading, setLoading]     = useState(true);
@@ -770,18 +741,17 @@ export default function AdminAdsManager({ token }) {
       setSaving(true);
 
       const fd = new FormData();
-      fd.append("title",             form.title);
+      fd.append("title",             form.title             || "");
       fd.append("subtitle",          form.subtitle          || "");
       fd.append("tag",               form.tag               || "");
       fd.append("ctaText",           form.ctaText           || "Learn More");
       fd.append("ctaUrl",            form.ctaUrl            || "/jobs");
       fd.append("accentColor",       form.accentColor       || "#10b981");
       fd.append("bannerType",        form.bannerType        || "spotlight");
-      fd.append("bannerHeadline",    form.bannerHeadline    || "");
-      fd.append("bannerDescription", form.bannerDescription || "");
+      fd.append("bannerHeadline",    "");
+      fd.append("bannerDescription", "");
       fd.append("order",             Number(form.order)     || 0);
       fd.append("isActive",          Boolean(form.isActive));
-      // ✅ FIX 7: These now always carry the correct selected size values
       fd.append("imageSize",         form.imageSize         || "medium");
       fd.append("objectFit",         form.objectFit         || "cover");
       fd.append("objectPosition",    form.objectPosition    || "center top");
@@ -792,9 +762,7 @@ export default function AdminAdsManager({ token }) {
         fd.append("imageUrl", form.imageUrl);
       }
 
-      const config = {
-        headers: { Authorization: `Bearer ${token}` },
-      };
+      const config = { headers: { Authorization: `Bearer ${token}` } };
 
       if (editingAd) {
         await axios.patch(`${API_BASE_URL}/api/ads/admin/${editingAd._id}`, fd, config);
@@ -816,7 +784,7 @@ export default function AdminAdsManager({ token }) {
 
   /* ── Delete ── */
   const handleDelete = async (id, title) => {
-    if (!window.confirm(`Delete ad "${title}"? This cannot be undone.`)) return;
+    if (!window.confirm(`Delete ad "${title || "this ad"}"? This cannot be undone.`)) return;
     try {
       setDeleting(id);
       await axios.delete(`${API_BASE_URL}/api/ads/admin/${id}`, { headers: authHeaders });
@@ -846,7 +814,7 @@ export default function AdminAdsManager({ token }) {
   /* ── Reorder ── */
   const moveAd = async (filteredIdx, dir, bannerType) => {
     const filtered = ads.filter(a => a.bannerType === bannerType);
-    const swapIdx = dir === "up" ? filteredIdx - 1 : filteredIdx + 1;
+    const swapIdx  = dir === "up" ? filteredIdx - 1 : filteredIdx + 1;
     if (swapIdx < 0 || swapIdx >= filtered.length) return;
 
     const newFiltered = [...filtered];
@@ -899,6 +867,20 @@ export default function AdminAdsManager({ token }) {
         </button>
       </div>
 
+      {/* Size reference legend */}
+      <div style={{
+        marginBottom:20, padding:"12px 16px", background:"#f8fafc",
+        border:"1px solid #e2e8f0", borderRadius:10,
+        display:"flex", gap:24, flexWrap:"wrap", fontSize:12, color:"#64748b",
+      }}>
+        <span style={{ fontWeight:700, color:"#0f172a" }}>Banner sizes:</span>
+        {BANNER_TYPES.map(t => (
+          <span key={t.value}>
+            <span style={{ fontWeight:600, color:"#0f172a" }}>{t.label}:</span> {t.dimensions}
+          </span>
+        ))}
+      </div>
+
       {/* Content */}
       {loading ? (
         <div style={{ textAlign:"center", padding:60, color:"#64748b" }}>
@@ -925,7 +907,7 @@ export default function AdminAdsManager({ token }) {
             <div style={{ marginBottom:28 }}>
               <div style={{ fontSize:13, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:12, display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ width:8, height:8, background:"#3b82f6", borderRadius:"50%", display:"inline-block" }} />
-                Full Banners ({bannerAds.length})
+                Full Banners ({bannerAds.length}) · 1440 × 480 px
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {bannerAds.map((ad, i) => (
@@ -946,7 +928,7 @@ export default function AdminAdsManager({ token }) {
             <div>
               <div style={{ fontSize:13, fontWeight:700, color:"#64748b", textTransform:"uppercase", letterSpacing:"0.5px", marginBottom:12, display:"flex", alignItems:"center", gap:6 }}>
                 <span style={{ width:8, height:8, background:"#10b981", borderRadius:"50%", display:"inline-block" }} />
-                Spotlight Cards ({spotlightAds.length})
+                Spotlight Cards ({spotlightAds.length}) · 800 × 500 px
               </div>
               <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
                 {spotlightAds.map((ad, i) => (

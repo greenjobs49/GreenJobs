@@ -407,16 +407,16 @@ useEffect(() => {
         /* ══ FULL BANNER ADS ══ */
         .fb-section { position: relative; overflow: hidden; background: #0f172a; }
         .fb-banner { position: relative; min-height: 260px; display: flex; align-items: center; overflow: hidden; cursor: pointer; }
-        .fb-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transition: transform 7s ease; transform: scale(1.05); }
-        .fb-banner:hover .fb-bg-img { transform: scale(1); }
+        .fb-bg-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: none; transition: none; }
+        .fb-banner:hover .fb-bg-img { transform: none; }
         .fb-gradient { display: none; }
         .fb-accent-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
         .fb-inner { position: absolute; inset: 0; z-index: 3; width: 100%; display: flex; align-items: flex-end; justify-content: center; padding: 0; }
-        .fb-copy { display: flex; flex-direction: column; align-items: center; text-align: center; width: 100%; padding: 24px 28px 32px; background: linear-gradient(to top, rgba(0,0,0,0.88) 0%, rgba(0,0,0,0.55) 40%, rgba(0,0,0,0.00) 100%); }
-        .fb-eyebrow { display: inline-flex; align-items: center; gap: 8px; margin-bottom: 10px; padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 1.2px; text-transform: uppercase; }
-        .fb-headline { font-size: 20px; font-weight: 700; color: white; line-height: 1.3; margin: 0 0 8px; text-shadow: 0 1px 6px rgba(0,0,0,0.6); letter-spacing: 0px; }
-        .fb-sub { font-size: 14px; color: rgba(255,255,255,0.85); line-height: 1.55; max-width: 520px; margin: 0 0 18px; font-weight: 400; text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
-        .fb-btns { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .fb-copy { display: none; }
+        .fb-eyebrow { display: none; }
+        .fb-headline { display: none; }
+        .fb-sub { display: none; }
+        .fb-btns { display: none; }
         .fb-btn-main { display: inline-flex; align-items: center; gap: 8px; padding: 9px 20px; border-radius: 8px; font-size: 13px; font-weight: 500; border: none; cursor: pointer; font-family: 'Inter', sans-serif; transition: all 0.2s; letter-spacing: 0.1px; color: white; box-shadow: 0 2px 10px rgba(0,0,0,0.3); }
         .fb-btn-main:hover { transform: translateY(-2px) scale(1.03); filter: brightness(1.12); box-shadow: 0 8px 28px rgba(0,0,0,0.5); }
         .fb-btn-ghost { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: 700; background: rgba(255,255,255,0.09); color: white; cursor: pointer; border: 1.5px solid rgba(255,255,255,0.3); backdrop-filter: blur(4px); font-family: 'Inter', sans-serif; transition: all 0.2s; }
@@ -428,7 +428,7 @@ useEffect(() => {
         .fb-nav-row { position: absolute; bottom: 14px; left: 50%; transform: translateX(-50%); display: flex; gap: 7px; z-index: 10; align-items: center; }
         .fb-dot { height: 4px; border-radius: 2px; cursor: pointer; transition: all 0.35s ease; background: rgba(255,255,255,0.35); width: 18px; }
         .fb-dot.active { width: 32px; background: white; }
-        .fb-anim { animation: fbIn 0.45s cubic-bezier(0.16,1,0.3,1); }
+        .fb-anim { animation: none; }
 
         /* ══ ADS / SPOTLIGHT ══ */
         .ads-section { background: #f8fafc; padding: 72px 40px; position: relative; }
@@ -448,46 +448,23 @@ useEffect(() => {
         .ads-arrow:hover { border-color: #10b981; background: #f0fdf4; color: #10b981; }
         .ads-spotlight { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; align-items: stretch; }
         .ads-spotlight-single { display: block; }
-        .ad-main-card { border-radius: 20px; overflow: hidden; position: relative; min-height: 380px; cursor: pointer; transition: transform 0.3s, box-shadow 0.3s; animation: slideIn 0.4s ease; background: #0f172a; }
-        .ad-main-card:hover { transform: translateY(-4px); box-shadow: 0 24px 48px rgba(0,0,0,0.14); }
-        .ad-main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; transition: transform 0.5s ease; }
-        .ad-main-card:hover .ad-main-img { transform: scale(1.04); }
+        .ad-main-card { border-radius: 20px; overflow: hidden; position: relative; min-height: 380px; cursor: pointer; transition: none; animation: none; background: #0f172a; }
+        .ad-main-card:hover { transform: none; box-shadow: none; }
+        .ad-main-img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; z-index: 0; transition: none; }
+        .ad-main-card:hover .ad-main-img { transform: none; }
         .ad-main-overlay {
-          position: absolute; inset: 0; z-index: 1;
-          background: linear-gradient(
-            to top,
-            rgba(0,0,0,0.88) 0%,
-            rgba(0,0,0,0.55) 28%,
-            rgba(0,0,0,0.18) 55%,
-            rgba(0,0,0,0.00) 100%
-          );
+          display: none;
         }
         .ad-main-content {
-          position: absolute; bottom: 0; left: 0; right: 0;
-          z-index: 2;
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-          text-align: center;
-          padding: 24px 28px 32px;
+          display: none;
         }
-        .ad-main-tag { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 50px; font-size: 10px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 10px; color: white; backdrop-filter: blur(8px); }
-        .ad-main-title { font-size: 20px; font-weight: 700; color: white; margin-bottom: 8px; line-height: 1.3; letter-spacing: 0px; text-shadow: 0 1px 6px rgba(0,0,0,0.6); }
+        .ad-main-tag { display: none; }
+        .ad-main-title { display: none; }
         .ad-main-subtitle {
-          font-size: 14px; color: rgba(255,255,255,0.88);
-          margin-bottom: 20px; line-height: 1.5;
-          text-shadow: 0 1px 6px rgba(0,0,0,0.5);
-          max-width: 360px;    /* keeps it readable at width */
+          display: none;
         }
         .ad-main-cta {
-          display: inline-flex; align-items: center; gap: 7px;
-          padding: 9px 20px; border-radius: 8px;
-          font-size: 13px; font-weight: 500; border: none;
-          cursor: pointer; transition: all 0.2s;
-          font-family: 'Inter', sans-serif; color: white;
-          box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-          letter-spacing: 0.1px;
+          display: none;
         }
         .ad-main-cta:hover {
           transform: translateY(-2px) scale(1.03);
@@ -885,51 +862,28 @@ useEffect(() => {
 
         {/* ══ FULL BANNER ADS ══ */}
         {fullBannerAds.length > 0 && (
-          <section className="fb-section">
-            {(() => {
-              const ad = fullBannerAds.map(normalizeDbAd)[activeFB];
-              return (
-                <div key={activeFB} className="fb-banner fb-anim" onClick={() => handleAdNav(ad.ctaUrl)}>
-                  {ad.image && (
-                    <img src={ad.image} alt={ad.title} className="fb-bg-img" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
-                      onError={e => { e.target.style.background = "#1e293b"; }} />
-                  )}
-                  <div className="fb-gradient" />
-                  <div className="fb-accent-layer" style={{ background: `linear-gradient(105deg, ${ad.accent}44 0%, transparent 55%)` }} />
-                  <div className="fb-inner">
-                    <div className="fb-copy">
-                      {ad.tag && (
-                        <div className="fb-eyebrow" style={{ background: `${ad.accent}2a`, color: ad.accent, border: `1px solid ${ad.accent}44` }}>
-                          <span style={{ width: 6, height: 6, borderRadius: "50%", background: ad.accent, display: "inline-block" }} />
-                          {ad.tag}
-                        </div>
-                      )}
-                      <h2 className="fb-headline">{ad.bannerHeadline || ad.title}</h2>
-                      <p className="fb-sub">{ad.bannerDescription || ad.subtitle}</p>
-                      <div className="fb-btns">
-                        <button
-                          className="fb-btn-main"
-                          style={{ background: ad.accent, boxShadow: `0 4px 24px ${ad.accent}55` }}
-                          onClick={e => { e.stopPropagation(); handleAdNav(ad.ctaUrl); }}
-                        >
-                          {ad.cta}<ChevronRight size={17} />
-                        </button>
-                      </div>
-                    </div>
+        <section className="fb-section">
+          {(() => {
+            const ad = fullBannerAds.map(normalizeDbAd)[activeFB];
+            return (
+              <div key={activeFB} className="fb-banner fb-anim" onClick={() => handleAdNav(ad.ctaUrl)}>
+                {ad.image && (
+                  <img src={ad.image} alt="Banner Ad" className="fb-bg-img" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
+                    onError={e => { e.target.style.background = "#1e293b"; }} />
+                )}
+                {fullBannerAds.length > 1 && (
+                  <div className="fb-nav-row">
+                    {fullBannerAds.map((_, i) => (
+                      <div key={i} className={`fb-dot${i === activeFB ? " active" : ""}`}
+                        onClick={e => { e.stopPropagation(); setActiveFB(i); }} />
+                    ))}
                   </div>
-                  {fullBannerAds.length > 1 && (
-                    <div className="fb-nav-row">
-                      {fullBannerAds.map((_, i) => (
-                        <div key={i} className={`fb-dot${i === activeFB ? " active" : ""}`}
-                          onClick={e => { e.stopPropagation(); setActiveFB(i); }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })()}
-          </section>
-        )}
+                )}
+              </div>
+            );
+          })()}
+        </section>
+      )}
 
         {/* ══ LIVE JOBS ══ */}
         <section className="jobs-section">
@@ -1189,46 +1143,34 @@ useEffect(() => {
                 </div>
               ) : (
                 <div className="ads-spotlight">
-                  <div className="ad-main-card" onClick={() => handleAdNav(featuredAds[activeAd]?.ctaUrl)} key={activeAd}>
-                    {featuredAds[activeAd].image ? (
-                      <img src={featuredAds[activeAd].image} alt={featuredAds[activeAd].title} className="ad-main-img" style={{ objectFit: featuredAds[activeAd].objectFit, objectPosition: featuredAds[activeAd].objectPosition }} onError={e => { e.target.style.display = "none"; }} />
-                    ):(
-                      <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[activeAd].accent}99, #0f172a)`, zIndex: 0 }} />
-                    )}
-                    <div className="ad-main-overlay" />
-                    <div className="ad-main-content">
-                      {featuredAds[activeAd].tag && (
-                        <div className="ad-main-tag" style={{ background: featuredAds[activeAd].accent + "40", border: `1px solid ${featuredAds[activeAd].accent}60` }}>{featuredAds[activeAd].tag}</div>
-                      )}
-                      <div className="ad-main-title">{featuredAds[activeAd].title}</div>
-                      {featuredAds[activeAd].subtitle && <div className="ad-main-subtitle">{featuredAds[activeAd].subtitle}</div>}
-                      <button className="ad-main-cta" style={{ background: featuredAds[activeAd].accent }}
-                        onClick={e => { e.stopPropagation(); handleAdNav(featuredAds[activeAd]?.ctaUrl); }}>
-                        {featuredAds[activeAd].cta} <ChevronRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-
-                  <div className="ads-side-stack">
-                    {featuredAds.map((ad, i) => ({ ad, i })).filter(({ i }) => i !== activeAd).map(({ ad, i }) => (
-                      <div key={i} className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
-                        onClick={() => { setActiveAd(i); handleAdNav(ad.ctaUrl); }}>
-                        {ad.image ? (
-                          <img src={ad.image} alt={ad.title} className="ad-side-thumb" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
-                            onError={e => { e.target.style.display = "none"; const p = e.target.nextElementSibling; if (p) p.style.display = "block"; }} />
-                        ) : null}
-                        <div className="ad-side-thumb-placeholder"
-                          style={{ display: ad.image ? "none" : "block", background: `linear-gradient(135deg, ${ad.accent}55, ${ad.accent}22)` }} />
-                        <div className="ad-side-body">
-                          {ad.tag && <div className="ad-side-tag" style={{ color: ad.accent }}>{ad.tag}</div>}
-                          <div className="ad-side-title">{ad.title}</div>
-                          {ad.subtitle && <div className="ad-side-subtitle">{ad.subtitle}</div>}
-                        </div>
-                        <div className="ad-side-arrow"><ChevronRight size={18} /></div>
-                      </div>
-                    ))}
-                  </div>
+                <div className="ad-main-card" onClick={() => handleAdNav(featuredAds[activeAd]?.ctaUrl)} key={activeAd}>
+                  {featuredAds[activeAd].image ? (
+                    <img src={featuredAds[activeAd].image} alt="Ad" className="ad-main-img" style={{ objectFit: featuredAds[activeAd].objectFit, objectPosition: featuredAds[activeAd].objectPosition }} onError={e => { e.target.style.display = "none"; }} />
+                  ):(
+                    <div style={{ position: "absolute", inset: 0, background: `linear-gradient(135deg, ${featuredAds[activeAd].accent}99, #0f172a)`, zIndex: 0 }} />
+                  )}
                 </div>
+
+                <div className="ads-side-stack">
+                  {featuredAds.map((ad, i) => ({ ad, i })).filter(({ i }) => i !== activeAd).map(({ ad, i }) => (
+                    <div key={i} className={`ad-side-card${i === (activeAd + 1) % featuredAds.length ? " highlighted" : ""}`}
+                      onClick={() => { setActiveAd(i); handleAdNav(ad.ctaUrl); }}>
+                      {ad.image ? (
+                        <img src={ad.image} alt="Ad" className="ad-side-thumb" style={{ objectFit: ad.objectFit, objectPosition: ad.objectPosition }}
+                          onError={e => { e.target.style.display = "none"; const p = e.target.nextElementSibling; if (p) p.style.display = "block"; }} />
+                      ) : null}
+                      <div className="ad-side-thumb-placeholder"
+                        style={{ display: ad.image ? "none" : "block", background: `linear-gradient(135deg, ${ad.accent}55, ${ad.accent}22)` }} />
+                      <div className="ad-side-body">
+                        {ad.tag && <div className="ad-side-tag" style={{ color: ad.accent }}>{ad.tag}</div>}
+                        <div className="ad-side-title">{ad.title}</div>
+                        {ad.subtitle && <div className="ad-side-subtitle">{ad.subtitle}</div>}
+                      </div>
+                      <div className="ad-side-arrow"><ChevronRight size={18} /></div>
+                    </div>
+                  ))}
+                </div>
+              </div>
               )}
             </div>
           </section>

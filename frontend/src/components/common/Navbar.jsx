@@ -149,6 +149,7 @@ const Navbar = ({ title }) => {
     altText:      "Navbar Banner",
     height:       "75px",
     borderRadius: "8px",
+    ctaUrl:       "/jobs",
   });
   const [bannerEditOpen, setBannerEditOpen] = useState(false);
   const [bannerLoading,  setBannerLoading]  = useState(false);
@@ -168,6 +169,7 @@ const Navbar = ({ title }) => {
           altText:      res.data.banner.altText      || prev.altText,
           height:       res.data.banner.height       || prev.height,
           borderRadius: res.data.banner.borderRadius || prev.borderRadius,
+          ctaUrl:       res.data.banner.ctaUrl       || prev.ctaUrl,  // ← Add this
         }));
       }
     } catch {
@@ -205,6 +207,7 @@ const Navbar = ({ title }) => {
         altText:      formData.altText,
         height:       formData.height,
         borderRadius: formData.borderRadius,
+        ctaUrl:       formData.ctaUrl,  // ← Add this
       });
       if (res.data?.success) {
         // Instant local update — no need to wait for the next poll
@@ -213,6 +216,7 @@ const Navbar = ({ title }) => {
           altText:      formData.altText,
           height:       formData.height,
           borderRadius: formData.borderRadius,
+          ctaUrl:       formData.ctaUrl,  // ← Add this
         });
         return true;
       }
@@ -507,7 +511,18 @@ const Navbar = ({ title }) => {
 
           {/* CENTER: Banner image (desktop only) */}
           <div className="navbar-center">
-            <div className="banner-wrap" style={{ position: "relative", display: "inline-block" }}>
+            <div 
+              className="banner-wrap" 
+              style={{ position: "relative", display: "inline-block", cursor: banner.ctaUrl ? "pointer" : "default" }}
+              onClick={() => {
+                if (!banner.ctaUrl) return;
+                if (banner.ctaUrl.startsWith("http")) {
+                  window.open(banner.ctaUrl, "_blank");
+                } else {
+                  navigate(banner.ctaUrl);
+                }
+              }}
+            >
               <img
                 src={banner.imageUrl}
                 alt={banner.altText}
@@ -521,7 +536,7 @@ const Navbar = ({ title }) => {
               {isAuthenticated && user?.role?.toLowerCase() === "admin" && (
                 <button
                   className="banner-edit-btn"
-                  onClick={() => setBannerEditOpen(true)}
+                  onClick={(e) => { e.stopPropagation(); setBannerEditOpen(true); }}
                   title="Edit banner"
                 >
                   Edit Banner

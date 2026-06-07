@@ -6,6 +6,7 @@ const adSchema = new mongoose.Schema(
       type: String,
       trim: true,
       maxlength: 120,
+      // optional — not required
     },
     subtitle: {
       type: String,
@@ -28,24 +29,21 @@ const adSchema = new mongoose.Schema(
       default: "/jobs",
       trim: true,
     },
-    // Either an external image URL or uploaded image path
     imageUrl: {
       type: String,
       trim: true,
     },
-    // Accent color (hex)
     accentColor: {
       type: String,
       default: "#10b981",
       match: /^#[0-9a-fA-F]{3,6}$/,
     },
-    // Full-banner vs spotlight card
     bannerType: {
       type: String,
       enum: ["full_banner", "spotlight"],
       default: "spotlight",
     },
-    // Full banner extra fields
+    // Kept in schema for backward-compat but no longer used on frontend
     bannerHeadline: {
       type: String,
       trim: true,
@@ -70,7 +68,6 @@ const adSchema = new mongoose.Schema(
       type: String,
       default: "center top",
     },
-    // Display order (lower = shown first)
     order: {
       type: Number,
       default: 0,

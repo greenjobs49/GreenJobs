@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef,useEffect } from "react";
 import apiClient from "../../api/apiClient"; // adjust path if needed
 
 const SIZE_PRESETS = [
@@ -13,6 +13,7 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
     altText:      banner?.altText      || "Navbar Banner",
     height:       banner?.height       || "75px",
     borderRadius: banner?.borderRadius || "8px",
+    ctaUrl:       banner?.ctaUrl       || "/jobs",
   });
 
   const [tab,            setTab]            = useState("upload");
@@ -22,6 +23,23 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
   const [uploadedUrl,    setUploadedUrl]    = useState("");
   const [error,          setError]          = useState("");
   const [success,        setSuccess]        = useState("");
+
+    useEffect(() => {
+    if (isOpen && banner) {
+      setFormData({
+        imageUrl:     banner.imageUrl     || "",
+        altText:      banner.altText      || "Navbar Banner",
+        height:       banner.height       || "75px",
+        borderRadius: banner.borderRadius || "8px",
+        ctaUrl:       banner.ctaUrl       || "/jobs",
+      });
+      setUploadedUrl("");
+      setError("");
+      setSuccess("");
+      setUploadProgress(0);
+      setTab("upload");
+    }
+  }, [isOpen, banner]);
 
   const fileInputRef = useRef(null);
 
@@ -327,6 +345,14 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
         }
         @keyframes bemSpin { to { transform: rotate(360deg); } }
 
+        .bem-help-text {
+          font-size: 11px; color: #9ca3af; margin-top: 6px; line-height: 1.5;
+        }
+        .bem-help-code {
+          background: #f1f5f9; padding: 1px 5px; border-radius: 3px;
+          color: #475569; font-family: monospace;
+        }
+
         @media (max-width: 540px) {
           .bem-modal     { width: 98%; border-radius: 14px; }
           .bem-size-cards { grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
@@ -360,7 +386,7 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
             Upload Image
           </button>
           <button className={`bem-tab${tab === "style" ? " active" : ""}`} onClick={() => setTab("style")}>
-            Style
+            Style & Links
           </button>
         </div>
 
@@ -399,6 +425,15 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
                   <div className="bem-drop-sub">
                     {uploading ? "Please wait" : "PNG, JPEG, WEBP, GIF · Max 5MB"}
                   </div>
+                  {!uploading && (
+                    <div style={{
+                      marginTop: 10, padding: "6px 14px", borderRadius: 8,
+                      background: "#f0fdf4", border: "1px solid #bbf7d0",
+                      fontSize: 12, color: "#065f46", fontWeight: 600, display: "inline-block"
+                    }}>
+                      Recommended: <strong>800 × 75 px</strong> (wide banner, 10:1 ratio)
+                    </div>
+                  )}
                   {!uploading && (
                     <button type="button" className="bem-drop-btn">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -487,63 +522,81 @@ const BannerEditModal = ({ isOpen, banner, onClose, onSave, isLoading }) => {
               </>
             )}
 
-            {/* ── Style Tab ── */}
+            {/* ── Style & Links Tab ── */}
             {tab === "style" && (
-              <div className="bem-style-row">
-                {/* Height */}
-                <div className="bem-field">
-                  <label className="bem-label">Height</label>
-                  <input
-                    name="height"
-                    type="text"
-                    className="bem-input"
-                    value={formData.height}
-                    onChange={handleChange}
-                    placeholder="75px"
-                  />
-                  <div className="bem-presets">
-                    {SIZE_PRESETS.map(p => (
+              <>
+                <div className="bem-style-row">
+                  {/* Height */}
+                  <div className="bem-field">
+                    <label className="bem-label">Height</label>
+                    <input
+                      name="height"
+                      type="text"
+                      className="bem-input"
+                      value={formData.height}
+                      onChange={handleChange}
+                      placeholder="75px"
+                    />
+                    <div className="bem-presets">
+                      {SIZE_PRESETS.map(p => (
+                        <button
+                          key={p.value} type="button"
+                          className={`bem-preset${formData.height === p.value ? " active" : ""}`}
+                          onClick={() => setFormData(prev => ({ ...prev, height: p.value }))}
+                        >
+                          {p.label}<br /><span style={{ fontSize: 10, opacity: 0.7 }}>{p.value}</span>
+                        </button>
+                      ))}
                       <button
-                        key={p.value} type="button"
-                        className={`bem-preset${formData.height === p.value ? " active" : ""}`}
-                        onClick={() => setFormData(prev => ({ ...prev, height: p.value }))}
+                        type="button"
+                        className={`bem-preset${formData.height === "130px" ? " active" : ""}`}
+                        onClick={() => setFormData(prev => ({ ...prev, height: "130px" }))}
                       >
-                        {p.label}<br /><span style={{ fontSize: 10, opacity: 0.7 }}>{p.value}</span>
+                        XL<br /><span style={{ fontSize: 10, opacity: 0.7 }}>130px</span>
                       </button>
-                    ))}
-                    <button
-                      type="button"
-                      className={`bem-preset${formData.height === "130px" ? " active" : ""}`}
-                      onClick={() => setFormData(prev => ({ ...prev, height: "130px" }))}
-                    >
-                      XL<br /><span style={{ fontSize: 10, opacity: 0.7 }}>130px</span>
-                    </button>
+                    </div>
+                  </div>
+                  {/* Border Radius */}
+                  <div className="bem-field">
+                    <label className="bem-label">Border Radius</label>
+                    <input
+                      name="borderRadius"
+                      type="text"
+                      className="bem-input"
+                      value={formData.borderRadius}
+                      onChange={handleChange}
+                      placeholder="8px"
+                    />
+                    <div className="bem-presets">
+                      {radiusPresets.map(p => (
+                        <button
+                          key={p.value} type="button"
+                          className={`bem-preset${formData.borderRadius === p.value ? " active" : ""}`}
+                          onClick={() => setFormData(prev => ({ ...prev, borderRadius: p.value }))}
+                        >
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
-                {/* Border Radius */}
-                <div className="bem-field">
-                  <label className="bem-label">Border Radius</label>
+
+                {/* CTA URL */}
+                <div className="bem-field" style={{ marginTop: 20 }}>
+                  <label className="bem-label">CTA Link URL (Optional)</label>
                   <input
-                    name="borderRadius"
+                    name="ctaUrl"
                     type="text"
                     className="bem-input"
-                    value={formData.borderRadius}
+                    value={formData.ctaUrl}
                     onChange={handleChange}
-                    placeholder="8px"
+                    placeholder="/jobs or https://example.com"
                   />
-                  <div className="bem-presets">
-                    {radiusPresets.map(p => (
-                      <button
-                        key={p.value} type="button"
-                        className={`bem-preset${formData.borderRadius === p.value ? " active" : ""}`}
-                        onClick={() => setFormData(prev => ({ ...prev, borderRadius: p.value }))}
-                      >
-                        {p.label}
-                      </button>
-                    ))}
+                  <div className="bem-help-text">
+                    Leave blank for no link. Use <code className="bem-help-code">/jobs</code> for internal routes or <code className="bem-help-code">https://example.com</code> for external links.
                   </div>
                 </div>
-              </div>
+              </>
             )}
 
             {/* Live preview */}
