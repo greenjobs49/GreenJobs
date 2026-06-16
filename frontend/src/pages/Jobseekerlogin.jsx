@@ -285,8 +285,8 @@ startCooldown(); setStep("verify"); }
             <h2 className="js-tagline-title">Find your <em>purpose</em> in green energy</h2>
             <p className="js-tagline-sub">Discover renewable energy jobs across India and connect with companies building a sustainable future.</p>
             <div className="js-stats">
-              <div><div className="js-stat-num">50+</div><div className="js-stat-label">Active Jobs</div></div>
-              <div><div className="js-stat-num">30+</div><div className="js-stat-label">Companies</div></div>
+              <div><div className="js-stat-num">60+</div><div className="js-stat-label">Active Jobs</div></div>
+              <div><div className="js-stat-num">40+</div><div className="js-stat-label">Companies</div></div>
               <div><div className="js-stat-num">100+</div><div className="js-stat-label">Placements</div></div>
             </div>
           </div>
